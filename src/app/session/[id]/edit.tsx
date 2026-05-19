@@ -1,5 +1,5 @@
-import { useRouter } from 'expo-router';
-import React, { useMemo, useState } from 'react';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { GRID_COLORS, type GridColor } from '@/components/climb/color-grid';
 import {
   ColorCountsTable,
   emptyColorCounts,
@@ -21,21 +22,17 @@ import { Chip } from '@/components/ui/chip';
 import { Section } from '@/components/ui/section';
 import { useGyms } from '@/hooks/use-gyms';
 import { useRecentGyms } from '@/hooks/use-recent-gyms';
-import { useRecordSession } from '@/hooks/use-record-session';
+import { useSessionDetail, useUpdateSession } from '@/hooks/use-session';
 
-// ── 날짜 칩 헬퍼 ────────────────────────────────────────────
-type DateChoice = 'today' | 'yesterday' | 'day_before';
-const DATE_CHIPS: { value: DateChoice; label: string }[] = [
-  { value: 'today', label: '오늘' },
-  { value: 'yesterday', label: '어제' },
-  { value: 'day_before', label: '그저께' },
-];
+const KO_WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
 
-function isoDateForChoice(choice: DateChoice): string {
-  const d = new Date();
-  if (choice === 'yesterday') d.setDate(d.getDate() - 1);
-  if (choice === 'day_before') d.setDate(d.getDate() - 2);
-  return d.toISOString().slice(0, 10);
+function formatLongDate(iso: string): string {
+  const d = new Date(`${iso}T00:00:00`);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  const w = KO_WEEKDAYS[d.getDay()];
+  return `${y}.${m}.${day} (${w})`;
 }
 
 const DURATION_CHIPS: { value: number; label: string }[] = [
@@ -55,20 +52,43 @@ const CONDITION_OPTIONS: { value: number; emoji: string }[] = [
   { value: 5, emoji: '😄' },
 ];
 
-export default function NewSessionScreen() {
+export default function EditSessionScreen() {
+  const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
-  const recordSession = useRecordSession();
+  const { data, isLoading, error } = useSessionDetail(id);
+  const updateSession = useUpdateSession();
+  const { data: recentGyms } = useRecentGyms();
+  const { data: allGyms } = useGyms();
 
-  const [dateChoice, setDateChoice] = useState<DateChoice>('today');
   const [gymId, setGymId] = useState<string | null>(null);
   const [showGymModal, setShowGymModal] = useState(false);
   const [durationMin, setDurationMin] = useState<number | null>(null);
   const [condition, setCondition] = useState<number | null>(null);
   const [notes, setNotes] = useState('');
   const [colorCounts, setColorCounts] = useState<ColorCountsValue>(emptyColorCounts);
+  const [prefilled, setPrefilled] = useState(false);
 
-  const { data: recentGyms } = useRecentGyms();
-  const { data: allGyms } = useGyms();
+  // 첫 fetch 완료 시 한 번만 prefill — 이후 사용자 편집 보존
+  useEffect(() => {
+    if (prefilled || !data) return;
+    setGymId(data.gym_id);
+    setDurationMin(data.duration_min);
+    setCondition(data.condition);
+    setNotes(data.notes ?? '');
+    const next = emptyColorCounts();
+    for (const s of data.color_summary) {
+      if ((GRID_COLORS as readonly string[]).includes(s.color)) {
+        next[s.color as GridColor] = {
+          color: s.color as GridColor,
+          tries: s.tries,
+          sends: s.sends,
+        };
+      }
+    }
+    setColorCounts(next);
+    setPrefilled(true);
+  }, [data, prefilled]);
+
   const selectedGym = useMemo(
     () => allGyms?.find((g) => g.id === gymId) ?? null,
     [allGyms, gymId],
@@ -80,20 +100,50 @@ export default function NewSessionScreen() {
   }, [gymId, colorCounts]);
 
   async function handleSubmit() {
-    if (!gymId || recordSession.isPending) return;
+    if (!id || !gymId || updateSession.isPending) return;
     try {
-      await recordSession.mutateAsync({
+      await updateSession.mutateAsync({
+        sessionId: id,
         gymId,
-        sessionDate: isoDateForChoice(dateChoice),
         durationMin,
         condition,
         notes: notes.trim() ? notes.trim().slice(0, 100) : null,
         colors: Object.values(colorCounts),
       });
-      router.replace('/(tabs)/log');
+      router.replace({ pathname: '/session/[id]', params: { id } });
     } catch (e) {
-      Alert.alert('기록 실패', e instanceof Error ? e.message : '알 수 없는 오류');
+      Alert.alert('저장 실패', e instanceof Error ? e.message : '알 수 없는 오류');
     }
+  }
+
+  if (isLoading || !prefilled) {
+    return (
+      <SafeAreaView
+        className="flex-1 bg-background-primary items-center justify-center"
+        edges={['top', 'bottom']}
+      >
+        <ActivityIndicator />
+      </SafeAreaView>
+    );
+  }
+
+  if (error || !data) {
+    return (
+      <SafeAreaView
+        className="flex-1 bg-background-primary items-center justify-center p-6"
+        edges={['top', 'bottom']}
+      >
+        <Text className="text-status-danger text-center mb-4">
+          {error?.message ?? '세션을 찾을 수 없어요'}
+        </Text>
+        <Pressable
+          onPress={() => router.back()}
+          className="border border-border-default rounded-md px-4 py-2"
+        >
+          <Text className="text-text-primary">돌아가기</Text>
+        </Pressable>
+      </SafeAreaView>
+    );
   }
 
   return (
@@ -103,30 +153,20 @@ export default function NewSessionScreen() {
           <Text className="text-text-primary text-2xl">←</Text>
         </Pressable>
         <Text className="flex-1 text-center text-text-primary text-base font-semibold">
-          오늘 운동 기록
+          세션 수정
         </Text>
         <View className="w-10" />
       </View>
 
       <ScrollView className="flex-1" contentContainerClassName="p-4 gap-6">
-        <Section title="날짜" required>
-          <View className="flex-row gap-2">
-            {DATE_CHIPS.map(({ value, label }) => (
-              <Chip
-                key={value}
-                label={label}
-                selected={dateChoice === value}
-                onPress={() => setDateChoice(value)}
-              />
-            ))}
-            <Chip
-              label="더 이전"
-              selected={false}
-              onPress={() =>
-                Alert.alert('준비 중', '그저께 이전 날짜 선택은 v1.1에서 추가됩니다.')
-              }
-            />
+        {/* 날짜는 readonly — date picker는 v1.1 */}
+        <Section title="날짜">
+          <View className="px-3 py-2 rounded-md bg-background-secondary">
+            <Text className="text-text-primary text-sm">
+              {formatLongDate(data.session_date)}
+            </Text>
           </View>
+          <Text className="text-text-tertiary text-xs">날짜 수정은 v1.1에서 가능</Text>
         </Section>
 
         <Section title="암장" required>
@@ -191,7 +231,6 @@ export default function NewSessionScreen() {
         </Section>
 
         <Section title="색깔별 기록">
-          <Text className="text-text-tertiary text-xs mb-2">안 적어도 돼요 (옵션)</Text>
           <ColorCountsTable value={colorCounts} onChange={setColorCounts} />
         </Section>
 
@@ -210,12 +249,12 @@ export default function NewSessionScreen() {
       <View className="px-4 pt-2 pb-2 border-t border-border-subtle">
         <Pressable
           onPress={handleSubmit}
-          disabled={!canSubmit || recordSession.isPending}
+          disabled={!canSubmit || updateSession.isPending}
           className={`rounded-md p-4 items-center ${
             !canSubmit ? 'bg-background-tertiary' : 'bg-brand-primary'
           }`}
         >
-          {recordSession.isPending ? (
+          {updateSession.isPending ? (
             <ActivityIndicator color="white" />
           ) : (
             <Text
@@ -223,7 +262,7 @@ export default function NewSessionScreen() {
                 !canSubmit ? 'text-text-muted' : 'text-background-primary'
               }`}
             >
-              기록
+              저장
             </Text>
           )}
         </Pressable>
@@ -233,8 +272,8 @@ export default function NewSessionScreen() {
         visible={showGymModal}
         gyms={allGyms ?? []}
         selectedId={gymId}
-        onSelect={(id) => {
-          setGymId(id);
+        onSelect={(pickedId) => {
+          setGymId(pickedId);
           setShowGymModal(false);
         }}
         onClose={() => setShowGymModal(false)}

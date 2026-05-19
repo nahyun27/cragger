@@ -80,19 +80,28 @@ export default function LogScreen() {
 }
 
 function SessionRow({ session }: { session: RecentSession }) {
+  const router = useRouter();
   const gymLabel = session.gym
     ? `${session.gym.name}${session.gym.branch ? ` ${session.gym.branch}` : ''}`
     : '암장 미선택';
   return (
-    <View className="py-3 gap-1">
-      <Text className="text-text-primary text-base">
-        {formatDate(session.session_date)} · {gymLabel}
-      </Text>
-      <Text className="text-text-tertiary text-sm">
-        완등 {session.send_count}개
-        {session.duration_min != null && ` · ${formatDuration(session.duration_min)}`}
-      </Text>
-    </View>
+    <Pressable
+      onPress={() =>
+        router.push({ pathname: '/session/[id]', params: { id: session.id } })
+      }
+      className="flex-row items-center py-3 gap-3 active:opacity-60"
+    >
+      <View className="flex-1 gap-1">
+        <Text className="text-text-primary text-base">
+          {formatDate(session.session_date)} · {gymLabel}
+        </Text>
+        <Text className="text-text-tertiary text-sm">
+          완등 {session.send_count}개
+          {session.duration_min != null && ` · ${formatDuration(session.duration_min)}`}
+        </Text>
+      </View>
+      <Text className="text-text-tertiary text-lg">›</Text>
+    </Pressable>
   );
 }
 

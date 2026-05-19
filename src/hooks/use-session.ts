@@ -1,6 +1,8 @@
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { supabase } from '@/lib/supabase';
+
+import type { ColorCount } from '@/hooks/use-record-session';
 
 export type SessionRow = {
   id: string;
@@ -8,6 +10,7 @@ export type SessionRow = {
   gym_id: string | null;
   session_date: string;
   duration_min: number | null;
+  condition: number | null;
   notes: string | null;
   created_at: string;
   completed_at: string | null;
@@ -22,12 +25,224 @@ export function useSession(sessionId: string | undefined) {
       const { data, error } = await supabase
         .from('sessions')
         .select(
-          'id, user_id, gym_id, session_date, duration_min, notes, created_at, completed_at, gym:gyms(id, name, branch)',
+          'id, user_id, gym_id, session_date, duration_min, condition, notes, created_at, completed_at, gym:gyms(id, name, branch)',
         )
         .eq('id', sessionId!)
         .single();
       if (error) throw new Error(error.message);
       return data as unknown as SessionRow;
+    },
+  });
+}
+
+// ── Detail (session + 색깔별 집계) ───────────────────────────
+
+export type ColorSummary = {
+  color: string;
+  sends: number;
+  tries: number;
+};
+
+export type SessionDetail = SessionRow & {
+  color_summary: ColorSummary[];
+};
+
+export function useSessionDetail(sessionId: string | undefined) {
+  return useQuery({
+    queryKey: ['sessions', sessionId, 'detail'] as const,
+    enabled: !!sessionId,
+    queryFn: async (): Promise<SessionDetail> => {
+      const [sessionRes, attemptsRes] = await Promise.all([
+        supabase
+          .from('sessions')
+          .select(
+            'id, user_id, gym_id, session_date, duration_min, condition, notes, created_at, completed_at, gym:gyms(id, name, branch)',
+          )
+          .eq('id', sessionId!)
+          .single(),
+        supabase
+          .from('attempts')
+          .select('result, problem:problems(color)')
+          .eq('session_id', sessionId!),
+      ]);
+      if (sessionRes.error) throw new Error(sessionRes.error.message);
+      if (attemptsRes.error) throw new Error(attemptsRes.error.message);
+
+      const session = sessionRes.data as unknown as SessionRow;
+      const attempts = (attemptsRes.data ?? []) as Array<{
+        result: 'onsight' | 'flash' | 'send' | 'project' | 'fall';
+        problem: { color: string } | null;
+      }>;
+
+      const map = new Map<string, ColorSummary>();
+      for (const a of attempts) {
+        const color = a.problem?.color;
+        if (!color) continue;
+        const cur = map.get(color) ?? { color, sends: 0, tries: 0 };
+        cur.tries += 1;
+        if (a.result === 'send' || a.result === 'onsight' || a.result === 'flash') {
+          cur.sends += 1;
+        }
+        map.set(color, cur);
+      }
+
+      return { ...session, color_summary: Array.from(map.values()) };
+    },
+  });
+}
+
+// ── Update (delete-and-recreate) ─────────────────────────────
+
+export type UpdateSessionArgs = {
+  sessionId: string;
+  gymId: string;
+  durationMin: number | null;
+  condition: number | null;
+  notes: string | null;
+  colors: ColorCount[];
+};
+
+// 수정 흐름:
+//   1. 기존 attempts.problem_id 모음
+//   2. attempts DELETE (session_id)
+//   3. problems DELETE (모음 id들 — 1세션당 1problem 모델이라 안전)
+//   4. sessions UPDATE
+//   5. 새 problems + attempts INSERT (record와 동일 패턴)
+// 트랜잭션 X — 부분 실패 시 orphan/incomplete 가능 (MVP 수용).
+export function useUpdateSession() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (args: UpdateSessionArgs) => {
+      const used = args.colors.filter((c) => c.tries > 0);
+      if (used.length === 0) {
+        throw new Error('최소 한 색깔의 시도 수를 1 이상으로 입력하세요');
+      }
+
+      // 1. 기존 problem_id 수집 — 이 세션의 attempts에 달린 것만
+      const { data: existing, error: e1 } = await supabase
+        .from('attempts')
+        .select('problem_id')
+        .eq('session_id', args.sessionId)
+        .not('problem_id', 'is', null);
+      if (e1) throw new Error(e1.message);
+      const oldProblemIds = Array.from(
+        new Set(
+          ((existing ?? []) as Array<{ problem_id: string | null }>)
+            .map((r) => r.problem_id)
+            .filter((v): v is string => !!v),
+        ),
+      );
+
+      // 2. attempts 삭제
+      const { error: e2 } = await supabase
+        .from('attempts')
+        .delete()
+        .eq('session_id', args.sessionId);
+      if (e2) throw new Error(e2.message);
+
+      // 3. 옛 problems 삭제
+      if (oldProblemIds.length > 0) {
+        const { error: e3 } = await supabase
+          .from('problems')
+          .delete()
+          .in('id', oldProblemIds);
+        if (e3) throw new Error(e3.message);
+      }
+
+      // 4. session UPDATE — created_by 없이 gym_id/조건만 갱신
+      const { error: e4 } = await supabase
+        .from('sessions')
+        .update({
+          gym_id: args.gymId,
+          duration_min: args.durationMin,
+          condition: args.condition,
+          notes: args.notes,
+        })
+        .eq('id', args.sessionId);
+      if (e4) throw new Error(e4.message);
+
+      // user_id 가져오기 (problems.created_by용)
+      const { data: sessionRow, error: e4b } = await supabase
+        .from('sessions')
+        .select('user_id')
+        .eq('id', args.sessionId)
+        .single();
+      if (e4b) throw new Error(e4b.message);
+      const userId = (sessionRow as { user_id: string }).user_id;
+
+      // 5. 새 problems INSERT
+      const { data: newProblems, error: e5 } = await supabase
+        .from('problems')
+        .insert(
+          used.map((c) => ({
+            gym_id: args.gymId,
+            color: c.color,
+            created_by: userId,
+          })),
+        )
+        .select('id, color');
+      if (e5) throw new Error(e5.message);
+
+      const colorToProblemId = new Map<string, string>();
+      for (const p of (newProblems ?? []) as Array<{ id: string; color: string }>) {
+        colorToProblemId.set(p.color, p.id);
+      }
+
+      // 6. 새 attempts INSERT
+      const attemptRows: Array<{
+        session_id: string;
+        problem_id: string;
+        climbing_type: 'boulder';
+        result: 'send' | 'project';
+      }> = [];
+      for (const c of used) {
+        const pid = colorToProblemId.get(c.color);
+        if (!pid) continue;
+        for (let i = 0; i < c.sends; i++) {
+          attemptRows.push({
+            session_id: args.sessionId,
+            problem_id: pid,
+            climbing_type: 'boulder',
+            result: 'send',
+          });
+        }
+        const projects = Math.max(0, c.tries - c.sends);
+        for (let i = 0; i < projects; i++) {
+          attemptRows.push({
+            session_id: args.sessionId,
+            problem_id: pid,
+            climbing_type: 'boulder',
+            result: 'project',
+          });
+        }
+      }
+
+      if (attemptRows.length > 0) {
+        const { error: e6 } = await supabase.from('attempts').insert(attemptRows);
+        if (e6) throw new Error(e6.message);
+      }
+
+      return { sessionId: args.sessionId };
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['sessions'] });
+    },
+  });
+}
+
+// ── Delete ───────────────────────────────────────────────────
+
+// sessions DELETE → attempts는 ON DELETE CASCADE로 자동.
+// problems는 session 직접 연결 없어 orphan으로 남음 (MVP 수용, 통계엔 무해).
+export function useDeleteSession() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (sessionId: string) => {
+      const { error } = await supabase.from('sessions').delete().eq('id', sessionId);
+      if (error) throw new Error(error.message);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['sessions'] });
     },
   });
 }
