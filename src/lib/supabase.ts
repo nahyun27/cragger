@@ -17,7 +17,14 @@ if (!supabaseUrl || !supabaseAnonKey) {
 import { Platform } from 'react-native';
 
 export const supabase = Platform.OS === 'web' 
-  ? ({} as any) 
+  ? ({
+      auth: {
+        getSession: async () => ({ data: { session: null } }),
+        onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => {} } } }),
+        signInWithPassword: async () => ({ error: { message: 'Not supported on web preview' } }),
+        signUp: async () => ({ data: { session: null }, error: { message: 'Not supported on web preview' } }),
+      }
+    } as any) 
   : createClient<Database>(supabaseUrl, supabaseAnonKey, {
       auth: {
         storage: AsyncStorage,

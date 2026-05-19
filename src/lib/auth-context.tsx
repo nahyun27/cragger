@@ -1,7 +1,10 @@
-import type { Session } from '@supabase/supabase-js';
+import type { AuthChangeEvent, Session } from '@supabase/supabase-js';
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 
 import { supabase } from '@/lib/supabase';
+
+type GetSessionResult = { data: { session: Session | null } };
+type AuthSubscription = { data: { subscription: { unsubscribe: () => void } } };
 
 type AuthContextValue = {
   session: Session | null;
@@ -17,7 +20,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let mounted = true;
 
-    supabase.auth.getSession().then(({ data }) => {
+    supabase.auth.getSession().then(({ data }: GetSessionResult) => {
       if (!mounted) return;
       setSession(data.session);
       setIsLoading(false);
@@ -25,9 +28,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, newSession) => {
-      setSession(newSession);
-    });
+    }: AuthSubscription = supabase.auth.onAuthStateChange(
+      (_event: AuthChangeEvent, newSession: Session | null) => {
+        setSession(newSession);
+      },
+    );
 
     return () => {
       mounted = false;

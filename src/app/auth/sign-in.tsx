@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import {
   ActivityIndicator,
+  Image,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -26,6 +27,7 @@ type FormValues = z.infer<typeof schema>;
 export default function SignInScreen() {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [focusedInput, setFocusedInput] = useState<'email' | 'password' | null>(null);
 
   const {
     control,
@@ -50,16 +52,30 @@ export default function SignInScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         className="flex-1"
       >
-        <View className="flex-1 px-6 justify-center gap-6">
-          <Text className="text-text-primary text-3xl font-bold">로그인</Text>
+        <View className="flex-1 px-8 justify-center pb-8">
+          {/* Logo & Header */}
+          <View className="items-center mb-10">
+            <Image
+              source={require('../../../assets/logo.png')}
+              style={{ width: 80, height: 80, borderRadius: 20 }}
+              resizeMode="cover"
+            />
+            <Text className="text-text-primary text-3xl font-bold mt-6 tracking-tight">
+              환영합니다
+            </Text>
+            <Text className="text-text-muted text-base mt-2">
+              Creagger에서 당신의 한계를 넘어보세요
+            </Text>
+          </View>
 
           {submitError && (
-            <View className="border border-status-danger rounded-md p-3 bg-background-secondary">
-              <Text className="text-status-danger">{submitError}</Text>
+            <View className="border border-status-danger/30 rounded-xl p-4 bg-status-danger/10 mb-6 flex-row items-center">
+              <Text className="text-status-danger font-medium flex-1">{submitError}</Text>
             </View>
           )}
 
-          <View className="gap-4">
+          <View className="gap-5">
+            {/* Email Input */}
             <Controller
               control={control}
               name="email"
@@ -67,23 +83,28 @@ export default function SignInScreen() {
                 <View>
                   <TextInput
                     placeholder="이메일"
-                    placeholderTextColor="#9CA3AF"
+                    placeholderTextColor="#A1A1AA"
                     autoCapitalize="none"
                     autoCorrect={false}
                     keyboardType="email-address"
                     autoComplete="email"
-                    className="border border-border-default rounded-md p-4 text-text-primary text-base"
+                    className={`border-2 rounded-xl p-4 text-text-primary text-base bg-background-secondary transition-colors ${
+                      focusedInput === 'email' ? 'border-brand-primary' : 'border-transparent'
+                    }`}
+                    onFocus={() => setFocusedInput('email')}
+                    onBlur={() => setFocusedInput(null)}
                     onChangeText={onChange}
                     value={value}
                     editable={!isSubmitting}
                   />
                   {errors.email && (
-                    <Text className="text-status-danger text-sm mt-1">{errors.email.message}</Text>
+                    <Text className="text-status-danger text-sm mt-1.5 ml-1">{errors.email.message}</Text>
                   )}
                 </View>
               )}
             />
 
+            {/* Password Input */}
             <Controller
               control={control}
               name="password"
@@ -91,42 +112,68 @@ export default function SignInScreen() {
                 <View>
                   <TextInput
                     placeholder="비밀번호"
-                    placeholderTextColor="#9CA3AF"
+                    placeholderTextColor="#A1A1AA"
                     autoCapitalize="none"
                     autoCorrect={false}
                     secureTextEntry
                     autoComplete="password"
-                    className="border border-border-default rounded-md p-4 text-text-primary text-base"
+                    className={`border-2 rounded-xl p-4 text-text-primary text-base bg-background-secondary transition-colors ${
+                      focusedInput === 'password' ? 'border-brand-primary' : 'border-transparent'
+                    }`}
+                    onFocus={() => setFocusedInput('password')}
+                    onBlur={() => setFocusedInput(null)}
                     onChangeText={onChange}
                     value={value}
                     editable={!isSubmitting}
                   />
                   {errors.password && (
-                    <Text className="text-status-danger text-sm mt-1">
+                    <Text className="text-status-danger text-sm mt-1.5 ml-1">
                       {errors.password.message}
                     </Text>
                   )}
                 </View>
               )}
             />
+
+            {/* Main Sign In Button */}
+            <Pressable
+              onPress={handleSubmit(onSubmit)}
+              disabled={isSubmitting}
+              className={`rounded-xl p-4 items-center mt-2 ${
+                isSubmitting ? 'bg-brand-primary/70' : 'bg-brand-primary active:bg-brand-accent'
+              }`}
+            >
+              {isSubmitting ? (
+                <ActivityIndicator color="white" />
+              ) : (
+                <Text className="text-white text-lg font-bold">이메일로 로그인</Text>
+              )}
+            </Pressable>
           </View>
 
-          <Pressable
-            onPress={handleSubmit(onSubmit)}
-            disabled={isSubmitting}
-            className="bg-brand-primary rounded-md p-4 items-center"
-          >
-            {isSubmitting ? (
-              <ActivityIndicator color="white" />
-            ) : (
-              <Text className="text-background-primary text-base font-semibold">로그인</Text>
-            )}
-          </Pressable>
+          {/* Divider */}
+          <View className="flex-row items-center my-8">
+            <View className="flex-1 h-[1px] bg-border-subtle" />
+            <Text className="px-4 text-text-muted text-sm font-medium">3초만에 시작하기</Text>
+            <View className="flex-1 h-[1px] bg-border-subtle" />
+          </View>
 
-          <View className="flex-row justify-center gap-2">
-            <Text className="text-text-secondary">계정이 없으신가요?</Text>
-            <Link href="/auth/sign-up" className="text-brand-primary font-semibold">
-              가입하기
+          {/* Social Logins */}
+          <View className="gap-3">
+            <Pressable className="flex-row items-center justify-center bg-[#FEE500] p-4 rounded-xl active:opacity-80">
+              <Text className="text-[#000000] text-base font-bold ml-2">카카오로 계속하기</Text>
+            </Pressable>
+            
+            <Pressable className="flex-row items-center justify-center bg-[#000000] dark:bg-white p-4 rounded-xl active:opacity-80">
+              <Text className="text-white dark:text-black text-base font-bold ml-2">Apple로 계속하기</Text>
+            </Pressable>
+          </View>
+
+          {/* Sign Up Link */}
+          <View className="flex-row justify-center mt-10">
+            <Text className="text-text-secondary text-base">계정이 없으신가요? </Text>
+            <Link href="/auth/sign-up" className="text-brand-primary text-base font-bold">
+              회원가입
             </Link>
           </View>
         </View>
