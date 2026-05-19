@@ -31,7 +31,6 @@ export default function GymVoteScreen() {
 
   const [pickerColor, setPickerColor] = useState<string | null>(null);
 
-  // color → avg lookup
   const avgByColor = useMemo(() => {
     const m = new Map<string, GymColorAvg>();
     for (const a of avgs ?? []) m.set(a.color, a);
@@ -40,8 +39,7 @@ export default function GymVoteScreen() {
 
   const activePickerColorData = useMemo(() => {
     if (!pickerColor) return null;
-    const c = colors?.find((x) => x.color === pickerColor);
-    return c ?? null;
+    return colors?.find((x) => x.color === pickerColor) ?? null;
   }, [pickerColor, colors]);
 
   const activePickerAvg = pickerColor ? avgByColor.get(pickerColor) : undefined;
@@ -75,7 +73,7 @@ export default function GymVoteScreen() {
             {gym.branch ? ` ${gym.branch}` : ''}
           </Text>
           <Text className="text-text-tertiary text-xs mt-0.5">
-            시도해본 색깔에만 투표할 수 있어요
+            이 암장의 색깔별 난이도를 평가해주세요
           </Text>
         </View>
       )}
@@ -101,18 +99,6 @@ export default function GymVoteScreen() {
           )}
           contentContainerClassName="px-4 pb-6"
           ItemSeparatorComponent={() => <View className="h-px bg-border-subtle" />}
-          ListEmptyComponent={
-            !isLoading ? (
-              <View className="p-6 items-center">
-                <Text className="text-text-secondary text-center">
-                  이 암장에서 아직 시도한 색깔이 없어요
-                </Text>
-                <Text className="text-text-tertiary text-xs mt-2 text-center">
-                  운동 기록부터 남겨주세요
-                </Text>
-              </View>
-            ) : null
-          }
         />
       )}
 
