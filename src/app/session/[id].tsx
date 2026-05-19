@@ -126,7 +126,12 @@ export default function SessionDetailScreen() {
     <SafeAreaView className="flex-1 bg-background-primary" edges={['top', 'bottom']}>
       {/* Header */}
       <View className="flex-row items-center px-2 py-2 border-b border-border-subtle">
-        <Pressable onPress={() => router.back()} className="p-2" hitSlop={8}>
+        {/* Detail은 router.replace로 진입해서 stack이 비어 있음 → back() 대신 log 탭으로 명시 navigate. 진행 중 세션이 있으면 log 탭이 다시 redirect할 거라 효과적으로 no-op이지만 GO_BACK 에러 토스트는 사라짐. */}
+        <Pressable
+          onPress={() => router.replace('/(tabs)/log')}
+          className="p-2"
+          hitSlop={8}
+        >
           <Text className="text-text-primary text-2xl">←</Text>
         </Pressable>
         <View className="flex-1 items-center px-2">

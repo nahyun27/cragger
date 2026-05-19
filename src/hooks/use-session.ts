@@ -84,6 +84,8 @@ export function useCreateSession() {
 
 export function useCompleteSession() {
   const queryClient = useQueryClient();
+  const { session: authSession } = useAuth();
+  const userId = authSession?.user.id;
   return useMutation({
     mutationFn: async (sessionId: string) => {
       const { error } = await supabase
@@ -93,6 +95,12 @@ export function useCompleteSession() {
       if (error) throw new Error(error.message);
     },
     onSuccess: () => {
+      // Optimistic: drop the active-session cache so the log tab doesn't
+      // bounce back to /session/[id] during refetch. Without this the
+      // stale cached value triggers the auto-redirect effect.
+      if (userId) {
+        queryClient.setQueryData(['sessions', userId, 'active'], null);
+      }
       queryClient.invalidateQueries({ queryKey: ['sessions'] });
     },
   });
