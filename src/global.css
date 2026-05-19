@@ -1,9 +1,95 @@
-:root {
-  --font-display:
-    Spline Sans, Inter, ui-sans-serif, system-ui, sans-serif, Apple Color Emoji, Segoe UI Emoji,
-    Segoe UI Symbol, Noto Color Emoji;
-  --font-mono:
-    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, Liberation Mono, Courier New, monospace;
-  --font-rounded: 'SF Pro Rounded', 'Hiragino Maru Gothic ProN', Meiryo, 'MS PGothic', sans-serif;
-  --font-serif: Georgia, 'Times New Roman', serif;
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background-primary: #ffffff;
+    --background-secondary: #f4f4f5;
+    --background-tertiary: #e4e4e7;
+    
+    --text-primary: #18181b;
+    --text-secondary: #3f3f46;
+    --text-tertiary: #71717a;
+    --text-muted: #a1a1aa;
+    
+    --border-default: #d4d4d8;
+    --border-subtle: #e4e4e7;
+    
+    --brand-primary: #0d9488;
+    --brand-accent: #14b8a6;
+    
+    --status-success: #22c55e;
+    --status-warning: #f59e0b;
+    --status-danger: #ef4444;
+    --status-info: #3b82f6;
+
+    --climb-red: #ef4444;
+    --climb-orange: #f97316;
+    --climb-yellow: #eab308;
+    --climb-green: #22c55e;
+    --climb-blue: #3b82f6;
+    --climb-purple: #a855f7;
+    --climb-pink: #ec4899;
+    --climb-black: #18181b;
+    --climb-white: #f8fafc;
+    --climb-gray: #71717a;
+  }
+
+  .dark {
+    --background-primary: #09090b;
+    --background-secondary: #18181b;
+    --background-tertiary: #27272a;
+    
+    --text-primary: #fafafa;
+    --text-secondary: #a1a1aa;
+    --text-tertiary: #71717a;
+    --text-muted: #52525b;
+    
+    --border-default: #3f3f46;
+    --border-subtle: #27272a;
+    
+    --brand-primary: #2dd4bf;
+    --brand-accent: #5eead4;
+    
+    --status-success: #4ade80;
+    --status-warning: #fbbf24;
+    --status-danger: #f87171;
+    --status-info: #60a5fa;
+
+    --climb-red: #f87171;
+    --climb-orange: #fb923c;
+    --climb-yellow: #fcd34d;
+    --climb-green: #4ade80;
+    --climb-blue: #60a5fa;
+    --climb-purple: #c084fc;
+    --climb-pink: #f472b6;
+    --climb-black: #3f3f46;
+    --climb-white: #fafafa;
+    --climb-gray: #a1a1aa;
+  }
+}
+
+@layer utilities {
+  .elevation-sm {
+    elevation: 2;
+    shadow-color: #000;
+    shadow-offset: 0px 1px;
+    shadow-opacity: 0.18;
+    shadow-radius: 1.0px;
+  }
+  .elevation-md {
+    elevation: 4;
+    shadow-color: #000;
+    shadow-offset: 0px 2px;
+    shadow-opacity: 0.23;
+    shadow-radius: 2.62px;
+  }
+  .elevation-lg {
+    elevation: 8;
+    shadow-color: #000;
+    shadow-offset: 0px 4px;
+    shadow-opacity: 0.30;
+    shadow-radius: 4.65px;
+  }
 }
