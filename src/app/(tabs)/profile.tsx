@@ -1,6 +1,9 @@
 import React from 'react';
-import { ScrollView, Text, View } from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+
+import { useAuth } from '@/lib/auth-context';
+import { supabase } from '@/lib/supabase';
 
 function ColorChip({ colorClass, name }: { colorClass: string; name: string }) {
   return (
@@ -23,9 +26,24 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 }
 
 export default function ProfileScreen() {
+  const { session } = useAuth();
+
   return (
     <SafeAreaView className="flex-1 bg-background-primary" edges={['top']}>
       <ScrollView className="flex-1" contentContainerClassName="p-4">
+        <View className="mb-8 p-4 bg-background-secondary rounded-md gap-3">
+          <Text className="text-text-tertiary text-sm">로그인 계정</Text>
+          <Text className="text-text-primary text-base">
+            {session?.user.email ?? '—'}
+          </Text>
+          <Pressable
+            onPress={() => supabase.auth.signOut()}
+            className="border border-border-default rounded-md p-3 items-center self-start"
+          >
+            <Text className="text-text-primary">로그아웃</Text>
+          </Pressable>
+        </View>
+
         <Text className="text-text-primary text-3xl font-bold mb-6">Design Tokens</Text>
 
         <Section title="Background Colors">
