@@ -69,7 +69,7 @@ export default function SignUpScreen() {
               resizeMode="cover"
             />
             <Text className="text-text-primary text-3xl font-bold mt-6 tracking-tight">
-              Creagger 시작하기
+              크래거 시작하기
             </Text>
             <Text className="text-text-muted text-base mt-2">
               지금 가입하고 첫 등반을 기록해보세요

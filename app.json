@@ -1,16 +1,20 @@
 {
   "expo": {
-    "name": "climbing-app",
-    "slug": "climbing-app",
+    "name": "Cragger",
+    "slug": "cragger",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "climbingapp",
+    "scheme": "cragger",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/expo.icon"
+      "icon": "./assets/expo.icon",
+      "infoPlist": {
+        "CFBundleDisplayName": "크래거"
+      }
     },
     "android": {
+      "name": "크래거",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",

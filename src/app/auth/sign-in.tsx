@@ -64,7 +64,7 @@ export default function SignInScreen() {
               환영합니다
             </Text>
             <Text className="text-text-muted text-base mt-2">
-              Creagger에서 당신의 한계를 넘어보세요
+              크래거에서 당신의 한계를 넘어보세요
             </Text>
           </View>
 
