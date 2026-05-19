@@ -19,7 +19,7 @@ import { Platform } from 'react-native';
 export const supabase = Platform.OS === 'web' 
   ? ({
       auth: {
-        getSession: async () => ({ data: { session: null } }),
+        getSession: async () => ({ data: { session: { user: { id: 'dummy' } } } }),
         onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => {} } } }),
         signInWithPassword: async () => ({ error: { message: 'Not supported on web preview' } }),
         signUp: async () => ({ data: { session: null }, error: { message: 'Not supported on web preview' } }),
