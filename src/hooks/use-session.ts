@@ -1,6 +1,5 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 
-import { useAuth } from '@/lib/auth-context';
 import { supabase } from '@/lib/supabase';
 
 export type SessionRow = {
@@ -29,79 +28,6 @@ export function useSession(sessionId: string | undefined) {
         .single();
       if (error) throw new Error(error.message);
       return data as unknown as SessionRow;
-    },
-  });
-}
-
-export function useActiveSession() {
-  const { session: authSession } = useAuth();
-  const userId = authSession?.user.id;
-  return useQuery({
-    queryKey: ['sessions', userId, 'active'] as const,
-    enabled: !!userId,
-    queryFn: async (): Promise<{ id: string } | null> => {
-      const today = new Date().toISOString().slice(0, 10);
-      const { data, error } = await supabase
-        .from('sessions')
-        .select('id')
-        .eq('user_id', userId!)
-        .eq('session_date', today)
-        .is('completed_at', null)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      if (error) throw new Error(error.message);
-      return data;
-    },
-  });
-}
-
-export function useCreateSession() {
-  const queryClient = useQueryClient();
-  const { session: authSession } = useAuth();
-  return useMutation({
-    mutationFn: async ({ gymId }: { gymId: string }): Promise<{ id: string }> => {
-      const userId = authSession?.user.id;
-      if (!userId) throw new Error('Not authenticated');
-      const today = new Date().toISOString().slice(0, 10);
-      const { data, error } = await supabase
-        .from('sessions')
-        .insert({
-          user_id: userId,
-          gym_id: gymId,
-          session_date: today,
-        })
-        .select('id')
-        .single();
-      if (error) throw new Error(error.message);
-      return data as { id: string };
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['sessions'] });
-    },
-  });
-}
-
-export function useCompleteSession() {
-  const queryClient = useQueryClient();
-  const { session: authSession } = useAuth();
-  const userId = authSession?.user.id;
-  return useMutation({
-    mutationFn: async (sessionId: string) => {
-      const { error } = await supabase
-        .from('sessions')
-        .update({ completed_at: new Date().toISOString() })
-        .eq('id', sessionId);
-      if (error) throw new Error(error.message);
-    },
-    onSuccess: () => {
-      // Optimistic: drop the active-session cache so the log tab doesn't
-      // bounce back to /session/[id] during refetch. Without this the
-      // stale cached value triggers the auto-redirect effect.
-      if (userId) {
-        queryClient.setQueryData(['sessions', userId, 'active'], null);
-      }
-      queryClient.invalidateQueries({ queryKey: ['sessions'] });
     },
   });
 }
