@@ -2,7 +2,6 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   Pressable,
   ScrollView,
   Text,
@@ -160,7 +159,7 @@ export default function GymDetailScreen() {
       <View className="px-4 pt-2 pb-2 border-t border-border-subtle">
         <Pressable
           onPress={() =>
-            Alert.alert('투표', '난이도 투표 화면은 별도 작업입니다.')
+            router.push({ pathname: '/gym/[id]/vote', params: { id: data.id } })
           }
           className="bg-brand-primary rounded-md p-4 items-center"
         >
