@@ -70,25 +70,35 @@ function ColorCell({
       disabled={disabled}
       // 4열: 각 셀은 (100% - 3*gap) / 4 정도. flex-wrap 환경에서 % 계산 단순화 위해
       // basis 사용. gap-2 (8px) 기준으로 폭 계산.
-      style={{ width: '23%' }}
-      className={`items-center gap-1.5 p-2 rounded-md ${
-        selected ? 'bg-background-secondary' : ''
-      } ${disabled ? 'opacity-50' : ''}`}
+      style={[
+        { width: '23%' },
+        selected ? { transform: [{ translateY: -2 }] } : null,
+      ]}
+      className={`items-center gap-1.5 p-2 rounded-md ${disabled ? 'opacity-50' : ''}`}
     >
+      {/* Selected state = black ring + lift. Never brand cyan, because the
+          sky hold (#0EA5E9) collides with our brand cyan. */}
       <View
-        className={`w-12 h-12 rounded-full ${
-          selected ? 'border-4 border-brand-primary' : ''
-        }`}
-        style={{
-          backgroundColor: hex,
-          ...(needsContrastBorder && !selected
+        className="w-12 h-12 rounded-full"
+        style={[
+          { backgroundColor: hex },
+          selected && {
+            borderWidth: 3,
+            borderColor: '#0f172a',
+            shadowColor: '#0f172a',
+            shadowOpacity: 0.18,
+            shadowRadius: 6,
+            shadowOffset: { width: 0, height: 3 },
+            elevation: 3,
+          },
+          !selected && needsContrastBorder
             ? { borderWidth: 1, borderColor: '#D4D4D8' }
-            : null),
-        }}
+            : null,
+        ]}
       />
       <Text
         className={`text-xs ${
-          selected ? 'text-text-primary font-semibold' : 'text-text-secondary'
+          selected ? 'text-text-primary font-bold' : 'text-text-secondary'
         }`}
       >
         {label}
