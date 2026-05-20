@@ -135,8 +135,9 @@ supabase/
 - [x] 색깔 투표 화면 (grade_votes 분리 테이블, 14색, V0~V8+ 모달)
 - [x] 통계 화면 (프로필 탭, 암장별 색깔 막대 + 요약 카드)
 - [x] grade_votes 시드 (Becky 시트 → 15 gym / 100+ votes)
+- [x] 암장 추가 요청 폼 (`gym_requests` 테이블 + 진입 CTA 2곳)
+- [x] 회원권 관리 (4종 enum, CRUD, 다회권 차감)
 - [ ] 공유 카드 편집 (PNG 캡처 + 시스템 share sheet)
-- [ ] 회원권 관리 (`memberships` 테이블 있음, UI 없음)
 - [ ] (prebuild) 카카오 로그인
 - [ ] V그레이드 깊이 (월별 추이, 개인 max V, heatmap) — v1.1
 - [ ] 친구/팔로우/피드 — v1.1 (스키마 준비됨)
