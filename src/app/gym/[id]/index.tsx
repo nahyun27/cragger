@@ -225,65 +225,101 @@ function ColorStatRow({ stat }: { stat: ColorStat }) {
   const label = resolveColorLabel(stat.color);
   const hasEnoughVotes = stat.vote_count >= COLOR_VOTE_THRESHOLD;
   const needsBorder = stat.color.toLowerCase() === 'white';
+  // V0..V8+ → 0..8.5 numeric scale. Spec uses V8+ as the right edge of the track.
+  const fillPct =
+    stat.avg_v_grade != null ? Math.min(100, Math.max(2, (stat.avg_v_grade / 8.5) * 100)) : 0;
 
   return (
-    <View className="flex-row items-center justify-between bg-background-secondary p-3.5 rounded-2xl border border-border-subtle">
-      <View className="flex-row items-center gap-3">
-        {/* Color pill badge */}
+    <View
+      className="flex-row items-center gap-3 p-3 rounded-2xl bg-background-secondary border border-border-subtle"
+      style={!hasEnoughVotes && { opacity: 0.65 }}
+    >
+      {/* Color pill (left) */}
+      <View
+        className="flex-row items-center gap-1.5 px-3 py-1.5 rounded-full border"
+        style={{
+          backgroundColor: hex + '15',
+          borderColor: hex,
+          flexShrink: 0,
+        }}
+      >
         <View
-          className="px-3 py-1.5 rounded-full border flex-row items-center gap-1.5"
+          className="w-2.5 h-2.5 rounded-full"
           style={{
-            backgroundColor: hex + '15', // 8% opacity background
-            borderColor: hex,
+            backgroundColor: hex,
+            ...(needsBorder ? { borderWidth: 1, borderColor: '#D4D4D8' } : null),
           }}
+        />
+        <Text
+          className="text-xs font-bold"
+          style={{ color: needsBorder ? '#1e293b' : hex }}
         >
-          <View
-            className="w-3 h-3 rounded-full"
-            style={{
-              backgroundColor: hex,
-              ...(needsBorder ? { borderWidth: 1, borderColor: '#D4D4D8' } : null),
-            }}
-          />
-          <Text
-            className="text-xs font-bold"
-            style={{ color: needsBorder ? '#1e293b' : hex }}
-          >
-            {label}
-          </Text>
+          {label}
+        </Text>
+      </View>
+
+      {/* Track with scale labels + knob (middle, grows) */}
+      <View className="flex-1 gap-1.5">
+        <View className="flex-row justify-between">
+          {['V0', 'V2', 'V4', 'V6', 'V8+'].map((g) => (
+            <Text
+              key={g}
+              className="text-text-muted"
+              style={{ fontSize: 9, fontWeight: '500', fontFamily: 'Menlo' }}
+            >
+              {g}
+            </Text>
+          ))}
+        </View>
+        <View className="h-1.5 bg-background-tertiary rounded-full relative">
+          {hasEnoughVotes && stat.avg_v_grade != null && (
+            <>
+              <View
+                className="absolute left-0 top-0 h-full bg-brand-primary rounded-full"
+                style={{ width: `${fillPct}%` }}
+              />
+              <View
+                className="absolute w-3.5 h-3.5 rounded-full bg-brand-primary border-2 border-white"
+                style={{
+                  left: `${fillPct}%`,
+                  top: -4,
+                  marginLeft: -7,
+                  shadowColor: '#000',
+                  shadowOpacity: 0.2,
+                  shadowRadius: 3,
+                  shadowOffset: { width: 0, height: 1 },
+                  elevation: 2,
+                }}
+              />
+            </>
+          )}
         </View>
       </View>
 
-      {/* Difficulty track/stat */}
-      <View className="flex-1 items-end pr-1">
-        {hasEnoughVotes && stat.avg_v_grade !== null ? (
-          <View className="items-end">
-            <Text className="text-text-primary text-sm font-bold">
+      {/* Average + vote count (right) */}
+      <View className="items-end" style={{ minWidth: 70, flexShrink: 0 }}>
+        {hasEnoughVotes && stat.avg_v_grade_label ? (
+          <>
+            <Text className="text-text-primary text-xs font-extrabold">
               평균 {stat.avg_v_grade_label}
             </Text>
-            <View className="flex-row items-center gap-1.5 mt-1">
-              {/* Visual gauge track */}
-              <View className="w-24 h-1.5 bg-background-tertiary rounded-full overflow-hidden">
-                <View
-                  className="h-full bg-brand-primary rounded-full"
-                  style={{
-                    width: `${Math.min(100, Math.max(10, (stat.avg_v_grade / 10) * 100))}%`,
-                  }}
-                />
-              </View>
-              <Text className="text-text-tertiary text-xs">
-                {stat.vote_count}표
-              </Text>
-            </View>
-          </View>
+            <Text
+              className="text-text-tertiary mt-0.5"
+              style={{ fontSize: 10, fontWeight: '600' }}
+            >
+              {stat.vote_count}표
+            </Text>
+          </>
         ) : (
-          <View className="items-end">
-            <Text className="text-text-tertiary text-xs">
-              데이터 모으는 중
+          <>
+            <Text className="text-text-muted text-xs font-semibold">데이터</Text>
+            <Text
+              className="text-text-muted mt-0.5"
+              style={{ fontSize: 10, fontWeight: '600' }}
+            >
+              {stat.vote_count}표 · {COLOR_VOTE_THRESHOLD}표 필요
             </Text>
-            <Text className="text-text-tertiary text-[10px] mt-0.5">
-              ({stat.vote_count}표 투표됨)
-            </Text>
-          </View>
+          </>
         )}
       </View>
     </View>

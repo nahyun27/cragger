@@ -60,7 +60,7 @@ function ResultButton({
     <Pressable
       onPress={onPress}
       disabled={isOff}
-      className={`flex-1 p-3 rounded-md items-center ${
+      className={`flex-1 py-3.5 rounded-[10px] items-center active:opacity-85 ${
         isOff ? 'bg-background-tertiary' : palette.bg
       }`}
     >
@@ -68,7 +68,7 @@ function ResultButton({
         <ActivityIndicator color="white" />
       ) : (
         <Text
-          className={`font-semibold ${
+          className={`text-base font-bold ${
             isOff ? 'text-text-muted' : palette.text
           }`}
         >
