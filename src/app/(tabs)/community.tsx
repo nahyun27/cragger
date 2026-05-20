@@ -268,9 +268,6 @@ function PostCard({
         </View>
       )}
 
-      {/* Divider */}
-      <View style={s.cardDivider} />
-
       {/* Footer Metrics */}
       <View style={s.cardFooter}>
         <View style={s.metricsRow}>
@@ -280,18 +277,21 @@ function PostCard({
               if (toggle.isPending) return;
               toggle.mutate({ postId: post.id, currentlyLiked: liked });
             }}
-            style={({ pressed }) => [s.metricBtn, { opacity: pressed ? 0.6 : 1 }]}
             hitSlop={8}
+            style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
           >
-            <Feather name="heart" size={16} color={liked ? '#ef4444' : '#94a3b8'} />
-            <Text style={[s.metricCountText, liked && s.metricCountTextLiked]}>
-              {post.like_count}
-            </Text>
+            <View style={s.metricBtn}>
+              <Feather name="heart" size={16} color={liked ? '#ef4444' : '#94a3b8'} />
+              <Text
+                style={[s.metricCountText, liked && s.metricCountTextLiked]}
+                numberOfLines={1}
+              >{post.like_count}</Text>
+            </View>
           </Pressable>
 
           <View style={s.metricBtn}>
             <Feather name="message-circle" size={16} color="#94a3b8" />
-            <Text style={s.metricCountText}>{post.comment_count}</Text>
+            <Text style={s.metricCountText} numberOfLines={1}>{post.comment_count}</Text>
           </View>
         </View>
 
@@ -565,15 +565,11 @@ const s = StyleSheet.create({
     fontWeight: '700',
     color: '#475569',
   },
-  cardDivider: {
-    height: 1,
-    backgroundColor: '#f1f5f9',
-    marginVertical: 12,
-  },
   cardFooter: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    marginTop: 4,
   },
   metricsRow: {
     flexDirection: 'row',
@@ -583,7 +579,8 @@ const s = StyleSheet.create({
   metricBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
+    gap: 6,
+    flexShrink: 0,
   },
   metricCountText: {
     fontSize: 12,
