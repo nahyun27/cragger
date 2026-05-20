@@ -1,3 +1,4 @@
+import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useMemo, useState } from 'react';
 import {
@@ -10,16 +11,15 @@ import {
   Text,
   TextInput,
   View,
+  useColorScheme,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { GymPickerModal } from '@/components/session/gym-picker-modal';
-import { Chip } from '@/components/ui/chip';
 import { Section } from '@/components/ui/section';
 import { useGyms } from '@/hooks/use-gyms';
 import {
   addMonthsISO,
-  todayISO,
   useCreateMembership,
   type MembershipType,
 } from '@/hooks/use-memberships';
@@ -31,6 +31,7 @@ const START_CHIPS: { value: StartDateChoice; label: string }[] = [
   { value: 'yesterday', label: '어제' },
   { value: 'day_before', label: '그저께' },
 ];
+
 function startDateForChoice(choice: StartDateChoice): string {
   const d = new Date();
   if (choice === 'yesterday') d.setDate(d.getDate() - 1);
@@ -45,16 +46,12 @@ const DURATION_CHIPS: { months: number; label: string }[] = [
   { months: 12, label: '12개월' },
 ];
 
-const TYPE_OPTIONS: { value: MembershipType; label: string; hint: string }[] = [
-  { value: 'monthly', label: '월권', hint: '기간 만료식' },
-  { value: 'period', label: '기간권', hint: '명시적 시작/종료' },
-  { value: 'passes', label: '다회권', hint: 'N회 차감' },
-  { value: 'single', label: '1일권', hint: '한 번 방문' },
-];
-
 export default function NewMembershipScreen() {
   const router = useRouter();
   const createMembership = useCreateMembership();
+  const colorScheme = useColorScheme();
+  const isDark = colorScheme === 'dark';
+  const iconColor = isDark ? '#fafafa' : '#18181b';
 
   const [startChoice, setStartChoice] = useState<StartDateChoice>('today');
   const [gymId, setGymId] = useState<string | null>(null);
@@ -65,6 +62,11 @@ export default function NewMembershipScreen() {
   const [usedPasses, setUsedPasses] = useState<string>('0');
   const [price, setPrice] = useState<string>('');
   const [notes, setNotes] = useState<string>('');
+
+  const [isTotalFocused, setIsTotalFocused] = useState(false);
+  const [isUsedFocused, setIsUsedFocused] = useState(false);
+  const [isPriceFocused, setIsPriceFocused] = useState(false);
+  const [isNotesFocused, setIsNotesFocused] = useState(false);
 
   const { data: recentGyms } = useRecentGyms();
   const { data: allGyms } = useGyms();
@@ -119,181 +121,424 @@ export default function NewMembershipScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-background-primary" edges={['top', 'bottom']}>
-      <View className="flex-row items-center px-2 py-2 border-b border-border-subtle">
-        <Pressable onPress={() => router.back()} className="p-2" hitSlop={8}>
-          <Text className="text-text-primary text-2xl">←</Text>
+      {/* Header */}
+      <View className="flex-row items-center px-4 py-3 border-b border-border-subtle bg-background-primary">
+        <Pressable
+          onPress={() => router.back()}
+          className="p-1.5 rounded-lg active:bg-background-secondary"
+          hitSlop={8}
+        >
+          <Feather name="arrow-left" size={24} color={iconColor} />
         </Pressable>
-        <Text className="flex-1 text-center text-text-primary text-base font-semibold">
+        <Text className="flex-1 text-center text-text-primary text-lg font-bold mr-8">
           회원권 추가
         </Text>
-        <View className="w-10" />
       </View>
 
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         className="flex-1"
       >
-        <ScrollView contentContainerClassName="p-4 gap-6">
+        <ScrollView contentContainerClassName="p-5 gap-6">
+          {/* Gym Section */}
           <Section title="암장" required>
-            <View className="flex-row flex-wrap gap-2">
-              <Chip label="🔍 장소 검색" selected={false} onPress={() => setShowGymModal(true)} />
-              {(recentGyms ?? []).map((g) => (
-                <Chip
-                  key={g.id}
-                  label={`${g.name}${g.branch ? ` ${g.branch}` : ''}`}
-                  selected={gymId === g.id}
-                  onPress={() => setGymId(g.id)}
-                />
-              ))}
-            </View>
-            {selectedGym && (
-              <View className="mt-2 px-3 py-2 rounded-md bg-background-secondary">
-                <Text className="text-text-primary text-sm">
-                  선택: {selectedGym.name}
-                  {selectedGym.branch ? ` ${selectedGym.branch}` : ''}
+            <Pressable
+              onPress={() => setShowGymModal(true)}
+              className="flex-row items-center justify-between border border-border-subtle bg-background-secondary rounded-xl py-3 px-4 active:bg-background-tertiary"
+            >
+              <View className="flex-row items-center gap-2">
+                <Feather name="search" size={16} color="#71717a" />
+                <Text
+                  className={`text-base ${
+                    selectedGym ? 'text-text-primary font-semibold' : 'text-text-muted'
+                  }`}
+                >
+                  {selectedGym
+                    ? `${selectedGym.name}${selectedGym.branch ? ` ${selectedGym.branch}` : ''}`
+                    : '암장을 선택해주세요'}
                 </Text>
+              </View>
+              <Feather name="chevron-down" size={16} color="#71717a" />
+            </Pressable>
+
+            {recentGyms && recentGyms.length > 0 && (
+              <View className="mt-3 gap-1.5">
+                <Text className="text-text-tertiary text-xs font-semibold px-0.5">
+                  최근 방문한 암장
+                </Text>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerClassName="gap-2"
+                >
+                  {recentGyms.map((g) => {
+                    const isSelected = gymId === g.id;
+                    return (
+                      <Pressable
+                        key={g.id}
+                        onPress={() => setGymId(g.id)}
+                        className={`px-3.5 py-2 rounded-full border ${
+                          isSelected
+                            ? 'border-brand-primary bg-brand-primary/10'
+                            : 'border-border-subtle bg-background-primary'
+                        }`}
+                      >
+                        <Text
+                          className={`text-xs font-semibold ${
+                            isSelected ? 'text-brand-primary' : 'text-text-secondary'
+                          }`}
+                        >
+                          {g.name}
+                          {g.branch ? ` ${g.branch}` : ''}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </ScrollView>
               </View>
             )}
           </Section>
 
+          {/* Membership Type Section (2x2 Grid) */}
           <Section title="종류" required>
-            <View className="flex-row flex-wrap gap-2">
-              {TYPE_OPTIONS.map(({ value, label }) => (
-                <Chip
-                  key={value}
-                  label={label}
-                  selected={type === value}
-                  onPress={() => setType(value)}
-                />
-              ))}
+            <View className="flex-row gap-3">
+              <View className="flex-1 gap-3">
+                {/* Monthly */}
+                <Pressable
+                  onPress={() => setType('monthly')}
+                  className={`p-4 rounded-2xl border gap-1.5 justify-center ${
+                    type === 'monthly'
+                      ? 'border-brand-primary bg-brand-primary/5'
+                      : 'border-border-subtle bg-background-primary'
+                  }`}
+                >
+                  <View className="flex-row items-center justify-between">
+                    <Text
+                      className={`text-base font-bold ${
+                        type === 'monthly' ? 'text-brand-primary' : 'text-text-primary'
+                      }`}
+                    >
+                      📅 월 회원권
+                    </Text>
+                    {type === 'monthly' ? (
+                      <View className="w-4 h-4 rounded-full bg-brand-primary items-center justify-center">
+                        <Feather name="check" size={10} color="white" />
+                      </View>
+                    ) : (
+                      <View className="w-4 h-4 rounded-full border border-border-default bg-background-primary" />
+                    )}
+                  </View>
+                  <Text className="text-text-tertiary text-xs">정기 결제식 이용권</Text>
+                </Pressable>
+
+                {/* Passes */}
+                <Pressable
+                  onPress={() => setType('passes')}
+                  className={`p-4 rounded-2xl border gap-1.5 justify-center ${
+                    type === 'passes'
+                      ? 'border-brand-primary bg-brand-primary/5'
+                      : 'border-border-subtle bg-background-primary'
+                  }`}
+                >
+                  <View className="flex-row items-center justify-between">
+                    <Text
+                      className={`text-base font-bold ${
+                        type === 'passes' ? 'text-brand-primary' : 'text-text-primary'
+                      }`}
+                    >
+                      🔢 다회권
+                    </Text>
+                    {type === 'passes' ? (
+                      <View className="w-4 h-4 rounded-full bg-brand-primary items-center justify-center">
+                        <Feather name="check" size={10} color="white" />
+                      </View>
+                    ) : (
+                      <View className="w-4 h-4 rounded-full border border-border-default bg-background-primary" />
+                    )}
+                  </View>
+                  <Text className="text-text-tertiary text-xs">횟수 차감 이용권</Text>
+                </Pressable>
+              </View>
+
+              <View className="flex-1 gap-3">
+                {/* Period */}
+                <Pressable
+                  onPress={() => setType('period')}
+                  className={`p-4 rounded-2xl border gap-1.5 justify-center ${
+                    type === 'period'
+                      ? 'border-brand-primary bg-brand-primary/5'
+                      : 'border-border-subtle bg-background-primary'
+                  }`}
+                >
+                  <View className="flex-row items-center justify-between">
+                    <Text
+                      className={`text-base font-bold ${
+                        type === 'period' ? 'text-brand-primary' : 'text-text-primary'
+                      }`}
+                    >
+                      ⏱️ 기간권
+                    </Text>
+                    {type === 'period' ? (
+                      <View className="w-4 h-4 rounded-full bg-brand-primary items-center justify-center">
+                        <Feather name="check" size={10} color="white" />
+                      </View>
+                    ) : (
+                      <View className="w-4 h-4 rounded-full border border-border-default bg-background-primary" />
+                    )}
+                  </View>
+                  <Text className="text-text-tertiary text-xs">일정 기간 지정형</Text>
+                </Pressable>
+
+                {/* Single */}
+                <Pressable
+                  onPress={() => setType('single')}
+                  className={`p-4 rounded-2xl border gap-1.5 justify-center ${
+                    type === 'single'
+                      ? 'border-brand-primary bg-brand-primary/5'
+                      : 'border-border-subtle bg-background-primary'
+                  }`}
+                >
+                  <View className="flex-row items-center justify-between">
+                    <Text
+                      className={`text-base font-bold ${
+                        type === 'single' ? 'text-brand-primary' : 'text-text-primary'
+                      }`}
+                    >
+                      🎟️ 1일권
+                    </Text>
+                    {type === 'single' ? (
+                      <View className="w-4 h-4 rounded-full bg-brand-primary items-center justify-center">
+                        <Feather name="check" size={10} color="white" />
+                      </View>
+                    ) : (
+                      <View className="w-4 h-4 rounded-full border border-border-default bg-background-primary" />
+                    )}
+                  </View>
+                  <Text className="text-text-tertiary text-xs">단일 방문용 이용권</Text>
+                </Pressable>
+              </View>
             </View>
-            <Text className="text-text-tertiary text-xs">
-              {TYPE_OPTIONS.find((t) => t.value === type)?.hint}
-            </Text>
           </Section>
 
+          {/* Start Date Section */}
           <Section title="시작일" required>
             <View className="flex-row gap-2">
-              {START_CHIPS.map(({ value, label }) => (
-                <Chip
-                  key={value}
-                  label={label}
-                  selected={startChoice === value}
-                  onPress={() => setStartChoice(value)}
-                />
-              ))}
-              <Chip
-                label="더 이전"
-                selected={false}
-                onPress={() =>
-                  Alert.alert('준비 중', '그저께 이전 시작일은 v1.1에서 추가됩니다.')
-                }
-              />
+              {START_CHIPS.map(({ value, label }) => {
+                const isSelected = startChoice === value;
+                return (
+                  <Pressable
+                    key={value}
+                    onPress={() => setStartChoice(value)}
+                    className={`flex-1 py-2.5 rounded-xl border items-center justify-center ${
+                      isSelected
+                        ? 'border-brand-primary bg-brand-primary/10'
+                        : 'border-border-subtle bg-background-primary'
+                    }`}
+                  >
+                    <Text
+                      className={`text-sm font-semibold ${
+                        isSelected ? 'text-brand-primary' : 'text-text-secondary'
+                      }`}
+                    >
+                      {label}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+              <Pressable
+                onPress={() => Alert.alert('준비 중', '그저께 이전 시작일은 v1.1에서 추가됩니다.')}
+                className="px-4 py-2.5 rounded-xl border border-border-subtle bg-background-primary items-center justify-center"
+              >
+                <Text className="text-text-muted text-sm font-semibold">더 이전</Text>
+              </Pressable>
             </View>
-            <Text className="text-text-tertiary text-xs">{startDate}</Text>
+
+            <View className="flex-row items-center gap-1.5 mt-1 px-1">
+              <Feather name="calendar" size={12} color="#71717a" />
+              <Text className="text-text-tertiary text-xs font-semibold">
+                지정일: {startDate}
+              </Text>
+            </View>
           </Section>
 
+          {/* Duration Section */}
           {(type === 'monthly' || type === 'period') && (
             <Section title="기간" required>
-              <View className="flex-row flex-wrap gap-2">
-                {DURATION_CHIPS.map(({ months, label }) => (
-                  <Chip
-                    key={months}
-                    label={label}
-                    selected={durationMonths === months}
-                    onPress={() => setDurationMonths(months)}
-                  />
-                ))}
+              <View className="flex-row gap-2">
+                {DURATION_CHIPS.map(({ months, label }) => {
+                  const isSelected = durationMonths === months;
+                  return (
+                    <Pressable
+                      key={months}
+                      onPress={() => setDurationMonths(months)}
+                      className={`flex-1 py-2.5 rounded-xl border items-center justify-center ${
+                        isSelected
+                          ? 'border-brand-primary bg-brand-primary/10'
+                          : 'border-border-subtle bg-background-primary'
+                      }`}
+                    >
+                      <Text
+                        className={`text-sm font-semibold ${
+                          isSelected ? 'text-brand-primary' : 'text-text-secondary'
+                        }`}
+                      >
+                        {label}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
               </View>
-              <Text className="text-text-tertiary text-xs">
-                종료일: {computedEndDate}
-              </Text>
+
+              <View className="mt-1 flex-row items-center gap-1.5 bg-brand-primary/5 p-3 rounded-xl border border-brand-primary/10">
+                <Feather name="info" size={14} color="#0d9488" />
+                <Text className="text-brand-primary text-xs font-semibold">
+                  선택 시 종료일: {computedEndDate}
+                </Text>
+              </View>
             </Section>
           )}
 
+          {/* Passes Inputs (Horizontal 2 Columns) */}
           {type === 'passes' && (
-            <>
-              <Section title="총 횟수" required>
-                <TextInput
-                  placeholder="10"
-                  placeholderTextColor="#9CA3AF"
-                  value={totalPasses}
-                  onChangeText={(t) => setTotalPasses(t.replace(/[^\d]/g, '').slice(0, 4))}
-                  keyboardType="number-pad"
-                  className="border border-border-default rounded-md px-3 py-2.5 text-text-primary text-base"
-                />
-              </Section>
-              <Section title="이미 사용한 횟수">
-                <TextInput
-                  placeholder="0"
-                  placeholderTextColor="#9CA3AF"
-                  value={usedPasses}
-                  onChangeText={(t) => setUsedPasses(t.replace(/[^\d]/g, '').slice(0, 4))}
-                  keyboardType="number-pad"
-                  className="border border-border-default rounded-md px-3 py-2.5 text-text-primary text-base"
-                />
-              </Section>
-            </>
+            <View className="flex-row gap-4">
+              <View className="flex-1">
+                <Section title="총 횟수" required>
+                  <TextInput
+                    placeholder="10"
+                    placeholderTextColor="#a1a1aa"
+                    value={totalPasses}
+                    onChangeText={(t) => setTotalPasses(t.replace(/[^\d]/g, '').slice(0, 4))}
+                    keyboardType="number-pad"
+                    onFocus={() => setIsTotalFocused(true)}
+                    onBlur={() => setIsTotalFocused(false)}
+                    className={`border rounded-xl px-3.5 py-2.5 text-text-primary text-base ${
+                      isTotalFocused
+                        ? 'border-brand-primary bg-background-primary'
+                        : 'border-border-subtle bg-background-secondary'
+                    }`}
+                  />
+                </Section>
+              </View>
+              <View className="flex-1">
+                <Section title="이미 사용한 횟수">
+                  <TextInput
+                    placeholder="0"
+                    placeholderTextColor="#a1a1aa"
+                    value={usedPasses}
+                    onChangeText={(t) => setUsedPasses(t.replace(/[^\d]/g, '').slice(0, 4))}
+                    keyboardType="number-pad"
+                    onFocus={() => setIsUsedFocused(true)}
+                    onBlur={() => setIsUsedFocused(false)}
+                    className={`border rounded-xl px-3.5 py-2.5 text-text-primary text-base ${
+                      isUsedFocused
+                        ? 'border-brand-primary bg-background-primary'
+                        : 'border-border-subtle bg-background-secondary'
+                    }`}
+                  />
+                </Section>
+              </View>
+            </View>
           )}
 
+          {/* Price Section */}
           <Section title="가격 (원)">
-            <TextInput
-              placeholder="선택"
-              placeholderTextColor="#9CA3AF"
-              value={price}
-              onChangeText={(t) => setPrice(t.replace(/[^\d]/g, '').slice(0, 8))}
-              keyboardType="number-pad"
-              className="border border-border-default rounded-md px-3 py-2.5 text-text-primary text-base"
-            />
+            <View
+              className={`flex-row items-center border rounded-xl px-3.5 py-1.5 ${
+                isPriceFocused
+                  ? 'border-brand-primary bg-background-primary'
+                  : 'border-border-subtle bg-background-secondary'
+              }`}
+            >
+              <Text className="text-text-muted text-base mr-1.5">₩</Text>
+              <TextInput
+                placeholder="선택 사항"
+                placeholderTextColor="#a1a1aa"
+                value={price}
+                onChangeText={(t) => setPrice(t.replace(/[^\d]/g, '').slice(0, 8))}
+                keyboardType="number-pad"
+                onFocus={() => setIsPriceFocused(true)}
+                onBlur={() => setIsPriceFocused(false)}
+                className="flex-1 text-text-primary text-base py-1 outline-none"
+              />
+            </View>
           </Section>
 
+          {/* Notes Section */}
           <Section title="메모">
-            <TextInput
-              placeholder="선택 (최대 200자)"
-              placeholderTextColor="#9CA3AF"
-              value={notes}
-              onChangeText={(t) => setNotes(t.slice(0, 200))}
-              maxLength={200}
-              multiline
-              className="border border-border-default rounded-md px-3 py-2.5 text-text-primary text-base min-h-[60px]"
-              style={{ textAlignVertical: 'top' }}
-            />
+            <View
+              className={`border rounded-xl px-3.5 py-2.5 min-h-[80px] relative ${
+                isNotesFocused
+                  ? 'border-brand-primary bg-background-primary'
+                  : 'border-border-subtle bg-background-secondary'
+              }`}
+            >
+              <TextInput
+                placeholder="메모를 입력해 주세요 (선택 사항)"
+                placeholderTextColor="#a1a1aa"
+                value={notes}
+                onChangeText={(t) => setNotes(t.slice(0, 200))}
+                maxLength={200}
+                multiline
+                onFocus={() => setIsNotesFocused(true)}
+                onBlur={() => setIsNotesFocused(false)}
+                className="text-text-primary text-base outline-none w-full"
+                style={{ textAlignVertical: 'top', height: 60 }}
+              />
+              <Text className="absolute right-3.5 bottom-2.5 text-text-muted text-[10px] font-semibold">
+                {notes.length} / 200
+              </Text>
+            </View>
           </Section>
         </ScrollView>
 
-        <View className="px-4 pt-2 pb-2 border-t border-border-subtle">
+        {/* Save Button */}
+        <View className="px-5 pt-3 pb-6 border-t border-border-subtle bg-background-primary">
           <Pressable
             onPress={handleSubmit}
             disabled={!canSubmit || createMembership.isPending}
-            className={`rounded-md p-4 items-center ${
+            style={({ pressed }) => [
+              {
+                transform: [{ scale: pressed && canSubmit ? 0.98 : 1 }],
+                opacity: pressed && canSubmit ? 0.9 : 1,
+              },
+            ]}
+            className={`rounded-xl p-4 items-center justify-center flex-row gap-2 elevation-sm ${
               !canSubmit ? 'bg-background-tertiary' : 'bg-brand-primary'
             }`}
           >
             {createMembership.isPending ? (
               <ActivityIndicator color="white" />
             ) : (
-              <Text
-                className={`font-semibold ${
-                  !canSubmit ? 'text-text-muted' : 'text-background-primary'
-                }`}
-              >
-                저장
-              </Text>
+              <>
+                <Feather
+                  name="check-circle"
+                  size={18}
+                  color={!canSubmit ? '#a1a1aa' : '#ffffff'}
+                />
+                <Text
+                  className={`font-bold text-base ${
+                    !canSubmit ? 'text-text-muted' : 'text-background-primary'
+                  }`}
+                >
+                  저장하기
+                </Text>
+              </>
             )}
           </Pressable>
         </View>
       </KeyboardAvoidingView>
 
-      <GymPickerModal
-        visible={showGymModal}
-        gyms={allGyms ?? []}
-        selectedId={gymId}
-        onSelect={(id) => {
-          setGymId(id);
-          setShowGymModal(false);
-        }}
-        onClose={() => setShowGymModal(false)}
-      />
-    </SafeAreaView>
-  );
+    <GymPickerModal
+      visible={showGymModal}
+      gyms={allGyms ?? []}
+      selectedId={gymId}
+      onSelect={(id) => {
+        setGymId(id);
+        setShowGymModal(false);
+      }}
+      onClose={() => setShowGymModal(false)}
+    />
+  </SafeAreaView>
+);
 }
+
