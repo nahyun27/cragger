@@ -9,6 +9,10 @@ export const CLIMB_COLOR_HEX: Record<string, string> = {
   black: '#1a1a1a',
   white: '#f7f7f7',
   gray: '#6B7280',
+  brown: '#92400E',
+  navy: '#1E40AF',
+  sky: '#0EA5E9',
+  lime: '#84CC16',
 };
 
 export const CLIMB_COLOR_LABEL: Record<string, string> = {
@@ -22,6 +26,10 @@ export const CLIMB_COLOR_LABEL: Record<string, string> = {
   black: '검정',
   white: '흰색',
   gray: '회색',
+  brown: '갈색',
+  navy: '남색',
+  sky: '하늘',
+  lime: '연두',
 };
 
 export const COLOR_VOTE_THRESHOLD = 10;

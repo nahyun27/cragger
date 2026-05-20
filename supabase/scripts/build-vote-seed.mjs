@@ -147,7 +147,7 @@ const COLOR_MAP = {
   연두: 'lime',
 };
 
-// 앱이 실제로 렌더링할 수 있는 색깔
+// 앱이 실제로 렌더링할 수 있는 색깔 — climb-colors.ts 와 동기 유지
 const SUPPORTED_COLORS = new Set([
   'red',
   'yellow',
@@ -159,6 +159,10 @@ const SUPPORTED_COLORS = new Set([
   'black',
   'white',
   'gray',
+  'brown',
+  'navy',
+  'sky',
+  'lime',
 ]);
 
 function normalizeColor(raw) {
