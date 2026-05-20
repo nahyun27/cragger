@@ -1,3 +1,4 @@
+import * as ImagePicker from 'expo-image-picker';
 import * as MediaLibrary from 'expo-media-library';
 import * as Sharing from 'expo-sharing';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -21,6 +22,28 @@ export default function SessionShareScreen() {
   const { data, isLoading, error } = useSessionDetail(id);
   const cardRef = useRef<View>(null);
   const [busy, setBusy] = useState<null | 'save' | 'share'>(null);
+  const [bgImageUri, setBgImageUri] = useState<string | null>(null);
+
+  async function pickBackgroundImage() {
+    try {
+      const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!perm.granted) {
+        Alert.alert('권한 필요', '사진을 선택하려면 갤러리 접근 권한이 필요해요.');
+        return;
+      }
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+      if (!result.canceled && result.assets[0]) {
+        setBgImageUri(result.assets[0].uri);
+      }
+    } catch (e) {
+      Alert.alert('사진 선택 실패', e instanceof Error ? e.message : '오류');
+    }
+  }
 
   async function capture(): Promise<string> {
     // captureRef가 width/height 옵션으로 출력 해상도 보강 가능.
@@ -129,11 +152,37 @@ export default function SessionShareScreen() {
             elevation: 4,
           }}
         >
-          <SessionShareCard ref={cardRef} session={data} size={340} />
+          <SessionShareCard
+            ref={cardRef}
+            session={data}
+            size={340}
+            backgroundImageUri={bgImageUri}
+          />
         </View>
         <Text className="text-text-tertiary text-xs mt-4">
           저장 / 공유 시 1080×1080 PNG로 출력됩니다
         </Text>
+
+        {/* Background image picker */}
+        <View className="flex-row items-center gap-2 mt-3">
+          <Pressable
+            onPress={pickBackgroundImage}
+            className="px-4 py-2 rounded-md border border-border-default bg-background-primary active:opacity-60"
+          >
+            <Text className="text-text-primary text-sm font-medium">
+              {bgImageUri ? '🖼️ 배경 변경' : '🖼️ 배경 사진 추가'}
+            </Text>
+          </Pressable>
+          {bgImageUri && (
+            <Pressable
+              onPress={() => setBgImageUri(null)}
+              className="px-3 py-2 rounded-md border border-border-default bg-background-primary active:opacity-60"
+              hitSlop={4}
+            >
+              <Text className="text-text-tertiary text-sm">제거</Text>
+            </Pressable>
+          )}
+        </View>
       </View>
 
       {/* Actions */}

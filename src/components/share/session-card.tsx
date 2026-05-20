@@ -1,5 +1,5 @@
 import React, { forwardRef } from 'react';
-import { Text, View } from 'react-native';
+import { Image, Text, View } from 'react-native';
 
 import { resolveColorHex } from '@/constants/climb-colors';
 import type { SessionDetail } from '@/hooks/use-session';
@@ -32,12 +32,20 @@ type Props = {
   // 카드 sizing: 화면 미리보기는 작게(360), 캡처 직전 1080으로 키운 hidden 인스턴스
   // 따로 렌더 — captureRef가 width/height 인자로 스케일 가능. 일단 size로 흡수.
   size?: number;
+  // 배경 이미지 URI (사진 picker로 선택한 로컬 file://). 카드 뒤에 깔리고
+  // opacity로 텍스트 가독성 확보.
+  backgroundImageUri?: string | null;
+  // 배경 이미지 투명도 (0~1). 기본 0.4 — 텍스트/점 가독성 유지.
+  backgroundOpacity?: number;
 };
 
 // 1:1 정사각형 공유 카드. captureRef 대상.
 // 완등(send)만 점으로 표시. project/fall 은 자랑용에 부적합이라 제외.
 export const SessionShareCard = forwardRef<View, Props>(
-  ({ session, size = 360 }, ref) => {
+  (
+    { session, size = 360, backgroundImageUri, backgroundOpacity = 0.4 },
+    ref,
+  ) => {
     const sends = session.color_summary
       .filter((c) => c.sends > 0)
       .sort((a, b) => b.sends - a.sends);
@@ -67,8 +75,27 @@ export const SessionShareCard = forwardRef<View, Props>(
           backgroundColor: '#ffffff',
           padding: size * 0.07,
           justifyContent: 'space-between',
+          overflow: 'hidden',
         }}
       >
+        {/* Background image (semi-transparent) */}
+        {backgroundImageUri && (
+          <Image
+            source={{ uri: backgroundImageUri }}
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              width: size,
+              height: size,
+              opacity: backgroundOpacity,
+            }}
+            resizeMode="cover"
+          />
+        )}
+
         {/* Header */}
         <View>
           <Text
