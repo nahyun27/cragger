@@ -137,10 +137,15 @@ supabase/
 - [x] grade_votes 시드 (Becky 시트 → 15 gym / 100+ votes)
 - [x] 암장 추가 요청 폼 (`gym_requests` 테이블 + 진입 CTA 2곳)
 - [x] 회원권 관리 (4종 enum, CRUD, 다회권 차감)
-- [ ] 공유 카드 편집 (PNG 캡처 + 시스템 share sheet)
+- [x] 세션 공유 카드 (1:1 PNG, 시스템 share sheet, 갤러리 저장)
+- [x] 즐겨찾기 (gym_favorites 토글, 카드/상세 ★)
+- [x] Instagram 핸들 등록 + deep link
+- [x] 최근 색깔 자동추천 + 암장별 필터링 (난이도 추가 토글)
+- [x] 200개 가까운 암장 시드 (UNIQUE name+branch 보호)
 - [ ] (prebuild) 카카오 로그인
 - [ ] V그레이드 깊이 (월별 추이, 개인 max V, heatmap) — v1.1
 - [ ] 친구/팔로우/피드 — v1.1 (스키마 준비됨)
+- [ ] 사진 첨부 / 9:16 스토리 카드 — v1.1
 
 ## 작업 원칙
 
