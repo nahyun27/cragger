@@ -241,6 +241,7 @@ export type CreatePostArgs = {
   title: string | null;
   body: string;
   gymId: string | null;
+  imageUrls?: string[];
 };
 
 export function useCreatePost() {
@@ -260,6 +261,7 @@ export function useCreatePost() {
           title: args.title?.trim() ? args.title.trim() : null,
           body,
           gym_id: args.gymId,
+          image_urls: args.imageUrls ?? [],
         })
         .select('id')
         .single();

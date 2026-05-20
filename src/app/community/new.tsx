@@ -1,8 +1,10 @@
+import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 import React, { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Image,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -24,6 +26,10 @@ import {
 } from '@/hooks/use-community';
 import { useGyms } from '@/hooks/use-gyms';
 import { useRecentGyms } from '@/hooks/use-recent-gyms';
+import { useAuth } from '@/lib/auth-context';
+import { uploadPostImage } from '@/lib/upload-image';
+
+const MAX_IMAGES = 4;
 
 const TYPE_OPTIONS: Exclude<PostType, 'meetup'>[] = ['general', 'question', 'review'];
 
@@ -35,28 +41,75 @@ export default function NewPostScreen() {
   const createPost = useCreatePost();
   const { data: allGyms } = useGyms();
   const { data: recentGyms } = useRecentGyms();
+  const { session: authSession } = useAuth();
 
   const [postType, setPostType] = useState<Exclude<PostType, 'meetup'>>('general');
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
   const [gymId, setGymId] = useState<string | null>(null);
   const [showGymModal, setShowGymModal] = useState(false);
+  const [pickedAssets, setPickedAssets] = useState<ImagePicker.ImagePickerAsset[]>([]);
+  const [uploading, setUploading] = useState(false);
 
   const selectedGym = useMemo(
     () => allGyms?.find((g) => g.id === gymId) ?? null,
     [allGyms, gymId],
   );
 
-  const canSubmit = body.trim().length > 0 && !createPost.isPending;
+  const canSubmit =
+    body.trim().length > 0 && !createPost.isPending && !uploading;
+
+  async function handlePickImages() {
+    const remaining = MAX_IMAGES - pickedAssets.length;
+    if (remaining <= 0) return;
+    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!perm.granted) {
+      Alert.alert('권한 필요', '갤러리 접근을 허용해주세요');
+      return;
+    }
+    const res = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsMultipleSelection: true,
+      selectionLimit: remaining,
+      quality: 0.8,
+      base64: true,
+    });
+    if (res.canceled || !res.assets) return;
+    setPickedAssets((prev) => [...prev, ...res.assets].slice(0, MAX_IMAGES));
+  }
+
+  function removeAssetAt(idx: number) {
+    setPickedAssets((prev) => prev.filter((_, i) => i !== idx));
+  }
 
   async function handleSubmit() {
     if (!canSubmit) return;
+    const userId = authSession?.user.id;
+    if (!userId) {
+      Alert.alert('로그인 필요');
+      return;
+    }
+    let uploadedUrls: string[] = [];
+    if (pickedAssets.length > 0) {
+      setUploading(true);
+      try {
+        uploadedUrls = await Promise.all(
+          pickedAssets.map((a) => uploadPostImage(a, userId)),
+        );
+      } catch (e) {
+        setUploading(false);
+        Alert.alert('업로드 실패', e instanceof Error ? e.message : '알 수 없는 오류');
+        return;
+      }
+      setUploading(false);
+    }
     try {
       const { id } = await createPost.mutateAsync({
         postType,
         title: title.trim() || null,
         body: body.trim(),
         gymId,
+        imageUrls: uploadedUrls,
       });
       router.replace({ pathname: '/community/[id]', params: { id } });
     } catch (e) {
@@ -161,10 +214,38 @@ export default function NewPostScreen() {
           </Section>
 
           <Section title="사진">
-            <View className="flex-row items-center gap-2 px-3 py-3 rounded-md bg-background-secondary border border-border-subtle">
-              <Feather name="image" size={16} color="#a1a1aa" />
-              <Text className="text-text-tertiary text-xs">사진 첨부는 준비 중이에요</Text>
+            <View className="flex-row flex-wrap gap-2">
+              {pickedAssets.map((a, idx) => (
+                <View key={`${a.uri}-${idx}`} className="relative">
+                  <Image
+                    source={{ uri: a.uri }}
+                    className="w-20 h-20 rounded-xl"
+                    resizeMode="cover"
+                  />
+                  <Pressable
+                    onPress={() => removeAssetAt(idx)}
+                    hitSlop={6}
+                    className="absolute -top-1.5 -right-1.5 w-6 h-6 rounded-full bg-background-primary border border-border-default items-center justify-center active:opacity-70"
+                  >
+                    <Feather name="x" size={12} color="#71717a" />
+                  </Pressable>
+                </View>
+              ))}
+              {pickedAssets.length < MAX_IMAGES && (
+                <Pressable
+                  onPress={handlePickImages}
+                  className="w-20 h-20 rounded-xl border border-dashed border-border-default items-center justify-center bg-background-secondary active:opacity-70"
+                >
+                  <Feather name="plus" size={18} color="#71717a" />
+                  <Text className="text-text-tertiary text-[10px] mt-1">
+                    {pickedAssets.length}/{MAX_IMAGES}
+                  </Text>
+                </Pressable>
+              )}
             </View>
+            <Text className="text-text-tertiary text-xs">
+              최대 {MAX_IMAGES}장. JPEG로 압축돼 업로드돼요.
+            </Text>
           </Section>
         </ScrollView>
 
@@ -176,8 +257,13 @@ export default function NewPostScreen() {
               !canSubmit ? 'bg-background-tertiary' : 'bg-brand-primary'
             }`}
           >
-            {createPost.isPending ? (
-              <ActivityIndicator color="white" />
+            {uploading || createPost.isPending ? (
+              <View className="flex-row items-center gap-2">
+                <ActivityIndicator color="white" />
+                <Text className="text-background-primary font-semibold">
+                  {uploading ? '업로드 중…' : '등록 중…'}
+                </Text>
+              </View>
             ) : (
               <Text
                 className={`font-semibold ${
