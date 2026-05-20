@@ -254,13 +254,20 @@ export default function EditMembershipScreen() {
                   }`}
                 >
                   <View className="flex-row items-center justify-between">
-                    <Text
-                      className={`text-base font-bold ${
-                        type === 'monthly' ? 'text-brand-primary' : 'text-text-primary'
-                      }`}
-                    >
-                      📅 월 회원권
-                    </Text>
+                    <View className="flex-row items-center gap-2">
+                      <Feather
+                        name="calendar"
+                        size={18}
+                        color={type === 'monthly' ? '#0d9488' : '#71717a'}
+                      />
+                      <Text
+                        className={`text-base font-bold ${
+                          type === 'monthly' ? 'text-brand-primary' : 'text-text-primary'
+                        }`}
+                      >
+                        월 회원권
+                      </Text>
+                    </View>
                     {type === 'monthly' ? (
                       <View className="w-4 h-4 rounded-full bg-brand-primary items-center justify-center">
                         <Feather name="check" size={10} color="white" />
@@ -282,13 +289,20 @@ export default function EditMembershipScreen() {
                   }`}
                 >
                   <View className="flex-row items-center justify-between">
-                    <Text
-                      className={`text-base font-bold ${
-                        type === 'passes' ? 'text-brand-primary' : 'text-text-primary'
-                      }`}
-                    >
-                      🔢 다회권
-                    </Text>
+                    <View className="flex-row items-center gap-2">
+                      <Feather
+                        name="layers"
+                        size={18}
+                        color={type === 'passes' ? '#0d9488' : '#71717a'}
+                      />
+                      <Text
+                        className={`text-base font-bold ${
+                          type === 'passes' ? 'text-brand-primary' : 'text-text-primary'
+                        }`}
+                      >
+                        다회권
+                      </Text>
+                    </View>
                     {type === 'passes' ? (
                       <View className="w-4 h-4 rounded-full bg-brand-primary items-center justify-center">
                         <Feather name="check" size={10} color="white" />
@@ -312,13 +326,20 @@ export default function EditMembershipScreen() {
                   }`}
                 >
                   <View className="flex-row items-center justify-between">
-                    <Text
-                      className={`text-base font-bold ${
-                        type === 'period' ? 'text-brand-primary' : 'text-text-primary'
-                      }`}
-                    >
-                      ⏱️ 기간권
-                    </Text>
+                    <View className="flex-row items-center gap-2">
+                      <Feather
+                        name="clock"
+                        size={18}
+                        color={type === 'period' ? '#0d9488' : '#71717a'}
+                      />
+                      <Text
+                        className={`text-base font-bold ${
+                          type === 'period' ? 'text-brand-primary' : 'text-text-primary'
+                        }`}
+                      >
+                        기간권
+                      </Text>
+                    </View>
                     {type === 'period' ? (
                       <View className="w-4 h-4 rounded-full bg-brand-primary items-center justify-center">
                         <Feather name="check" size={10} color="white" />
@@ -340,13 +361,20 @@ export default function EditMembershipScreen() {
                   }`}
                 >
                   <View className="flex-row items-center justify-between">
-                    <Text
-                      className={`text-base font-bold ${
-                        type === 'single' ? 'text-brand-primary' : 'text-text-primary'
-                      }`}
-                    >
-                      🎟️ 1일권
-                    </Text>
+                    <View className="flex-row items-center gap-2">
+                      <Feather
+                        name="tag"
+                        size={18}
+                        color={type === 'single' ? '#0d9488' : '#71717a'}
+                      />
+                      <Text
+                        className={`text-base font-bold ${
+                          type === 'single' ? 'text-brand-primary' : 'text-text-primary'
+                        }`}
+                      >
+                        1일권
+                      </Text>
+                    </View>
                     {type === 'single' ? (
                       <View className="w-4 h-4 rounded-full bg-brand-primary items-center justify-center">
                         <Feather name="check" size={10} color="white" />

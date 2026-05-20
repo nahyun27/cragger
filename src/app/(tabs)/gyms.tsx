@@ -326,18 +326,21 @@ function GymCard({ gym, isFavorite }: { gym: GymListItem; isFavorite: boolean })
           
           {/* Tech Boards with Distinct Glow Styles */}
           {gym.has_moonboard && (
-            <View className="px-2 py-0.5 rounded-md bg-purple-100 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-900/60">
-              <Text className="text-purple-600 dark:text-purple-300 text-xs font-semibold">⚡️ 문보드</Text>
+            <View className="px-2 py-0.5 rounded-md bg-purple-100 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-900/60 flex-row items-center gap-1">
+              <Feather name="zap" size={10} color="#9333ea" />
+              <Text className="text-purple-600 dark:text-purple-300 text-xs font-semibold">문보드</Text>
             </View>
           )}
           {gym.has_kilter && (
-            <View className="px-2 py-0.5 rounded-md bg-blue-100 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900/60">
-              <Text className="text-blue-600 dark:text-blue-300 text-xs font-semibold">⚡️ 킬터보드</Text>
+            <View className="px-2 py-0.5 rounded-md bg-blue-100 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900/60 flex-row items-center gap-1">
+              <Feather name="zap" size={10} color="#2563eb" />
+              <Text className="text-blue-600 dark:text-blue-300 text-xs font-semibold">킬터보드</Text>
             </View>
           )}
           {gym.has_tension && (
-            <View className="px-2 py-0.5 rounded-md bg-orange-100 dark:bg-orange-950/40 border border-orange-200 dark:border-orange-900/60">
-              <Text className="text-orange-600 dark:text-orange-300 text-xs font-semibold">⚡️ 텐션보드</Text>
+            <View className="px-2 py-0.5 rounded-md bg-orange-100 dark:bg-orange-950/40 border border-orange-200 dark:border-orange-900/60 flex-row items-center gap-1">
+              <Feather name="zap" size={10} color="#ea580c" />
+              <Text className="text-orange-600 dark:text-orange-300 text-xs font-semibold">텐션보드</Text>
             </View>
           )}
         </View>
@@ -349,16 +352,15 @@ function GymCard({ gym, isFavorite }: { gym: GymListItem; isFavorite: boolean })
           onPress={() =>
             toggleFavorite.mutate({ gymId: gym.id, currentlyFavorite: isFavorite })
           }
-          className="p-1"
+          className="p-1 active:opacity-60"
           hitSlop={10}
         >
-          <Text
-            className={`text-xl ${
-              isFavorite ? 'text-status-warning' : 'text-text-tertiary'
-            }`}
-          >
-            {isFavorite ? '★' : '☆'}
-          </Text>
+          <Feather
+            name="star"
+            size={20}
+            color={isFavorite ? '#f59e0b' : '#a1a1aa'}
+            fill={isFavorite ? '#f59e0b' : 'transparent'}
+          />
         </Pressable>
         <Feather name="chevron-right" size={18} color="#a1a1aa" />
       </View>

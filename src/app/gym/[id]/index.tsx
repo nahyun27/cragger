@@ -8,6 +8,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Feather } from '@expo/vector-icons';
 
 import {
   COLOR_VOTE_THRESHOLD,
@@ -83,76 +84,116 @@ export default function GymDetailScreen() {
   return (
     <SafeAreaView className="flex-1 bg-background-primary" edges={['top', 'bottom']}>
       {/* Header */}
-      <View className="flex-row items-center px-2 py-2 border-b border-border-subtle">
-        <Pressable onPress={() => router.back()} className="p-2" hitSlop={8}>
-          <Text className="text-text-primary text-2xl">←</Text>
+      <View className="flex-row items-center justify-between px-4 py-2 border-b border-border-subtle">
+        <Pressable onPress={() => router.back()} className="p-2 -ml-2 active:opacity-60" hitSlop={8}>
+          <Feather name="arrow-left" size={24} color="#0f172a" />
         </Pressable>
-        <View className="flex-1 items-center px-2">
-          <Text
-            className="text-text-primary text-base font-semibold"
-            numberOfLines={1}
-          >
-            {data.name}
-          </Text>
-          {data.branch && (
-            <Text className="text-text-tertiary text-xs" numberOfLines={1}>
-              {data.branch}
-            </Text>
-          )}
-        </View>
+        <Text className="text-text-primary text-base font-bold">암장 정보</Text>
         <Pressable
           onPress={() => {
             if (!id) return;
             toggleFavorite.mutate({ gymId: id, currentlyFavorite: favorited });
           }}
-          className="p-2"
+          className="p-2 -mr-2 active:opacity-60"
           hitSlop={8}
         >
-          <Text className="text-2xl">{favorited ? '★' : '☆'}</Text>
+          <Feather
+            name="star"
+            size={24}
+            color={favorited ? '#f59e0b' : '#94a3b8'}
+            fill={favorited ? '#f59e0b' : 'transparent'}
+          />
         </Pressable>
       </View>
 
-      <ScrollView className="flex-1" contentContainerClassName="p-4 gap-6">
-        {/* Meta */}
-        <View className="gap-1">
+      <ScrollView className="flex-1" contentContainerClassName="p-5 gap-6">
+        {/* Title Section */}
+        <View className="gap-1.5">
+          <View className="flex-row items-baseline gap-2 flex-wrap">
+            <Text className="text-2xl font-extrabold text-text-primary tracking-tight">
+              {data.name}
+            </Text>
+            {data.branch && (
+              <Text className="text-lg font-bold text-brand-primary">
+                {data.branch}
+              </Text>
+            )}
+          </View>
           {location && (
-            <Text className="text-text-secondary">
-              {[location, data.address].filter(Boolean).join(' · ')}
-            </Text>
-          )}
-          {sizeLine && (
-            <Text className="text-text-secondary text-sm">{sizeLine}</Text>
-          )}
-          {allTags.length > 0 && (
-            <View className="flex-row flex-wrap gap-1.5 mt-2">
-              {allTags.map((tag) => (
-                <View
-                  key={tag}
-                  className="px-2 py-0.5 rounded-full bg-background-secondary"
-                >
-                  <Text className="text-text-secondary text-xs">{tag}</Text>
-                </View>
-              ))}
+            <View className="flex-row items-start gap-1.5 mt-1.5">
+              <Feather name="map-pin" size={14} color="#71717a" style={{ marginTop: 2 }} />
+              <Text className="text-text-secondary text-sm flex-1 leading-5">
+                {[location, data.address].filter(Boolean).join(' · ')}
+              </Text>
             </View>
-          )}
-          {data.description && (
-            <Text className="text-text-primary mt-3 leading-5">
-              {data.description}
-            </Text>
           )}
         </View>
 
-        {/* Color stats */}
-        <View className="gap-3">
+        {/* Spec Cards Grid */}
+        {(data.size_pyeong || data.floors_count || data.opened_at) && (
+          <View className="flex-row gap-3">
+            {data.size_pyeong && (
+              <View className="flex-1 bg-background-secondary p-3.5 rounded-2xl border border-border-subtle items-center">
+                <Feather name="maximize-2" size={16} color="#0d9488" className="mb-1" />
+                <Text className="text-text-tertiary text-[10px] mb-0.5">규모</Text>
+                <Text className="text-text-primary text-sm font-bold">{data.size_pyeong}평</Text>
+              </View>
+            )}
+            {data.floors_count && (
+              <View className="flex-1 bg-background-secondary p-3.5 rounded-2xl border border-border-subtle items-center">
+                <Feather name="layers" size={16} color="#0d9488" className="mb-1" />
+                <Text className="text-text-tertiary text-[10px] mb-0.5">층수</Text>
+                <Text className="text-text-primary text-sm font-bold">{data.floors_count}층</Text>
+              </View>
+            )}
+            {data.opened_at && (
+              <View className="flex-1 bg-background-secondary p-3.5 rounded-2xl border border-border-subtle items-center">
+                <Feather name="calendar" size={16} color="#0d9488" className="mb-1" />
+                <Text className="text-text-tertiary text-[10px] mb-0.5">오픈</Text>
+                <Text className="text-text-primary text-sm font-bold">
+                  {new Date(data.opened_at).getFullYear()}년
+                </Text>
+              </View>
+            )}
+          </View>
+        )}
+
+        {/* Tags Section */}
+        {allTags.length > 0 && (
+          <View className="flex-row flex-wrap gap-1.5">
+            {allTags.map((tag) => (
+              <View
+                key={tag}
+                className="px-3 py-1.5 rounded-xl bg-background-secondary border border-border-subtle flex-row items-center gap-1.5"
+              >
+                <View className="w-1.5 h-1.5 rounded-full bg-brand-primary/60" />
+                <Text className="text-text-secondary text-xs font-semibold">{tag}</Text>
+              </View>
+            ))}
+          </View>
+        )}
+
+        {/* Description */}
+        {data.description && (
+          <View className="bg-brand-primary/5 border border-brand-primary/10 rounded-2xl p-4">
+            <Text className="text-text-primary text-sm leading-6">
+              {data.description}
+            </Text>
+          </View>
+        )}
+
+        {/* Color stats (Difficulty levels) */}
+        <View className="gap-3.5">
           <Text className="text-text-primary text-lg font-bold">
             색깔별 체감 난이도
           </Text>
           {data.color_stats.length === 0 ? (
-            <View className="p-6 items-center bg-background-secondary rounded-md">
-              <Text className="text-text-secondary">아직 투표가 없습니다</Text>
+            <View className="p-8 items-center justify-center bg-background-secondary rounded-2xl border border-border-subtle">
+              <Feather name="bar-chart-2" size={24} color="#a1a1aa" className="mb-2" />
+              <Text className="text-text-secondary text-sm">아직 투표가 없습니다</Text>
             </View>
           ) : (
-            <View className="gap-3">
+            <View className="gap-2.5">
               {data.color_stats.map((stat) => (
                 <ColorStatRow key={stat.color} stat={stat} />
               ))}
@@ -162,14 +203,15 @@ export default function GymDetailScreen() {
       </ScrollView>
 
       {/* Sticky vote button */}
-      <View className="px-4 pt-2 pb-2 border-t border-border-subtle">
+      <View className="px-5 pt-3 pb-3 border-t border-border-subtle bg-background-primary">
         <Pressable
           onPress={() =>
             router.push({ pathname: '/gym/[id]/vote', params: { id: data.id } })
           }
-          className="bg-brand-primary rounded-md p-4 items-center"
+          className="bg-brand-primary rounded-2xl py-4 px-6 items-center flex-row justify-center gap-2 active:opacity-90 shadow-sm"
         >
-          <Text className="text-background-primary font-semibold">
+          <Feather name="thumbs-up" size={16} color="white" />
+          <Text className="text-white font-bold text-base">
             이 암장 난이도 투표하기
           </Text>
         </Pressable>
@@ -182,43 +224,66 @@ function ColorStatRow({ stat }: { stat: ColorStat }) {
   const hex = resolveColorHex(stat.color);
   const label = resolveColorLabel(stat.color);
   const hasEnoughVotes = stat.vote_count >= COLOR_VOTE_THRESHOLD;
-  const dotIndex =
-    stat.avg_v_grade !== null
-      ? Math.min(4, Math.max(0, Math.floor(stat.avg_v_grade / 2)))
-      : null;
   const needsBorder = stat.color.toLowerCase() === 'white';
 
   return (
-    <View className="flex-row items-center gap-3">
-      <View
-        className="w-8 h-8 rounded-full"
-        style={{
-          backgroundColor: hex,
-          ...(needsBorder ? { borderWidth: 1, borderColor: '#D4D4D8' } : null),
-        }}
-      />
-      <View className="flex-1">
-        <Text className="text-text-primary font-medium">{label}</Text>
-        {hasEnoughVotes && dotIndex !== null ? (
-          <View className="flex-row items-center gap-1.5 mt-1">
-            {[0, 1, 2, 3, 4].map((i) => (
-              <View
-                key={i}
-                className={
-                  i === dotIndex
-                    ? 'w-2.5 h-2.5 rounded-full bg-brand-primary'
-                    : 'w-2 h-2 rounded-full bg-background-tertiary'
-                }
-              />
-            ))}
-            <Text className="text-text-secondary text-xs ml-2">
-              평균 {stat.avg_v_grade_label} · {stat.vote_count}표
+    <View className="flex-row items-center justify-between bg-background-secondary p-3.5 rounded-2xl border border-border-subtle">
+      <View className="flex-row items-center gap-3">
+        {/* Color pill badge */}
+        <View
+          className="px-3 py-1.5 rounded-full border flex-row items-center gap-1.5"
+          style={{
+            backgroundColor: hex + '15', // 8% opacity background
+            borderColor: hex,
+          }}
+        >
+          <View
+            className="w-3 h-3 rounded-full"
+            style={{
+              backgroundColor: hex,
+              ...(needsBorder ? { borderWidth: 1, borderColor: '#D4D4D8' } : null),
+            }}
+          />
+          <Text
+            className="text-xs font-bold"
+            style={{ color: needsBorder ? '#27272a' : hex }}
+          >
+            {label}
+          </Text>
+        </View>
+      </View>
+
+      {/* Difficulty track/stat */}
+      <View className="flex-1 items-end pr-1">
+        {hasEnoughVotes && stat.avg_v_grade !== null ? (
+          <View className="items-end">
+            <Text className="text-text-primary text-sm font-bold">
+              평균 {stat.avg_v_grade_label}
             </Text>
+            <View className="flex-row items-center gap-1.5 mt-1">
+              {/* Visual gauge track */}
+              <View className="w-24 h-1.5 bg-background-tertiary rounded-full overflow-hidden">
+                <View
+                  className="h-full bg-brand-primary rounded-full"
+                  style={{
+                    width: `${Math.min(100, Math.max(10, (stat.avg_v_grade / 10) * 100))}%`,
+                  }}
+                />
+              </View>
+              <Text className="text-text-tertiary text-xs">
+                {stat.vote_count}표
+              </Text>
+            </View>
           </View>
         ) : (
-          <Text className="text-text-tertiary text-xs mt-1">
-            데이터 모으는 중 ({stat.vote_count}표)
-          </Text>
+          <View className="items-end">
+            <Text className="text-text-tertiary text-xs">
+              데이터 모으는 중
+            </Text>
+            <Text className="text-text-tertiary text-[10px] mt-0.5">
+              ({stat.vote_count}표 투표됨)
+            </Text>
+          </View>
         )}
       </View>
     </View>

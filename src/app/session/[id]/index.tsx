@@ -9,6 +9,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Feather } from '@expo/vector-icons';
 
 import { resolveColorHex, resolveColorLabel } from '@/constants/climb-colors';
 import {
@@ -34,12 +35,12 @@ function formatDuration(min: number): string {
   return `${(min / 60).toFixed(1)}시간`;
 }
 
-const CONDITION_LABEL: Record<number, { emoji: string; label: string }> = {
-  1: { emoji: '😵', label: '매우 나쁨' },
-  2: { emoji: '😟', label: '나쁨' },
-  3: { emoji: '😐', label: '보통' },
-  4: { emoji: '🙂', label: '좋음' },
-  5: { emoji: '😄', label: '매우 좋음' },
+const CONDITION_LABEL: Record<number, { icon: 'frown' | 'meh' | 'smile'; color: string; label: string }> = {
+  1: { icon: 'frown', color: '#ef4444', label: '최악' },
+  2: { icon: 'frown', color: '#f97316', label: '안좋음' },
+  3: { icon: 'meh', color: '#71717a', label: '보통' },
+  4: { icon: 'smile', color: '#84cc16', label: '좋음' },
+  5: { icon: 'smile', color: '#0d9488', label: '최상' },
 };
 
 export default function SessionDetailScreen() {
@@ -109,73 +110,90 @@ export default function SessionDetailScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-background-primary" edges={['top', 'bottom']}>
-      <View className="flex-row items-center px-2 py-2 border-b border-border-subtle">
-        <Pressable onPress={() => router.back()} className="p-2" hitSlop={8}>
-          <Text className="text-text-primary text-2xl">←</Text>
+      <View className="flex-row items-center justify-between px-4 py-2 border-b border-border-subtle">
+        <Pressable onPress={() => router.back()} className="p-2 -ml-2 active:opacity-60" hitSlop={8}>
+          <Feather name="arrow-left" size={24} color="#0f172a" />
         </Pressable>
-        <View className="flex-1" />
-        <Pressable
-          onPress={() =>
-            router.push({ pathname: '/session/[id]/edit', params: { id: id! } })
-          }
-          className="p-2"
-          hitSlop={8}
-        >
-          <Text className="text-xl">✏️</Text>
-        </Pressable>
-        <Pressable
-          onPress={handleDelete}
-          disabled={deleteSession.isPending}
-          className="p-2"
-          hitSlop={8}
-        >
-          {deleteSession.isPending ? (
-            <ActivityIndicator />
-          ) : (
-            <Text className="text-xl">🗑️</Text>
-          )}
-        </Pressable>
+        <Text className="text-text-primary text-base font-bold">기록 상세</Text>
+        <View className="flex-row gap-1">
+          <Pressable
+            onPress={() =>
+              router.push({ pathname: '/session/[id]/edit', params: { id: id! } })
+            }
+            className="p-2 active:opacity-60"
+            hitSlop={8}
+          >
+            <Feather name="edit-3" size={20} color="#71717a" />
+          </Pressable>
+          <Pressable
+            onPress={handleDelete}
+            disabled={deleteSession.isPending}
+            className="p-2 active:opacity-60"
+            hitSlop={8}
+          >
+            {deleteSession.isPending ? (
+              <ActivityIndicator size="small" />
+            ) : (
+              <Feather name="trash-2" size={20} color="#ef4444" />
+            )}
+          </Pressable>
+        </View>
       </View>
 
-      <ScrollView className="flex-1" contentContainerClassName="p-4 gap-5">
-        <Text className="text-text-primary text-3xl font-bold">
-          {formatLongDate(data.session_date)}
-        </Text>
+      <ScrollView className="flex-1" contentContainerClassName="p-5 gap-6">
+        <View className="gap-2">
+          <Text className="text-text-primary text-3xl font-extrabold tracking-tight">
+            {formatLongDate(data.session_date)}
+          </Text>
 
-        {data.gym && (
-          <View className="p-4 rounded-md bg-background-secondary">
-            <Text className="text-text-primary text-base font-semibold">
-              {data.gym.name}
-              {data.gym.branch ? ` ${data.gym.branch}` : ''}
-            </Text>
-          </View>
-        )}
-
-        <View className="flex-row flex-wrap gap-x-4 gap-y-1">
-          {data.duration_min != null && (
-            <Text className="text-text-secondary">
-              ⏱ {formatDuration(data.duration_min)}
-            </Text>
-          )}
-          {cond && (
-            <Text className="text-text-secondary">
-              {cond.emoji} 컨디션 {cond.label}
-            </Text>
+          {data.gym && (
+            <View className="flex-row items-baseline gap-2 flex-wrap mt-1">
+              <Text className="text-lg font-bold text-text-primary">
+                {data.gym.name}
+              </Text>
+              {data.gym.branch && (
+                <Text className="text-sm font-semibold text-brand-primary">
+                  {data.gym.branch}
+                </Text>
+              )}
+            </View>
           )}
         </View>
 
-        <View className="gap-3 pt-2">
-          <Text className="text-text-secondary text-sm font-medium">색깔별 기록</Text>
+        <View className="flex-row flex-wrap gap-4 bg-background-secondary p-4 rounded-2xl border border-border-subtle">
+          {data.duration_min != null && (
+            <View className="flex-row items-center gap-1.5">
+              <Feather name="clock" size={16} color="#71717a" />
+              <Text className="text-text-secondary text-sm font-medium">
+                {formatDuration(data.duration_min)}
+              </Text>
+            </View>
+          )}
+          {cond && (
+            <View className="flex-row items-center gap-1.5">
+              <Feather name={cond.icon} size={16} color={cond.color} />
+              <Text className="text-text-secondary text-sm font-medium">
+                컨디션 {cond.label}
+              </Text>
+            </View>
+          )}
+        </View>
+
+        <View className="gap-4">
+          <Text className="text-text-primary text-lg font-bold">색깔별 기록</Text>
           {visibleColors.length === 0 ? (
-            <Text className="text-text-tertiary">기록된 등반이 없어요</Text>
+            <View className="p-8 items-center justify-center bg-background-secondary rounded-2xl border border-border-subtle">
+              <Feather name="activity" size={24} color="#a1a1aa" className="mb-2" />
+              <Text className="text-text-secondary text-sm">기록된 등반이 없어요</Text>
+            </View>
           ) : (
-            <View className="gap-2">
-              <View className="flex-row items-center gap-3 px-1">
+            <View className="bg-background-secondary p-4 rounded-2xl border border-border-subtle gap-3">
+              <View className="flex-row items-center gap-3 px-1 border-b border-border-subtle pb-2">
                 <View style={{ width: 64 }} />
-                <Text className="flex-1 text-text-tertiary text-xs text-center">
+                <Text className="flex-1 text-text-tertiary text-xs text-center font-semibold">
                   완등
                 </Text>
-                <Text className="flex-1 text-text-tertiary text-xs text-center">
+                <Text className="flex-1 text-text-tertiary text-xs text-center font-semibold">
                   시도
                 </Text>
               </View>
@@ -187,8 +205,8 @@ export default function SessionDetailScreen() {
         </View>
 
         {data.notes && (
-          <View className="border-l-4 border-border-default pl-3 py-1">
-            <Text className="text-text-primary">{data.notes}</Text>
+          <View className="bg-brand-primary/5 border border-brand-primary/10 rounded-2xl p-4">
+            <Text className="text-text-primary text-sm leading-6">{data.notes}</Text>
           </View>
         )}
       </ScrollView>

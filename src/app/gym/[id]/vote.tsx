@@ -9,6 +9,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Feather } from '@expo/vector-icons';
 
 import { GradePickerModal } from '@/components/vote/grade-picker-modal';
 import { resolveColorHex, resolveColorLabel } from '@/constants/climb-colors';
@@ -67,14 +68,13 @@ export default function GymVoteScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-background-primary" edges={['top', 'bottom']}>
-      <View className="flex-row items-center px-2 py-2 border-b border-border-subtle">
-        <Pressable onPress={() => router.back()} className="p-2" hitSlop={8}>
-          <Text className="text-text-primary text-2xl">←</Text>
+      <View className="flex-row items-center px-4 py-2 border-b border-border-subtle">
+        <Pressable onPress={() => router.back()} className="p-2 -ml-2 active:opacity-60" hitSlop={8}>
+          <Feather name="arrow-left" size={24} color="#0f172a" />
         </Pressable>
-        <Text className="flex-1 text-center text-text-primary text-base font-semibold">
+        <Text className="flex-1 text-center text-text-primary text-base font-semibold mr-6">
           난이도 투표
         </Text>
-        <View className="w-10" />
       </View>
 
       {gym && (

@@ -16,11 +16,14 @@ export function emptyColorCounts(): ColorCountsValue {
 type Props = {
   value: ColorCountsValue;
   onChange: (next: ColorCountsValue) => void;
+  // 표시 순서. 없으면 GRID_COLORS 기본순. 추천 hook이 주입할 때 사용.
+  colors?: readonly GridColor[];
 };
 
 // 8색 × [완등 -/N/+] [시도 -/N/+].
 // 완등 ≤ 시도 강제: 완등 + 누르면 시도 자동 따라옴, 시도 − 누르면 완등 같이 깎임.
-export function ColorCountsTable({ value, onChange }: Props) {
+export function ColorCountsTable({ value, onChange, colors }: Props) {
+  const order = colors ?? GRID_COLORS;
   function bumpTries(color: GridColor, delta: number) {
     const cur = value[color];
     const nextTries = Math.max(0, cur.tries + delta);
@@ -42,7 +45,7 @@ export function ColorCountsTable({ value, onChange }: Props) {
         <Text className="flex-1 text-text-tertiary text-xs text-center">완등</Text>
         <Text className="flex-1 text-text-tertiary text-xs text-center">시도</Text>
       </View>
-      {GRID_COLORS.map((color) => (
+      {order.map((color) => (
         <ColorRow
           key={color}
           color={color}

@@ -10,7 +10,9 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Feather } from '@expo/vector-icons';
 
+import { GRID_COLORS, type GridColor } from '@/components/climb/color-grid';
 import {
   ColorCountsTable,
   emptyColorCounts,
@@ -20,6 +22,7 @@ import { GymPickerModal } from '@/components/session/gym-picker-modal';
 import { Chip } from '@/components/ui/chip';
 import { Section } from '@/components/ui/section';
 import { useGyms } from '@/hooks/use-gyms';
+import { useRecentColorActivity } from '@/hooks/use-recent-color-activity';
 import { useRecentGyms } from '@/hooks/use-recent-gyms';
 import { useRecordSession } from '@/hooks/use-record-session';
 
@@ -47,12 +50,12 @@ const DURATION_CHIPS: { value: number; label: string }[] = [
   { value: 180, label: '3시간+' },
 ];
 
-const CONDITION_OPTIONS: { value: number; emoji: string }[] = [
-  { value: 1, emoji: '😵' },
-  { value: 2, emoji: '😟' },
-  { value: 3, emoji: '😐' },
-  { value: 4, emoji: '🙂' },
-  { value: 5, emoji: '😄' },
+const CONDITION_OPTIONS: { value: number; icon: 'frown' | 'meh' | 'smile'; color: string; label: string }[] = [
+  { value: 1, icon: 'frown', color: '#ef4444', label: '최악' },
+  { value: 2, icon: 'frown', color: '#f97316', label: '안좋음' },
+  { value: 3, icon: 'meh', color: '#71717a', label: '보통' },
+  { value: 4, icon: 'smile', color: '#84cc16', label: '좋음' },
+  { value: 5, icon: 'smile', color: '#0d9488', label: '최상' },
 ];
 
 export default function NewSessionScreen() {
@@ -68,6 +71,21 @@ export default function NewSessionScreen() {
   const [colorCounts, setColorCounts] = useState<ColorCountsValue>(emptyColorCounts);
 
   const { data: recentGyms } = useRecentGyms();
+  const { data: recentColors } = useRecentColorActivity(gymId);
+  // 사용자가 자주 푼 색깔 위로 → 안 푼 색깔은 난이도 기본순.
+  const colorOrder = useMemo<readonly GridColor[]>(() => {
+    if (!recentColors || recentColors.length === 0) return GRID_COLORS;
+    const seen = new Set<string>();
+    const head: GridColor[] = [];
+    for (const c of recentColors) {
+      if ((GRID_COLORS as readonly string[]).includes(c) && !seen.has(c)) {
+        head.push(c as GridColor);
+        seen.add(c);
+      }
+    }
+    const tail = GRID_COLORS.filter((c) => !seen.has(c));
+    return [...head, ...tail];
+  }, [recentColors]);
   const { data: allGyms } = useGyms();
   const selectedGym = useMemo(
     () => allGyms?.find((g) => g.id === gymId) ?? null,
@@ -98,14 +116,13 @@ export default function NewSessionScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-background-primary" edges={['top', 'bottom']}>
-      <View className="flex-row items-center px-2 py-2 border-b border-border-subtle">
-        <Pressable onPress={() => router.back()} className="p-2" hitSlop={8}>
-          <Text className="text-text-primary text-2xl">←</Text>
+      <View className="flex-row items-center px-4 py-2 border-b border-border-subtle">
+        <Pressable onPress={() => router.back()} className="p-2 -ml-2 active:opacity-60" hitSlop={8}>
+          <Feather name="arrow-left" size={24} color="#0f172a" />
         </Pressable>
-        <Text className="flex-1 text-center text-text-primary text-base font-semibold">
+        <Text className="flex-1 text-center text-text-primary text-base font-semibold mr-6">
           오늘 운동 기록
         </Text>
-        <View className="w-10" />
       </View>
 
       <ScrollView className="flex-1" contentContainerClassName="p-4 gap-6">
@@ -132,7 +149,8 @@ export default function NewSessionScreen() {
         <Section title="암장" required>
           <View className="flex-row flex-wrap gap-2">
             <Chip
-              label="🔍 장소 검색"
+              label="장소 검색"
+              icon={<Feather name="search" size={14} color="#71717a" />}
               selected={false}
               onPress={() => setShowGymModal(true)}
             />
@@ -171,19 +189,30 @@ export default function NewSessionScreen() {
 
         <Section title="컨디션">
           <View className="flex-row gap-2 justify-between">
-            {CONDITION_OPTIONS.map(({ value, emoji }) => {
+            {CONDITION_OPTIONS.map(({ value, icon, color, label }) => {
               const active = condition === value;
               return (
                 <Pressable
                   key={value}
                   onPress={() => setCondition(active ? null : value)}
-                  className={`flex-1 items-center py-3 rounded-md border ${
+                  className={`flex-1 items-center py-2.5 rounded-2xl border gap-1 ${
                     active
-                      ? 'border-brand-primary bg-background-secondary'
-                      : 'border-border-subtle'
+                      ? 'border-brand-primary bg-brand-primary/5'
+                      : 'border-border-subtle bg-background-primary'
                   }`}
                 >
-                  <Text className="text-2xl">{emoji}</Text>
+                  <Feather
+                    name={icon}
+                    size={20}
+                    color={active ? color : '#a1a1aa'}
+                  />
+                  <Text
+                    className={`text-[10px] ${
+                      active ? 'text-brand-primary font-bold' : 'text-text-tertiary'
+                    }`}
+                  >
+                    {label}
+                  </Text>
                 </Pressable>
               );
             })}
@@ -192,7 +221,11 @@ export default function NewSessionScreen() {
 
         <Section title="색깔별 기록">
           <Text className="text-text-tertiary text-xs mb-2">안 적어도 돼요 (옵션)</Text>
-          <ColorCountsTable value={colorCounts} onChange={setColorCounts} />
+          <ColorCountsTable
+            value={colorCounts}
+            onChange={setColorCounts}
+            colors={colorOrder}
+          />
         </Section>
 
         <Section title="메모">
