@@ -119,7 +119,7 @@ export default function CommunitySearchScreen() {
         </View>
       ) : feed.isLoading ? (
         <View style={s.centerWrap}>
-          <ActivityIndicator color="#0d9488" />
+          <ActivityIndicator color="#06b6d4" />
         </View>
       ) : feed.error ? (
         <View style={s.errorBox}>
@@ -151,7 +151,7 @@ export default function CommunitySearchScreen() {
           ListFooterComponent={
             feed.isFetchingNextPage ? (
               <View style={s.footerLoader}>
-                <ActivityIndicator color="#0d9488" />
+                <ActivityIndicator color="#06b6d4" />
               </View>
             ) : null
           }

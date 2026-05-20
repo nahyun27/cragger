@@ -100,7 +100,7 @@ export default function PostDetailScreen() {
   if (postQ.isLoading) {
     return (
       <SafeAreaView style={s.loadingContainer} edges={['top']}>
-        <ActivityIndicator size="large" color="#0d9488" />
+        <ActivityIndicator size="large" color="#06b6d4" />
       </SafeAreaView>
     );
   }
@@ -311,7 +311,7 @@ export default function PostDetailScreen() {
             </Text>
 
             {commentsQ.isLoading && (
-              <ActivityIndicator color="#0d9488" style={{ marginVertical: 12 }} />
+              <ActivityIndicator color="#06b6d4" style={{ marginVertical: 12 }} />
             )}
 
             {commentsQ.error && (
@@ -397,7 +397,7 @@ export default function PostDetailScreen() {
         {/* Reply context banner */}
         {replyToId && (
           <View style={s.replyBanner}>
-            <Feather name="corner-down-right" size={12} color="#0d9488" />
+            <Feather name="corner-down-right" size={12} color="#64748b" />
             <Text style={s.replyBannerText} numberOfLines={1}>
               {replyToName ?? '댓글'}에게 답글 작성 중
             </Text>
@@ -794,7 +794,7 @@ const s = StyleSheet.create({
     elevation: 1,
   },
   commentsCount: {
-    color: '#0d9488',
+    color: '#475569',
   },
   commentsTitle: {
     fontSize: 16,
@@ -911,7 +911,7 @@ const s = StyleSheet.create({
     color: '#64748b',
   },
   commentEditSaveBtn: {
-    backgroundColor: '#0d9488',
+    backgroundColor: '#06b6d4',
   },
   commentEditSaveBtnDisabled: {
     backgroundColor: '#cbd5e1',
@@ -927,15 +927,15 @@ const s = StyleSheet.create({
     gap: 6,
     paddingHorizontal: 14,
     paddingVertical: 6,
-    backgroundColor: '#f0fdfa',
+    backgroundColor: '#f1f5f9',
     borderTopWidth: 1,
-    borderColor: '#99f6e4',
+    borderColor: '#e2e8f0',
   },
   replyBannerText: {
     flex: 1,
     fontSize: 12,
     fontWeight: '700',
-    color: '#0f766e',
+    color: '#334155',
   },
   commentInputBar: {
     paddingHorizontal: 12,
@@ -967,9 +967,9 @@ const s = StyleSheet.create({
     borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#0d9488',
+    backgroundColor: '#06b6d4',
     flexShrink: 0,
-    shadowColor: '#0d9488',
+    shadowColor: '#06b6d4',
     shadowOpacity: 0.25,
     shadowRadius: 6,
     shadowOffset: { width: 0, height: 2 },

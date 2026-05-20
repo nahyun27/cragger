@@ -67,7 +67,7 @@ export const SessionShareCard = forwardRef<View, Props>(
       }
     }
 
-    const isDarkBg = ['#0f172a', '#0f766e', '#3b0764'].includes(backgroundColor);
+    const isDarkBg = ['#0f172a', '#0e7490', '#3b0764'].includes(backgroundColor);
     const textColor = isDarkBg ? '#ffffff' : '#0f172a';
     const textMutedColor = isDarkBg ? '#94a3b8' : '#64748b';
     const textSubtleColor = isDarkBg ? '#64748b' : '#cbd5e1';
@@ -253,17 +253,17 @@ export const SessionShareCard = forwardRef<View, Props>(
                   height: size * 0.36,
                   borderRadius: (size * 0.36) / 2,
                   borderWidth: 4,
-                  borderColor: '#0d9488',
+                  borderColor: '#06b6d4',
                   alignItems: 'center',
                   justifyContent: 'center',
                   backgroundColor: itemBg,
-                  shadowColor: '#0d9488',
+                  shadowColor: '#06b6d4',
                   shadowOpacity: 0.1,
                   shadowRadius: 8,
                   elevation: 2,
                 }}
               >
-                <Text style={{ color: '#0d9488', fontSize: size * 0.11, fontWeight: '900' }}>
+                <Text style={{ color: '#06b6d4', fontSize: size * 0.11, fontWeight: '900' }}>
                   {totalSends}
                 </Text>
                 <Text style={{ color: textMutedColor, fontSize: size * 0.028, fontWeight: '700', letterSpacing: 1 }}>
@@ -336,7 +336,7 @@ export const SessionShareCard = forwardRef<View, Props>(
             <Feather
               name="check-circle"
               size={size * 0.038}
-              color="#0d9488"
+              color="#06b6d4"
               style={{ marginRight: 6 }}
             />
             <Text
@@ -362,10 +362,10 @@ export const SessionShareCard = forwardRef<View, Props>(
             }}
           >
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-              <Feather name="trending-up" size={14} color="#0d9488" />
+              <Feather name="trending-up" size={14} color="#06b6d4" />
               <Text
                 style={{
-                  color: '#0d9488',
+                  color: '#06b6d4',
                   fontSize: size * 0.036,
                   fontWeight: '800',
                   letterSpacing: 0.5,

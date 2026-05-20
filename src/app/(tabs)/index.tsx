@@ -90,7 +90,7 @@ export default function HomeScreen() {
         style={{ flex: 1 }}
         contentContainerStyle={s.scrollContent}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={refetchAll} tintColor="#0d9488" />
+          <RefreshControl refreshing={refreshing} onRefresh={refetchAll} tintColor="#06b6d4" />
         }
       >
         {/* Greeting */}
@@ -137,7 +137,7 @@ export default function HomeScreen() {
           >
             <View style={s.actionSecondary}>
               <View style={s.actionIconSecondary}>
-                <Feather name="map-pin" size={20} color="#0d9488" />
+                <Feather name="map-pin" size={20} color="#475569" />
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={s.actionSecondaryTitle}>암장 찾기</Text>
@@ -151,7 +151,7 @@ export default function HomeScreen() {
         <SectionHeader title="이번 주 요약" />
         <View style={s.weekCard}>
           {weekQ.isLoading ? (
-            <ActivityIndicator color="#0d9488" />
+            <ActivityIndicator color="#06b6d4" />
           ) : weekQ.data && (weekQ.data.weeklySessions > 0 || weekQ.data.weeklySends > 0) ? (
             <View style={s.weekRow}>
               <WeekMetric
@@ -188,7 +188,7 @@ export default function HomeScreen() {
         />
         {recentQ.isLoading ? (
           <View style={s.sectionLoader}>
-            <ActivityIndicator color="#0d9488" />
+            <ActivityIndicator color="#06b6d4" />
           </View>
         ) : recent.length === 0 ? (
           <View style={s.emptyCard}>
@@ -214,7 +214,7 @@ export default function HomeScreen() {
             >
               <View style={s.gymCard}>
                 <View style={s.gymCardIcon}>
-                  <Feather name="map-pin" size={18} color="#0d9488" />
+                  <Feather name="map-pin" size={18} color="#475569" />
                 </View>
                 <View style={{ flex: 1, minWidth: 0 }}>
                   <Text style={s.gymCardName} numberOfLines={1}>
@@ -313,7 +313,7 @@ function WeekMetric({
 }) {
   return (
     <View style={s.weekCol}>
-      <Feather name={icon} size={14} color="#0d9488" />
+      <Feather name={icon} size={14} color="#475569" />
       <Text style={s.weekValue}>{value}</Text>
       <Text style={s.weekLabel}>{label}</Text>
     </View>
@@ -336,7 +336,7 @@ function SessionRow({ session }: { session: RecentSession }) {
     >
       <View style={s.sessionRow}>
         <View style={s.sessionIcon}>
-          <Feather name="map-pin" size={14} color="#0d9488" />
+          <Feather name="map-pin" size={14} color="#475569" />
         </View>
         <View style={{ flex: 1, minWidth: 0 }}>
           <Text style={s.sessionName} numberOfLines={1}>
@@ -391,13 +391,11 @@ const s = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: '#f0fdfa',
-    borderWidth: 1,
-    borderColor: '#99f6e4',
+    backgroundColor: '#f1f5f9',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  avatarBtnChar: { fontSize: 17, fontWeight: '800', color: '#0d9488' },
+  avatarBtnChar: { fontSize: 17, fontWeight: '800', color: '#334155' },
 
   quickActions: {
     flexDirection: 'row',
@@ -409,10 +407,10 @@ const s = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    backgroundColor: '#0d9488',
+    backgroundColor: '#06b6d4',
     borderRadius: 16,
     padding: 14,
-    shadowColor: '#0d9488',
+    shadowColor: '#06b6d4',
     shadowOpacity: 0.25,
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 4 },
@@ -447,9 +445,7 @@ const s = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 12,
-    backgroundColor: '#f0fdfa',
-    borderWidth: 1,
-    borderColor: '#99f6e4',
+    backgroundColor: '#f1f5f9',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -465,7 +461,7 @@ const s = StyleSheet.create({
     paddingHorizontal: 2,
   },
   sectionTitle: { fontSize: 15, fontWeight: '800', color: '#0f172a', letterSpacing: -0.2 },
-  sectionAction: { fontSize: 12, fontWeight: '700', color: '#0d9488' },
+  sectionAction: { fontSize: 12, fontWeight: '700', color: '#334155' },
   sectionLoader: { paddingVertical: 16, alignItems: 'center' },
 
   weekCard: {
@@ -514,9 +510,7 @@ const s = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 12,
-    backgroundColor: '#f0fdfa',
-    borderWidth: 1,
-    borderColor: '#99f6e4',
+    backgroundColor: '#f1f5f9',
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
@@ -552,9 +546,7 @@ const s = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 12,
-    backgroundColor: '#f0fdfa',
-    borderWidth: 1,
-    borderColor: '#99f6e4',
+    backgroundColor: '#f1f5f9',
     alignItems: 'center',
     justifyContent: 'center',
   },

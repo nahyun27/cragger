@@ -269,7 +269,7 @@ export default function ProfileEditScreen() {
                   disabled={uploadingAvatar}
                   className="flex-row items-center justify-center gap-1.5 px-3 py-2 rounded-md border border-border-default active:opacity-70"
                 >
-                  <Feather name="image" size={14} color="#0d9488" />
+                  <Feather name="image" size={14} color="#06b6d4" />
                   <Text className="text-text-primary text-sm font-semibold">
                     {avatarPreviewUri ? '변경' : '사진 선택'}
                   </Text>
@@ -520,7 +520,7 @@ function UsernameStatusIcon({
 }) {
   if (status === 'checking') return <ActivityIndicator size="small" />;
   if (status === 'available')
-    return <Feather name="check-circle" size={16} color="#0d9488" />;
+    return <Feather name="check-circle" size={16} color="#06b6d4" />;
   if (status === 'taken') return <Feather name="x-circle" size={16} color="#ef4444" />;
   return null;
 }

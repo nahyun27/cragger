@@ -66,7 +66,7 @@ export default function LogScreen() {
 
       {isLoading && (
         <View style={s.loadingContainer}>
-          <ActivityIndicator size="large" color="#0d9488" />
+          <ActivityIndicator size="large" color="#06b6d4" />
         </View>
       )}
 
@@ -86,7 +86,7 @@ export default function LogScreen() {
               {/* Dashboard summary card */}
               <View style={s.statsCard}>
                 <View style={s.statsCardHeader}>
-                  <Feather name="trending-up" size={14} color="#0d9488" />
+                  <Feather name="trending-up" size={14} color="#475569" />
                   <Text style={s.statsCardTitle}>최근 등반 통계</Text>
                 </View>
                 <View style={s.statsRow}>
@@ -163,7 +163,7 @@ function SessionCard({ session }: { session: RecentSession }) {
     >
       <View style={s.cardBody}>
         <View style={s.cardIcon}>
-          <Feather name="map-pin" size={16} color="#0d9488" />
+          <Feather name="map-pin" size={16} color="#475569" />
         </View>
 
         <View style={s.cardText}>
@@ -227,8 +227,8 @@ const s = StyleSheet.create({
     paddingHorizontal: 12,
     height: 38,
     borderRadius: 12,
-    backgroundColor: '#0d9488',
-    shadowColor: '#0d9488',
+    backgroundColor: '#06b6d4',
+    shadowColor: '#06b6d4',
     shadowOpacity: 0.25,
     shadowRadius: 6,
     shadowOffset: { width: 0, height: 2 },
@@ -295,7 +295,7 @@ const s = StyleSheet.create({
   statsCardTitle: {
     fontSize: 12,
     fontWeight: '800',
-    color: '#0d9488',
+    color: '#475569',
     letterSpacing: 0.3,
   },
   statsRow: {
@@ -365,7 +365,7 @@ const s = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 10,
-    backgroundColor: '#0d9488',
+    backgroundColor: '#06b6d4',
   },
   emptyBtnText: {
     color: '#ffffff',
@@ -389,9 +389,7 @@ const s = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 12,
-    backgroundColor: '#f0fdfa',
-    borderWidth: 1,
-    borderColor: '#99f6e4',
+    backgroundColor: '#f1f5f9',
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,

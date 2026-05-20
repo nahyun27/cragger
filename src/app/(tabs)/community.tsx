@@ -30,7 +30,7 @@ const FILTER_TABS: {
   icon: React.ComponentProps<typeof Feather>['name'];
   accent: string;
 }[] = [
-  { key: 'all', label: '전체', icon: 'layers', accent: '#0d9488' },
+  { key: 'all', label: '전체', icon: 'layers', accent: '#06b6d4' },
   { key: 'general', label: POST_TYPE_LABEL.general, icon: 'message-circle', accent: '#2563eb' },
   { key: 'question', label: POST_TYPE_LABEL.question, icon: 'help-circle', accent: '#7c3aed' },
   { key: 'review', label: POST_TYPE_LABEL.review, icon: 'star', accent: '#059669' },
@@ -135,7 +135,7 @@ export default function CommunityScreen() {
       {/* List States */}
       {feed.isLoading && (
         <View style={s.loadingContainer}>
-          <ActivityIndicator size="large" color="#0d9488" />
+          <ActivityIndicator size="large" color="#06b6d4" />
         </View>
       )}
 
@@ -178,7 +178,7 @@ export default function CommunityScreen() {
           ListFooterComponent={
             feed.isFetchingNextPage ? (
               <View style={s.footerLoader}>
-                <ActivityIndicator color="#0d9488" />
+                <ActivityIndicator color="#06b6d4" />
               </View>
             ) : null
           }
@@ -372,10 +372,10 @@ const s = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: '#0d9488',
+    backgroundColor: '#06b6d4',
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#0d9488',
+    shadowColor: '#06b6d4',
     shadowOpacity: 0.4,
     shadowRadius: 10,
     shadowOffset: { width: 0, height: 6 },
@@ -464,7 +464,7 @@ const s = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 10,
     borderRadius: 12,
-    backgroundColor: '#0d9488',
+    backgroundColor: '#06b6d4',
   },
   emptyBtnText: {
     color: '#ffffff',

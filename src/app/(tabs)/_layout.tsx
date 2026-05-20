@@ -11,7 +11,7 @@ export default function TabLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: '#0d9488', // brand-primary
+        tabBarActiveTintColor: isDark ? '#f8fafc' : '#0f172a', // active = strong text color, not brand
         tabBarInactiveTintColor: isDark ? '#64748b' : '#94a3b8',
         tabBarStyle: {
           backgroundColor: isDark ? '#09090b' : '#ffffff', // background-primary

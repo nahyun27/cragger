@@ -40,7 +40,7 @@ const CONDITION_LABEL: Record<number, { icon: 'frown' | 'meh' | 'smile'; color: 
   2: { icon: 'frown', color: '#f97316', label: '안좋음' },
   3: { icon: 'meh', color: '#64748b', label: '보통' },
   4: { icon: 'smile', color: '#84cc16', label: '좋음' },
-  5: { icon: 'smile', color: '#0d9488', label: '최상' },
+  5: { icon: 'smile', color: '#06b6d4', label: '최상' },
 };
 
 export default function SessionDetailScreen() {

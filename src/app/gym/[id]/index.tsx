@@ -134,21 +134,21 @@ export default function GymDetailScreen() {
           <View className="flex-row gap-3">
             {data.size_pyeong && (
               <View className="flex-1 bg-background-secondary p-3.5 rounded-2xl border border-border-subtle items-center">
-                <Feather name="maximize-2" size={16} color="#0d9488" className="mb-1" />
+                <Feather name="maximize-2" size={16} color="#06b6d4" className="mb-1" />
                 <Text className="text-text-tertiary text-[10px] mb-0.5">규모</Text>
                 <Text className="text-text-primary text-sm font-bold">{data.size_pyeong}평</Text>
               </View>
             )}
             {data.floors_count && (
               <View className="flex-1 bg-background-secondary p-3.5 rounded-2xl border border-border-subtle items-center">
-                <Feather name="layers" size={16} color="#0d9488" className="mb-1" />
+                <Feather name="layers" size={16} color="#06b6d4" className="mb-1" />
                 <Text className="text-text-tertiary text-[10px] mb-0.5">층수</Text>
                 <Text className="text-text-primary text-sm font-bold">{data.floors_count}층</Text>
               </View>
             )}
             {data.opened_at && (
               <View className="flex-1 bg-background-secondary p-3.5 rounded-2xl border border-border-subtle items-center">
-                <Feather name="calendar" size={16} color="#0d9488" className="mb-1" />
+                <Feather name="calendar" size={16} color="#06b6d4" className="mb-1" />
                 <Text className="text-text-tertiary text-[10px] mb-0.5">오픈</Text>
                 <Text className="text-text-primary text-sm font-bold">
                   {new Date(data.opened_at).getFullYear()}년

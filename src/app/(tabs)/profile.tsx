@@ -95,7 +95,7 @@ export default function ProfileScreen() {
                 className="flex-row items-center gap-1 mt-1 active:opacity-60 self-start"
                 hitSlop={6}
               >
-                <Feather name="instagram" size={12} color="#0d9488" />
+                <Feather name="instagram" size={12} color="#475569" />
                 <Text className="text-brand-primary text-xs font-semibold">
                   @{profile.instagram_handle}
                 </Text>
@@ -184,7 +184,7 @@ export default function ProfileScreen() {
 function SummaryMetric({ label, value, icon }: { label: string; value: number; icon: 'calendar' | 'check-circle' | 'award' }) {
   return (
     <View className="flex-1 items-center gap-1">
-      <Feather name={icon} size={15} color="#0d9488" className="mb-0.5" />
+      <Feather name={icon} size={15} color="#475569" className="mb-0.5" />
       <Text className="text-text-tertiary text-[10px] font-semibold">{label}</Text>
       <Text className="text-text-primary text-lg font-black mt-0.5">{value}</Text>
     </View>

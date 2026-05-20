@@ -114,7 +114,7 @@ export default function GymsScreen() {
             isFocused ? 'border-brand-primary bg-background-primary' : 'border-border-subtle'
           }`}
         >
-          <Feather name="search" size={18} color={isFocused ? '#0d9488' : '#64748b'} />
+          <Feather name="search" size={18} color={isFocused ? '#06b6d4' : '#64748b'} />
           <TextInput
             placeholder="이름·지점·지역 검색"
             placeholderTextColor="#94a3b8"
@@ -188,7 +188,7 @@ export default function GymsScreen() {
                 <Feather
                   name={opt.icon}
                   size={12}
-                  color={isSelected ? '#0d9488' : '#64748b'}
+                  color={isSelected ? '#06b6d4' : '#64748b'}
                 />
                 <Text
                   className={`text-xs font-semibold ${
@@ -205,7 +205,7 @@ export default function GymsScreen() {
 
       {isLoading && (
         <View className="p-12 items-center justify-center">
-          <ActivityIndicator size="large" color="#0d9488" />
+          <ActivityIndicator size="large" color="#06b6d4" />
         </View>
       )}
 

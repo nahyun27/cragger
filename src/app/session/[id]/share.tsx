@@ -23,7 +23,7 @@ const BG_COLORS = [
   { value: '#fafaf9', name: '크림', isDark: false },
   { value: '#ecfdf5', name: '민트', isDark: false },
   { value: '#0f172a', name: '차콜', isDark: true },
-  { value: '#0f766e', name: '딥틸', isDark: true },
+  { value: '#0e7490', name: '딥틸', isDark: true },
   { value: '#3b0764', name: '퍼플', isDark: true },
 ];
 
@@ -237,7 +237,7 @@ export default function SessionShareScreen() {
                         paddingVertical: 10,
                         borderRadius: 12,
                         borderWidth: 1,
-                        borderColor: active ? '#0d9488' : '#e2e8f0',
+                        borderColor: active ? '#06b6d4' : '#e2e8f0',
                         backgroundColor: active ? 'rgba(13, 148, 136, 0.05)' : '#ffffff',
                         opacity: pressed ? 0.8 : 1,
                       }
@@ -246,7 +246,7 @@ export default function SessionShareScreen() {
                     <Feather
                       name={item.icon}
                       size={14}
-                      color={active ? '#0d9488' : '#64748b'}
+                      color={active ? '#06b6d4' : '#64748b'}
                     />
                     <Text
                       className={`text-xs font-bold ${
@@ -281,7 +281,7 @@ export default function SessionShareScreen() {
                         paddingVertical: 10,
                         borderRadius: 12,
                         borderWidth: 1,
-                        borderColor: active ? '#0d9488' : '#e2e8f0',
+                        borderColor: active ? '#06b6d4' : '#e2e8f0',
                         backgroundColor: active ? 'rgba(13, 148, 136, 0.05)' : '#ffffff',
                         opacity: pressed ? 0.8 : 1,
                       }
@@ -290,7 +290,7 @@ export default function SessionShareScreen() {
                     <Feather
                       name={item.icon}
                       size={14}
-                      color={active ? '#0d9488' : '#64748b'}
+                      color={active ? '#06b6d4' : '#64748b'}
                     />
                     <Text
                       className={`text-xs font-bold ${
@@ -323,7 +323,7 @@ export default function SessionShareScreen() {
                         alignItems: 'center',
                         justifyContent: 'center',
                         borderWidth: active ? 2 : 1,
-                        borderColor: active ? '#0d9488' : '#e2e8f0',
+                        borderColor: active ? '#06b6d4' : '#e2e8f0',
                         backgroundColor: color.value,
                         opacity: pressed ? 0.8 : 1,
                         transform: [{ scale: active ? 1.05 : 1 }],
@@ -334,7 +334,7 @@ export default function SessionShareScreen() {
                       <Feather
                         name="check"
                         size={16}
-                        color={color.isDark ? '#ffffff' : '#0d9488'}
+                        color={color.isDark ? '#ffffff' : '#06b6d4'}
                       />
                     )}
                   </Pressable>
@@ -406,7 +406,7 @@ export default function SessionShareScreen() {
                             borderRadius: 8,
                             borderWidth: 1,
                             alignItems: 'center',
-                            borderColor: active ? '#0d9488' : '#e2e8f0',
+                            borderColor: active ? '#06b6d4' : '#e2e8f0',
                             backgroundColor: active ? 'rgba(13, 148, 136, 0.05)' : '#f8fafc',
                             opacity: pressed ? 0.8 : 1,
                           }
@@ -469,11 +469,11 @@ export default function SessionShareScreen() {
               paddingVertical: 14,
               alignItems: 'center',
               justifyContent: 'center',
-              backgroundColor: '#0d9488',
+              backgroundColor: '#06b6d4',
               flexDirection: 'row',
               gap: 6,
               opacity: pressed ? 0.8 : 1,
-              shadowColor: '#0d9488',
+              shadowColor: '#06b6d4',
               shadowOpacity: 0.15,
               shadowOffset: { width: 0, height: 4 },
               shadowRadius: 6,

@@ -217,7 +217,7 @@ export default function NewMembershipScreen() {
                       <Feather
                         name="calendar"
                         size={18}
-                        color={type === 'monthly' ? '#0d9488' : '#64748b'}
+                        color={type === 'monthly' ? '#06b6d4' : '#64748b'}
                       />
                       <Text
                         className={`text-base font-bold ${
@@ -252,7 +252,7 @@ export default function NewMembershipScreen() {
                       <Feather
                         name="layers"
                         size={18}
-                        color={type === 'passes' ? '#0d9488' : '#64748b'}
+                        color={type === 'passes' ? '#06b6d4' : '#64748b'}
                       />
                       <Text
                         className={`text-base font-bold ${
@@ -289,7 +289,7 @@ export default function NewMembershipScreen() {
                       <Feather
                         name="clock"
                         size={18}
-                        color={type === 'period' ? '#0d9488' : '#64748b'}
+                        color={type === 'period' ? '#06b6d4' : '#64748b'}
                       />
                       <Text
                         className={`text-base font-bold ${
@@ -324,7 +324,7 @@ export default function NewMembershipScreen() {
                       <Feather
                         name="tag"
                         size={18}
-                        color={type === 'single' ? '#0d9488' : '#64748b'}
+                        color={type === 'single' ? '#06b6d4' : '#64748b'}
                       />
                       <Text
                         className={`text-base font-bold ${
@@ -418,7 +418,7 @@ export default function NewMembershipScreen() {
               </View>
 
               <View className="mt-1 flex-row items-center gap-1.5 bg-brand-primary/5 p-3 rounded-xl border border-brand-primary/10">
-                <Feather name="info" size={14} color="#0d9488" />
+                <Feather name="info" size={14} color="#06b6d4" />
                 <Text className="text-brand-primary text-xs font-semibold">
                   선택 시 종료일: {computedEndDate}
                 </Text>
