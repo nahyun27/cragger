@@ -70,10 +70,19 @@ export function useGymDetail(gymId: string | undefined) {
       if (schemesRes.error) throw new Error(schemesRes.error.message);
       if (statsRes.error) throw new Error(statsRes.error.message);
 
+      // 색깔 통계는 어려운 순(평균 V그레이드 desc). null은 맨 뒤.
+      const colorStats = ((statsRes.data ?? []) as ColorStat[])
+        .slice()
+        .sort((a, b) => {
+          const av = a.avg_v_grade ?? -Infinity;
+          const bv = b.avg_v_grade ?? -Infinity;
+          return bv - av;
+        });
+
       return {
         ...(gymRes.data as GymRow),
         color_schemes: (schemesRes.data ?? []) as ColorScheme[],
-        color_stats: (statsRes.data ?? []) as ColorStat[],
+        color_stats: colorStats,
       };
     },
   });
