@@ -13,7 +13,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 
 import {
@@ -78,6 +78,7 @@ export default function PostDetailScreen() {
   const router = useRouter();
   const { session: authSession } = useAuth();
   const meId = authSession?.user.id;
+  const insets = useSafeAreaInsets();
 
   const postQ = usePost(id);
   const commentsQ = useComments(id);
@@ -91,7 +92,7 @@ export default function PostDetailScreen() {
 
   if (postQ.isLoading) {
     return (
-      <SafeAreaView style={s.loadingContainer} edges={['top', 'bottom']}>
+      <SafeAreaView style={s.loadingContainer} edges={['top']}>
         <ActivityIndicator size="large" color="#0d9488" />
       </SafeAreaView>
     );
@@ -99,7 +100,7 @@ export default function PostDetailScreen() {
 
   if (postQ.error || !postQ.data) {
     return (
-      <SafeAreaView style={s.errorContainer} edges={['top', 'bottom']}>
+      <SafeAreaView style={s.errorContainer} edges={['top']}>
         <Text style={s.errorText}>
           {postQ.error?.message ?? '글을 찾을 수 없어요'}
         </Text>
@@ -144,7 +145,7 @@ export default function PostDetailScreen() {
   }
 
   return (
-    <SafeAreaView style={s.container} edges={['top', 'bottom']}>
+    <SafeAreaView style={s.container} edges={['top']}>
       {/* Detail Header */}
       <View style={s.header}>
         <Pressable onPress={() => router.back()} style={({ pressed }) => [s.headerAction, { opacity: pressed ? 0.6 : 1 }]} hitSlop={8}>
@@ -186,7 +187,7 @@ export default function PostDetailScreen() {
                 }
                 style={({ pressed }) => [s.gymPill, { opacity: pressed ? 0.7 : 1 }]}
               >
-                <Feather name="map-pin" size={11} color="#0d9488" />
+                <Feather name="map-pin" size={11} color="#64748b" />
                 <Text style={s.gymPillText} numberOfLines={1}>
                   {post.gym.name}
                   {post.gym.branch ? ` ${post.gym.branch}` : ''}
@@ -281,7 +282,7 @@ export default function PostDetailScreen() {
         </ScrollView>
 
         {/* Comment Input Box */}
-        <View style={s.commentInputBar}>
+        <View style={[s.commentInputBar, { paddingBottom: 10 + insets.bottom }]}>
           <TextInput
             value={commentBody}
             onChangeText={(t) => setCommentBody(t.slice(0, COMMENT_MAX))}
@@ -460,9 +461,7 @@ const s = StyleSheet.create({
     alignItems: 'center',
     gap: 4,
     alignSelf: 'flex-start',
-    backgroundColor: '#f0fdfa',
-    borderWidth: 1,
-    borderColor: '#99f6e4',
+    backgroundColor: '#f1f5f9',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 8,
@@ -471,7 +470,7 @@ const s = StyleSheet.create({
   gymPillText: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#0f766e',
+    color: '#475569',
     maxWidth: 240,
   },
   cardSeparator: {

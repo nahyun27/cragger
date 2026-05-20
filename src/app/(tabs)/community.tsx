@@ -357,7 +357,7 @@ const s = StyleSheet.create({
   },
   fab: {
     position: 'absolute',
-    bottom: 24,
+    bottom: 96,
     right: 20,
     flexDirection: 'row',
     alignItems: 'center',
