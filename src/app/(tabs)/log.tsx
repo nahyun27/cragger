@@ -1,9 +1,10 @@
 import { useRouter } from 'expo-router';
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -11,27 +12,15 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 
-import { useRecentSessions, type RecentSession } from '@/hooks/use-recent-sessions';
+import { SessionCalendar } from '@/components/log/session-calendar';
+import { SessionRow } from '@/components/session/session-row';
+import { useRecentSessions } from '@/hooks/use-recent-sessions';
 
-const KO_WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
-
-function formatDate(iso: string): string {
-  const d = new Date(`${iso}T00:00:00`);
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  const w = KO_WEEKDAYS[d.getDay()];
-  return `${y}.${m}.${day} (${w})`;
-}
-
-function formatDuration(min: number): string {
-  if (min < 60) return `${min}분`;
-  if (min % 60 === 0) return `${min / 60}시간`;
-  return `${(min / 60).toFixed(1)}시간`;
-}
+type ViewMode = 'list' | 'calendar';
 
 export default function LogScreen() {
   const router = useRouter();
+  const [viewMode, setViewMode] = useState<ViewMode>('list');
   const { data: sessions, isLoading, error } = useRecentSessions(20);
   const isEmpty = !isLoading && (sessions?.length ?? 0) === 0;
 
@@ -64,130 +53,127 @@ export default function LogScreen() {
         </Pressable>
       </View>
 
-      {isLoading && (
-        <View style={s.loadingContainer}>
-          <ActivityIndicator size="large" color="#06b6d4" />
+      {/* View toggle */}
+      <View style={s.toggleWrap}>
+        <View style={s.toggle}>
+          <ToggleBtn
+            label="리스트"
+            icon="list"
+            active={viewMode === 'list'}
+            onPress={() => setViewMode('list')}
+          />
+          <ToggleBtn
+            label="캘린더"
+            icon="calendar"
+            active={viewMode === 'calendar'}
+            onPress={() => setViewMode('calendar')}
+          />
         </View>
+      </View>
+
+      {viewMode === 'calendar' ? (
+        <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingTop: 4 }}>
+          <SessionCalendar />
+        </ScrollView>
+      ) : (
+        <>
+          {isLoading && (
+            <View style={s.loadingContainer}>
+              <ActivityIndicator size="large" color="#06b6d4" />
+            </View>
+          )}
+
+          {error && (
+            <View style={s.errorContainer}>
+              <Text style={s.errorText}>{error.message}</Text>
+            </View>
+          )}
+
+          {!isLoading && !error && (
+            <FlatList
+              data={sessions}
+              keyExtractor={(item) => item.id}
+              contentContainerStyle={s.listContent}
+              ListHeaderComponent={
+                <>
+                  {/* Dashboard summary card */}
+                  <View style={s.statsCard}>
+                    <View style={s.statsCardHeader}>
+                      <Feather name="trending-up" size={14} color="#475569" />
+                      <Text style={s.statsCardTitle}>최근 등반 통계</Text>
+                    </View>
+                    <View style={s.statsRow}>
+                      <View style={s.statCol}>
+                        <Text style={s.statLabel}>총 세션</Text>
+                        <Text style={s.statVal}>{stats.totalSessions}</Text>
+                      </View>
+                      <View style={s.statDivider} />
+                      <View style={s.statCol}>
+                        <Text style={s.statLabel}>총 완등</Text>
+                        <Text style={s.statVal}>{stats.totalSends}</Text>
+                      </View>
+                      <View style={s.statDivider} />
+                      <View style={s.statCol}>
+                        <Text style={s.statLabel}>최근 암장</Text>
+                        <Text style={s.statValLatest} numberOfLines={1}>
+                          {stats.latestGym}
+                        </Text>
+                      </View>
+                    </View>
+                  </View>
+
+                  <Text style={s.sectionTitle}>지난 세션 목록</Text>
+
+                  {isEmpty && (
+                    <View style={s.emptyCard}>
+                      <View style={s.emptyIconWrapper}>
+                        <Feather name="activity" size={28} color="#94a3b8" />
+                      </View>
+                      <Text style={s.emptyTitle}>기록이 존재하지 않습니다</Text>
+                      <Text style={s.emptySubtitle}>
+                        첫 번째 등반 흔적을 남기고 기록을 쌓아가보세요!
+                      </Text>
+                      <Pressable
+                        onPress={() => router.push('/session/new')}
+                        style={({ pressed }) => [s.emptyBtn, { opacity: pressed ? 0.9 : 1 }]}
+                      >
+                        <Text style={s.emptyBtnText}>등반 기록 추가하기</Text>
+                      </Pressable>
+                    </View>
+                  )}
+                </>
+              }
+              renderItem={({ item }) => <SessionRow session={item} />}
+              ItemSeparatorComponent={() => <View style={{ height: 8 }} />}
+            />
+          )}
+        </>
       )}
-
-      {error && (
-        <View style={s.errorContainer}>
-          <Text style={s.errorText}>{error.message}</Text>
-        </View>
-      )}
-
-      {!isLoading && !error && (
-        <FlatList
-          data={sessions}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={s.listContent}
-          ListHeaderComponent={
-            <>
-              {/* Dashboard summary card */}
-              <View style={s.statsCard}>
-                <View style={s.statsCardHeader}>
-                  <Feather name="trending-up" size={14} color="#475569" />
-                  <Text style={s.statsCardTitle}>최근 등반 통계</Text>
-                </View>
-                <View style={s.statsRow}>
-                  <View style={s.statCol}>
-                    <Text style={s.statLabel}>총 세션</Text>
-                    <Text style={s.statVal}>{stats.totalSessions}</Text>
-                  </View>
-                  <View style={s.statDivider} />
-                  <View style={s.statCol}>
-                    <Text style={s.statLabel}>총 완등</Text>
-                    <Text style={s.statVal}>{stats.totalSends}</Text>
-                  </View>
-                  <View style={s.statDivider} />
-                  <View style={s.statCol}>
-                    <Text style={s.statLabel}>최근 암장</Text>
-                    <Text style={s.statValLatest} numberOfLines={1}>
-                      {stats.latestGym}
-                    </Text>
-                  </View>
-                </View>
-              </View>
-
-              <Text style={s.sectionTitle}>지난 세션 목록</Text>
-
-              {isEmpty && (
-                <View style={s.emptyCard}>
-                  <View style={s.emptyIconWrapper}>
-                    <Feather name="activity" size={28} color="#94a3b8" />
-                  </View>
-                  <Text style={s.emptyTitle}>기록이 존재하지 않습니다</Text>
-                  <Text style={s.emptySubtitle}>
-                    첫 번째 등반 흔적을 남기고 기록을 쌓아가보세요!
-                  </Text>
-                  <Pressable
-                    onPress={() => router.push('/session/new')}
-                    style={({ pressed }) => [s.emptyBtn, { opacity: pressed ? 0.9 : 1 }]}
-                  >
-                    <Text style={s.emptyBtnText}>등반 기록 추가하기</Text>
-                  </Pressable>
-                </View>
-              )}
-            </>
-          }
-          renderItem={({ item }) => <SessionCard session={item} />}
-          ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
-        />
-      )}
-
     </SafeAreaView>
   );
 }
 
-function SessionCard({ session }: { session: RecentSession }) {
-  const router = useRouter();
-  const gymName = session.gym?.name || '암장 미선택';
-  const branchName = session.gym?.branch ? ` ${session.gym.branch}` : '';
-  const hasSends = session.send_count > 0;
-
+function ToggleBtn({
+  label,
+  icon,
+  active,
+  onPress,
+}: {
+  label: string;
+  icon: React.ComponentProps<typeof Feather>['name'];
+  active: boolean;
+  onPress: () => void;
+}) {
   return (
     <Pressable
-      onPress={() => router.push({ pathname: '/session/[id]', params: { id: session.id } })}
-      style={({ pressed }) => [
-        s.card,
-        {
-          backgroundColor: '#ffffff',
-          opacity: pressed ? 0.97 : 1,
-          shadowColor: '#0f172a',
-          shadowOpacity: 0.04,
-          shadowRadius: 10,
-          shadowOffset: { width: 0, height: 3 },
-          elevation: 1,
-        },
-      ]}
+      onPress={onPress}
+      style={({ pressed }) => [{ flex: 1, opacity: pressed ? 0.7 : 1 }]}
     >
-      <View style={s.cardBody}>
-        <View style={s.cardIcon}>
-          <Feather name="map-pin" size={16} color="#475569" />
-        </View>
-
-        <View style={s.cardText}>
-          <Text style={s.cardGymName} numberOfLines={1}>
-            {gymName}
-            {branchName}
-          </Text>
-          <View style={s.metaRow}>
-            <Text style={s.metaText}>{formatDate(session.session_date)}</Text>
-            {session.duration_min != null && (
-              <>
-                <Text style={s.metaDot}>·</Text>
-                <Feather name="clock" size={11} color="#94a3b8" />
-                <Text style={s.metaText}>{formatDuration(session.duration_min)}</Text>
-              </>
-            )}
-          </View>
-        </View>
-
-        <View style={[s.sendBadge, !hasSends && s.sendBadgeMuted]}>
-          <Text style={[s.sendBadgeText, !hasSends && s.sendBadgeTextMuted]}>
-            완등 {session.send_count}
-          </Text>
-        </View>
+      <View style={[s.toggleBtn, active && s.toggleBtnActive]}>
+        <Feather name={icon} size={14} color={active ? '#0f172a' : '#94a3b8'} />
+        <Text style={[s.toggleBtnLabel, active && s.toggleBtnLabelActive]}>
+          {label}
+        </Text>
       </View>
     </Pressable>
   );
@@ -240,6 +226,48 @@ const s = StyleSheet.create({
     fontWeight: '800',
     letterSpacing: -0.2,
   },
+
+  // View toggle
+  toggleWrap: {
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 4,
+    backgroundColor: '#f8fafc',
+  },
+  toggle: {
+    flexDirection: 'row',
+    backgroundColor: '#f1f5f9',
+    borderRadius: 12,
+    padding: 4,
+    gap: 4,
+  },
+  toggleBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 8,
+    borderRadius: 9,
+    backgroundColor: 'transparent',
+  },
+  toggleBtnActive: {
+    backgroundColor: '#ffffff',
+    shadowColor: '#0f172a',
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    shadowOffset: { width: 0, height: 1 },
+    elevation: 1,
+  },
+  toggleBtnLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#94a3b8',
+  },
+  toggleBtnLabelActive: {
+    fontWeight: '800',
+    color: '#0f172a',
+  },
+
   loadingContainer: {
     flex: 1,
     alignItems: 'center',
@@ -260,7 +288,7 @@ const s = StyleSheet.create({
   },
   listContent: {
     paddingHorizontal: 16,
-    paddingTop: 16,
+    paddingTop: 12,
     paddingBottom: 120,
   },
   sectionTitle: {
@@ -371,74 +399,5 @@ const s = StyleSheet.create({
     color: '#ffffff',
     fontSize: 12,
     fontWeight: '700',
-  },
-
-  // Session Card
-  card: {
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-    borderRadius: 18,
-    padding: 14,
-  },
-  cardBody: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  cardIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    backgroundColor: '#f1f5f9',
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
-  },
-  cardText: {
-    flex: 1,
-    minWidth: 0,
-  },
-  cardGymName: {
-    fontSize: 14,
-    fontWeight: '800',
-    color: '#0f172a',
-    letterSpacing: -0.2,
-  },
-  metaRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    marginTop: 4,
-  },
-  metaText: {
-    fontSize: 11,
-    color: '#94a3b8',
-    fontWeight: '600',
-  },
-  metaDot: {
-    fontSize: 11,
-    color: '#cbd5e1',
-    marginHorizontal: 2,
-  },
-  sendBadge: {
-    backgroundColor: '#ecfdf5',
-    borderWidth: 1,
-    borderColor: '#a7f3d0',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 999,
-    flexShrink: 0,
-  },
-  sendBadgeMuted: {
-    backgroundColor: '#f1f5f9',
-    borderColor: '#e2e8f0',
-  },
-  sendBadgeText: {
-    color: '#059669',
-    fontSize: 12,
-    fontWeight: '800',
-  },
-  sendBadgeTextMuted: {
-    color: '#94a3b8',
   },
 });
