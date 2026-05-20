@@ -118,6 +118,18 @@ export default function SessionDetailScreen() {
         <View className="flex-row gap-1">
           <Pressable
             onPress={() =>
+              router.push({
+                pathname: '/session/[id]/share',
+                params: { id: id! },
+              })
+            }
+            className="p-2 active:opacity-60"
+            hitSlop={8}
+          >
+            <Feather name="share" size={20} color="#71717a" />
+          </Pressable>
+          <Pressable
+            onPress={() =>
               router.push({ pathname: '/session/[id]/edit', params: { id: id! } })
             }
             className="p-2 active:opacity-60"
