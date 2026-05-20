@@ -124,17 +124,22 @@ supabase/
 - [x] 스키마 SQL 작성 (`supabase/migrations/`)
 - [x] 시드 데이터 (수도권 21개 암장)
 - [x] IA 트리 + 사용자 플로우 + 핵심 와이어프레임 3개
-- [ ] 프로젝트 셋업 + Supabase 연결
-- [ ] Expo Router 탭 구조 셋업
-- [ ] NativeWind 설정 + 디자인 토큰
-- [ ] 인증 (이메일)
-- [ ] 암장 리스트 + 상세
-- [ ] 세션 기록 화면
-- [ ] 색깔 투표 화면
-- [ ] 통계 화면
-- [ ] 공유 카드 편집
-- [ ] 회원권 관리
+- [x] 프로젝트 셋업 + Supabase 연결
+- [x] Supabase CLI 도입 + 마이그레이션 워크플로우
+- [x] Expo Router 탭 구조 셋업 (홈/기록/암장/프로필)
+- [x] NativeWind 설정 + 디자인 토큰 (CSS-variable 기반)
+- [x] 인증 (이메일) + profiles 자동 생성 트리거 + 보호된 라우트
+- [x] 암장 리스트 + 상세 (검색·지역·시설 필터, photo placeholder)
+- [x] 세션 기록 화면 (사후 기록 모드, 한 화면 폼)
+- [x] 세션 상세 + 수정 + 삭제
+- [x] 색깔 투표 화면 (grade_votes 분리 테이블, 14색, V0~V8+ 모달)
+- [x] 통계 화면 (프로필 탭, 암장별 색깔 막대 + 요약 카드)
+- [x] grade_votes 시드 (Becky 시트 → 15 gym / 100+ votes)
+- [ ] 공유 카드 편집 (PNG 캡처 + 시스템 share sheet)
+- [ ] 회원권 관리 (`memberships` 테이블 있음, UI 없음)
 - [ ] (prebuild) 카카오 로그인
+- [ ] V그레이드 깊이 (월별 추이, 개인 max V, heatmap) — v1.1
+- [ ] 친구/팔로우/피드 — v1.1 (스키마 준비됨)
 
 ## 작업 원칙
 
