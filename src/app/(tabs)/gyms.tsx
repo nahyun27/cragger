@@ -13,11 +13,13 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { GymThumbnail } from '@/components/gym/gym-thumbnail';
+import { useFavoriteGymIds, useToggleFavorite } from '@/hooks/use-favorites';
 import { useGyms, type GymListItem } from '@/hooks/use-gyms';
 
 export default function GymsScreen() {
   const router = useRouter();
   const { data, isLoading, error } = useGyms();
+  const { data: favoriteIds } = useFavoriteGymIds();
   const [query, setQuery] = useState('');
   const [isFocused, setIsFocused] = useState(false);
   const [selectedRegion, setSelectedRegion] = useState('전체');
@@ -73,8 +75,14 @@ export default function GymsScreen() {
       );
     }
 
-    return filteredList;
-  }, [data, query, selectedRegion, selectedFacilities]);
+    // 4. Sort: favorites first, then by name
+    return [...filteredList].sort((a, b) => {
+      const aFav = favoriteIds?.has(a.id) ?? false;
+      const bFav = favoriteIds?.has(b.id) ?? false;
+      if (aFav !== bFav) return aFav ? -1 : 1;
+      return a.name.localeCompare(b.name);
+    });
+  }, [data, query, selectedRegion, selectedFacilities, favoriteIds]);
 
   const toggleFacility = (fac: string) => {
     setSelectedFacilities((prev) =>
@@ -206,7 +214,12 @@ export default function GymsScreen() {
         <FlatList
           data={filtered}
           keyExtractor={(item) => item.id}
-          renderItem={({ item }) => <GymCard gym={item} />}
+          renderItem={({ item }) => (
+            <GymCard
+              gym={item}
+              isFavorite={favoriteIds?.has(item.id) ?? false}
+            />
+          )}
           contentContainerClassName="px-5 pt-4 pb-12 gap-1.5"
           ListEmptyComponent={
             data && !isLoading ? (
@@ -243,8 +256,9 @@ export default function GymsScreen() {
   );
 }
 
-function GymCard({ gym }: { gym: GymListItem }) {
+function GymCard({ gym, isFavorite }: { gym: GymListItem; isFavorite: boolean }) {
   const router = useRouter();
+  const toggleFavorite = useToggleFavorite();
 
   const location = [gym.city, gym.district].filter(Boolean).join(' · ');
   const sizeBit = gym.size_pyeong ? `${gym.size_pyeong}평` : null;
@@ -329,9 +343,24 @@ function GymCard({ gym }: { gym: GymListItem }) {
         </View>
       </View>
       
-      {/* Right chevron indicator */}
-      <View className="justify-center items-center pl-2">
-        <Feather name="chevron-right" size={20} color="#a1a1aa" />
+      {/* Right: favorite toggle + chevron */}
+      <View className="justify-center items-center pl-2 gap-1.5">
+        <Pressable
+          onPress={() =>
+            toggleFavorite.mutate({ gymId: gym.id, currentlyFavorite: isFavorite })
+          }
+          className="p-1"
+          hitSlop={10}
+        >
+          <Text
+            className={`text-xl ${
+              isFavorite ? 'text-status-warning' : 'text-text-tertiary'
+            }`}
+          >
+            {isFavorite ? '★' : '☆'}
+          </Text>
+        </Pressable>
+        <Feather name="chevron-right" size={18} color="#a1a1aa" />
       </View>
     </Pressable>
   );

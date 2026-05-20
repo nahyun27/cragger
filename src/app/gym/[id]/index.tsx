@@ -1,5 +1,5 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import React from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -14,13 +14,16 @@ import {
   resolveColorHex,
   resolveColorLabel,
 } from '@/constants/climb-colors';
+import { useFavoriteGymIds, useToggleFavorite } from '@/hooks/use-favorites';
 import { useGymDetail, type ColorStat } from '@/hooks/use-gym-detail';
 
 export default function GymDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { data, isLoading, error } = useGymDetail(id);
-  const [favorited, setFavorited] = useState(false);
+  const { data: favoriteIds } = useFavoriteGymIds();
+  const toggleFavorite = useToggleFavorite();
+  const favorited = !!id && !!favoriteIds?.has(id);
 
   if (isLoading) {
     return (
@@ -98,7 +101,10 @@ export default function GymDetailScreen() {
           )}
         </View>
         <Pressable
-          onPress={() => setFavorited((v) => !v)}
+          onPress={() => {
+            if (!id) return;
+            toggleFavorite.mutate({ gymId: id, currentlyFavorite: favorited });
+          }}
           className="p-2"
           hitSlop={8}
         >
