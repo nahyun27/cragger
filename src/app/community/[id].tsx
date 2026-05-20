@@ -174,95 +174,90 @@ export default function PostDetailScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <ScrollView style={{ flex: 1 }} contentContainerStyle={s.scrollContent}>
-          {/* Post Header */}
-          <PostHeader post={post} />
+          {/* Post card (mirrors feed card style) */}
+          <View style={s.postCard}>
+            <PostHeader post={post} />
 
-          {/* Post Title */}
-          {post.title && (
-            <Text style={s.postTitle}>
-              {post.title}
-            </Text>
-          )}
+            {/* Location pill above title */}
+            {post.gym && (
+              <Pressable
+                onPress={() =>
+                  router.push({ pathname: '/gym/[id]', params: { id: post.gym!.id } })
+                }
+                style={({ pressed }) => [s.gymPill, { opacity: pressed ? 0.7 : 1 }]}
+              >
+                <Feather name="map-pin" size={11} color="#0d9488" />
+                <Text style={s.gymPillText} numberOfLines={1}>
+                  {post.gym.name}
+                  {post.gym.branch ? ` ${post.gym.branch}` : ''}
+                </Text>
+              </Pressable>
+            )}
 
-          {/* Post Body */}
-          <Text style={s.postBody}>{post.body}</Text>
+            {post.title && <Text style={s.postTitle}>{post.title}</Text>}
 
-          {/* Post Images */}
-          {post.image_urls.length > 0 && (
-            <View style={s.imageGrid}>
-              {post.image_urls.map((url, i) => (
-                <View key={`${url}-${i}`} style={s.imageWrapper}>
-                  <Image
-                    source={{ uri: url }}
-                    style={s.postImage}
-                    resizeMode="cover"
-                  />
+            <Text style={s.postBody}>{post.body}</Text>
+
+            {post.image_urls.length > 0 && (
+              <View style={s.imageGrid}>
+                {post.image_urls.map((url, i) => (
+                  <View key={`${url}-${i}`} style={s.imageWrapper}>
+                    <Image
+                      source={{ uri: url }}
+                      style={s.postImage}
+                      resizeMode="cover"
+                    />
+                  </View>
+                ))}
+              </View>
+            )}
+
+            {/* Metric row inside the card */}
+            <View style={s.cardSeparator} />
+            <View style={s.metricsRow}>
+              <Pressable
+                onPress={() => {
+                  if (toggleLike.isPending) return;
+                  toggleLike.mutate({ postId: post.id, currentlyLiked: liked });
+                }}
+                hitSlop={8}
+                style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
+              >
+                <View style={s.metricBtn}>
+                  <Feather name="heart" size={18} color={liked ? '#ef4444' : '#64748b'} />
+                  <Text
+                    style={[s.metricText, liked && s.metricTextLiked]}
+                    numberOfLines={1}
+                  >{post.like_count}</Text>
                 </View>
-              ))}
-            </View>
-          )}
-
-          {/* Tagged Gym */}
-          {post.gym && (
-            <Pressable
-              onPress={() =>
-                router.push({ pathname: '/gym/[id]', params: { id: post.gym!.id } })
-              }
-              style={({ pressed }) => [s.gymCard, { opacity: pressed ? 0.8 : 1 }]}
-            >
-              <Feather name="map-pin" size={14} color="#0d9488" />
-              <Text style={s.gymCardText} numberOfLines={1}>
-                {post.gym.name}
-                {post.gym.branch ? ` ${post.gym.branch}` : ''}
-              </Text>
-              <Feather name="chevron-right" size={16} color="#94a3b8" />
-            </Pressable>
-          )}
-
-          {/* Like / Comment Counts */}
-          <View style={s.postDivider} />
-          <View style={s.metricsRow}>
-            <Pressable
-              onPress={() => {
-                if (toggleLike.isPending) return;
-                toggleLike.mutate({ postId: post.id, currentlyLiked: liked });
-              }}
-              style={({ pressed }) => [s.metricBtn, { opacity: pressed ? 0.6 : 1 }]}
-              hitSlop={8}
-            >
-              <View style={[s.metricIconWrapper, liked && s.metricIconWrapperLiked]}>
-                <Feather name="heart" size={16} color={liked ? '#ef4444' : '#64748b'} />
+              </Pressable>
+              <View style={s.metricBtn}>
+                <Feather name="message-circle" size={18} color="#64748b" />
+                <Text style={s.metricText} numberOfLines={1}>{post.comment_count}</Text>
               </View>
-              <Text
-                style={[s.metricText, liked && s.metricTextLiked]}
-                numberOfLines={1}
-              >{post.like_count}</Text>
-            </Pressable>
-            <View style={s.metricBtn}>
-              <View style={s.metricIconWrapper}>
-                <Feather name="message-circle" size={16} color="#64748b" />
-              </View>
-              <Text style={s.metricText} numberOfLines={1}>{post.comment_count}</Text>
             </View>
           </View>
-          <View style={s.postDivider} />
 
           {/* Comments Section */}
-          <View style={s.commentsSection}>
-            <Text style={s.commentsTitle}>댓글 목록</Text>
-            
-            {commentsQ.isLoading && <ActivityIndicator color="#0d9488" style={{ marginVertical: 12 }} />}
-            
+          <View style={s.commentsCard}>
+            <Text style={s.commentsTitle}>
+              댓글 <Text style={s.commentsCount}>{post.comment_count}</Text>
+            </Text>
+
+            {commentsQ.isLoading && (
+              <ActivityIndicator color="#0d9488" style={{ marginVertical: 12 }} />
+            )}
+
             {commentsQ.error && (
               <Text style={s.commentsError}>{commentsQ.error.message}</Text>
             )}
-            
+
             {commentsQ.data && commentsQ.data.length === 0 && (
               <Text style={s.noCommentsText}>
-                아직 작성된 댓글이 없습니다. 첫 댓글을 남겨보세요!
+                아직 댓글이 없어요. 첫 댓글을 남겨보세요!
               </Text>
             )}
-            
+
             {commentsQ.data?.map((c) => (
               <CommentItem
                 key={c.id}
@@ -299,23 +294,21 @@ export default function PostDetailScreen() {
           <Pressable
             onPress={handleSubmitComment}
             disabled={!commentBody.trim() || createComment.isPending}
+            hitSlop={6}
             style={({ pressed }) => [
-              s.submitBtn,
-              !commentBody.trim() ? s.submitBtnDisabled : s.submitBtnEnabled,
-              { opacity: pressed ? 0.9 : 1 },
+              s.sendBtn,
+              !commentBody.trim() && s.sendBtnDisabled,
+              { opacity: pressed ? 0.85 : 1 },
             ]}
           >
             {createComment.isPending ? (
               <ActivityIndicator size="small" color="#ffffff" />
             ) : (
-              <Text
-                style={[
-                  s.submitBtnText,
-                  !commentBody.trim() ? s.submitBtnTextDisabled : s.submitBtnTextEnabled,
-                ]}
-              >
-                등록
-              </Text>
+              <Feather
+                name="send"
+                size={18}
+                color={!commentBody.trim() ? '#94a3b8' : '#ffffff'}
+              />
             )}
           </Pressable>
         </View>
@@ -390,7 +383,7 @@ function CommentItem({
 const s = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#ffffff',
+    backgroundColor: '#f8fafc',
   },
   loadingContainer: {
     flex: 1,
@@ -430,6 +423,7 @@ const s = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 12,
+    backgroundColor: '#ffffff',
     borderBottomWidth: 1,
     borderColor: '#e2e8f0',
   },
@@ -445,8 +439,46 @@ const s = StyleSheet.create({
     color: '#0f172a',
   },
   scrollContent: {
-    padding: 20,
-    paddingBottom: 40,
+    padding: 16,
+    paddingBottom: 32,
+    gap: 12,
+  },
+  postCard: {
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#f1f5f9',
+    borderRadius: 20,
+    padding: 18,
+    shadowColor: '#0f172a',
+    shadowOpacity: 0.03,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 1,
+  },
+  gymPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    alignSelf: 'flex-start',
+    backgroundColor: '#f0fdfa',
+    borderWidth: 1,
+    borderColor: '#99f6e4',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    marginBottom: 12,
+  },
+  gymPillText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#0f766e',
+    maxWidth: 240,
+  },
+  cardSeparator: {
+    height: 1,
+    backgroundColor: '#f1f5f9',
+    marginTop: 16,
+    marginBottom: 4,
   },
   postHeader: {
     flexDirection: 'row',
@@ -489,88 +521,66 @@ const s = StyleSheet.create({
     fontWeight: '800',
   },
   postTitle: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: '800',
     color: '#0f172a',
-    lineHeight: 28,
-    marginBottom: 12,
-    letterSpacing: -0.5,
+    lineHeight: 26,
+    marginBottom: 8,
+    letterSpacing: -0.4,
   },
   postBody: {
-    fontSize: 15,
+    fontSize: 14,
     color: '#334155',
-    lineHeight: 24,
-    marginBottom: 16,
+    lineHeight: 22,
   },
   imageGrid: {
-    gap: 10,
-    marginBottom: 16,
+    gap: 8,
+    marginTop: 12,
   },
   imageWrapper: {
-    borderRadius: 16,
+    borderRadius: 14,
     overflow: 'hidden',
     borderWidth: 1,
     borderColor: '#f1f5f9',
   },
   postImage: {
     width: '100%',
-    height: 240,
-  },
-  gymCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderRadius: 12,
-    backgroundColor: '#f8fafc',
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-    marginBottom: 16,
-  },
-  gymCardText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#0f172a',
-    flex: 1,
-  },
-  postDivider: {
-    height: 1,
-    backgroundColor: '#f1f5f9',
+    height: 220,
   },
   metricsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 16,
-    paddingVertical: 12,
+    gap: 20,
+    paddingTop: 8,
   },
   metricBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 6,
     flexShrink: 0,
-  },
-  metricIconWrapper: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#f1f5f9',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  metricIconWrapperLiked: {
-    backgroundColor: '#ffe4e6',
   },
   metricText: {
     fontSize: 13,
-    fontWeight: '600',
-    color: '#475569',
+    fontWeight: '700',
+    color: '#64748b',
   },
   metricTextLiked: {
     color: '#ef4444',
   },
-  commentsSection: {
-    marginTop: 20,
+  commentsCard: {
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#f1f5f9',
+    borderRadius: 20,
+    padding: 18,
+    shadowColor: '#0f172a',
+    shadowOpacity: 0.03,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 1,
+  },
+  commentsCount: {
+    color: '#0d9488',
   },
   commentsTitle: {
     fontSize: 16,
@@ -637,49 +647,44 @@ const s = StyleSheet.create({
     lineHeight: 18,
   },
   commentInputBar: {
-    paddingHorizontal: 16,
+    paddingHorizontal: 12,
     paddingVertical: 10,
     borderTopWidth: 1,
     borderColor: '#e2e8f0',
     flexDirection: 'row',
     alignItems: 'flex-end',
-    gap: 10,
+    gap: 8,
     backgroundColor: '#ffffff',
   },
   textInput: {
     flex: 1,
     borderWidth: 1,
     borderColor: '#e2e8f0',
-    borderRadius: 20,
+    borderRadius: 22,
     paddingHorizontal: 16,
-    paddingTop: 8,
-    paddingBottom: 8,
+    paddingTop: 10,
+    paddingBottom: 10,
     fontSize: 14,
     color: '#0f172a',
     maxHeight: 100,
     backgroundColor: '#f8fafc',
   },
-  submitBtn: {
-    height: 38,
-    paddingHorizontal: 16,
-    borderRadius: 19,
+  sendBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  submitBtnEnabled: {
     backgroundColor: '#0d9488',
+    shadowColor: '#0d9488',
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
   },
-  submitBtnDisabled: {
-    backgroundColor: '#f1f5f9',
-  },
-  submitBtnText: {
-    fontSize: 13,
-    fontWeight: '700',
-  },
-  submitBtnTextEnabled: {
-    color: '#ffffff',
-  },
-  submitBtnTextDisabled: {
-    color: '#cbd5e1',
+  sendBtnDisabled: {
+    backgroundColor: '#e2e8f0',
+    shadowOpacity: 0,
+    elevation: 0,
   },
 });

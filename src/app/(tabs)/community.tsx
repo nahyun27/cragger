@@ -261,6 +261,17 @@ function PostCard({
         </View>
       </View>
 
+      {/* Location Badge (above title) */}
+      {post.gym && (
+        <View style={s.locationBadge}>
+          <Feather name="map-pin" size={11} color="#64748b" />
+          <Text style={s.locationText} numberOfLines={1}>
+            {post.gym.name}
+            {post.gym.branch ? ` ${post.gym.branch}` : ''}
+          </Text>
+        </View>
+      )}
+
       {/* Content */}
       {post.title && (
         <Text style={s.cardTitle} numberOfLines={1}>
@@ -275,17 +286,6 @@ function PostCard({
       {firstImage && (
         <View style={s.cardImageWrapper}>
           <Image source={{ uri: firstImage }} style={s.cardImage} resizeMode="cover" />
-        </View>
-      )}
-
-      {/* Location Badge */}
-      {post.gym && (
-        <View style={s.locationBadge}>
-          <Feather name="map-pin" size={11} color="#64748b" />
-          <Text style={s.locationText} numberOfLines={1}>
-            {post.gym.name}
-            {post.gym.branch ? ` ${post.gym.branch}` : ''}
-          </Text>
         </View>
       )}
 
@@ -574,7 +574,7 @@ const s = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 8,
-    marginBottom: 2,
+    marginBottom: 8,
   },
   locationText: {
     fontSize: 11,
