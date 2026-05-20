@@ -192,6 +192,7 @@ export default function CommunityScreen() {
               </View>
             ) : null
           }
+          ItemSeparatorComponent={() => <View style={s.cardSeparator} />}
           renderItem={({ item }) => (
             <PostCard
               post={item}
@@ -487,7 +488,12 @@ const s = StyleSheet.create({
     borderColor: '#f1f5f9',
     borderRadius: 20,
     padding: 18,
-    marginBottom: 12,
+  },
+  cardSeparator: {
+    height: 1,
+    backgroundColor: '#e2e8f0',
+    marginVertical: 12,
+    marginHorizontal: 4,
   },
   cardHeader: {
     flexDirection: 'row',
