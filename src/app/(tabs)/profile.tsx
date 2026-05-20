@@ -10,6 +10,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Feather } from '@expo/vector-icons';
 
 import { GymStatsCard } from '@/components/stats/gym-stats-card';
 import { useProfile } from '@/hooks/use-profile';
@@ -39,14 +40,35 @@ export default function ProfileScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-background-primary" edges={['top']}>
+      {/* Header bar */}
+      <View className="flex-row items-center justify-between px-6 py-3 border-b border-border-subtle">
+        <Text className="text-text-primary text-xl font-extrabold tracking-tight">마이페이지</Text>
+        <View className="flex-row gap-1">
+          <Pressable
+            onPress={() => router.push('/profile/edit')}
+            className="p-2 active:opacity-60"
+            hitSlop={8}
+          >
+            <Feather name="edit-3" size={20} color="#71717a" />
+          </Pressable>
+          <Pressable
+            onPress={() => supabase.auth.signOut()}
+            className="p-2 active:opacity-60"
+            hitSlop={8}
+          >
+            <Feather name="log-out" size={20} color="#ef4444" />
+          </Pressable>
+        </View>
+      </View>
+
       <ScrollView contentContainerClassName="pb-10">
-        {/* Profile header */}
-        <View className="px-6 pt-4 flex-row items-center gap-3">
-          <View className="w-16 h-16 rounded-full bg-brand-primary items-center justify-center">
-            <Text className="text-background-primary text-2xl font-bold">{firstChar}</Text>
+        {/* Profile Card */}
+        <View className="px-6 py-5 flex-row items-center gap-4">
+          <View className="w-16 h-16 rounded-full bg-brand-primary/10 border-2 border-brand-primary items-center justify-center shadow-sm">
+            <Text className="text-brand-primary text-2xl font-extrabold">{firstChar}</Text>
           </View>
-          <View className="flex-1">
-            <Text className="text-text-primary text-lg font-bold" numberOfLines={1}>
+          <View className="flex-1 gap-1">
+            <Text className="text-text-primary text-xl font-extrabold tracking-tight" numberOfLines={1}>
               {username}
             </Text>
             <Text className="text-text-tertiary text-xs" numberOfLines={1}>
@@ -61,42 +83,30 @@ export default function ProfileScreen() {
                     Alert.alert('열기 실패', 'Instagram 앱/브라우저를 찾을 수 없어요'),
                   )
                 }
-                className="mt-1.5 self-start active:opacity-60"
+                className="flex-row items-center gap-1 mt-1 active:opacity-60 self-start"
                 hitSlop={6}
               >
-                <Text className="text-brand-primary text-xs font-medium">
-                  📷 @{profile.instagram_handle}
+                <Feather name="instagram" size={12} color="#0d9488" />
+                <Text className="text-brand-primary text-xs font-semibold">
+                  @{profile.instagram_handle}
                 </Text>
               </Pressable>
             ) : (
               <Pressable
                 onPress={() => router.push('/profile/edit')}
-                className="mt-1.5 self-start active:opacity-60"
+                className="flex-row items-center gap-1 mt-1 active:opacity-60 self-start"
                 hitSlop={6}
               >
-                <Text className="text-text-tertiary text-xs">+ Instagram 추가</Text>
+                <Feather name="plus" size={12} color="#a1a1aa" />
+                <Text className="text-text-tertiary text-xs">Instagram 연결</Text>
               </Pressable>
             )}
-          </View>
-          <View className="gap-1.5 items-end">
-            <Pressable
-              onPress={() => router.push('/profile/edit')}
-              className="px-3 py-1.5 rounded-md border border-border-default active:bg-background-secondary"
-            >
-              <Text className="text-text-secondary text-sm">프로필 수정</Text>
-            </Pressable>
-            <Pressable
-              onPress={() => supabase.auth.signOut()}
-              className="px-3 py-1.5 rounded-md border border-border-default active:bg-background-secondary"
-            >
-              <Text className="text-text-secondary text-sm">로그아웃</Text>
-            </Pressable>
           </View>
         </View>
 
         {/* Stats section */}
-        <View className="px-6 mt-8">
-          <Text className="text-text-primary text-xl font-bold mb-4">나의 운동 통계</Text>
+        <View className="px-6 mt-4">
+          <Text className="text-text-primary text-lg font-bold mb-3.5">나의 운동 통계</Text>
 
           {isLoading && (
             <View className="py-8 items-center">
@@ -105,7 +115,7 @@ export default function ProfileScreen() {
           )}
 
           {error && (
-            <View className="border border-status-danger rounded-md p-3 bg-background-secondary">
+            <View className="border border-status-danger rounded-2xl p-4 bg-background-secondary">
               <Text className="text-status-danger">{error.message}</Text>
             </View>
           )}
@@ -113,23 +123,24 @@ export default function ProfileScreen() {
           {stats && (
             <>
               {/* Summary card: 3 metrics */}
-              <View className="bg-background-secondary rounded-2xl p-5 mb-6">
+              <View className="bg-background-secondary rounded-2xl p-5 mb-5 border border-border-subtle shadow-sm">
                 <View className="flex-row justify-between">
-                  <SummaryMetric label="총 세션" value={stats.totalSessions} />
+                  <SummaryMetric label="총 세션" value={stats.totalSessions} icon="calendar" />
                   <Divider />
-                  <SummaryMetric label="총 완등" value={stats.totalSends} />
+                  <SummaryMetric label="총 완등" value={stats.totalSends} icon="check-circle" />
                   <Divider />
-                  <SummaryMetric label="활동 일수" value={stats.activityDays} />
+                  <SummaryMetric label="활동 일수" value={stats.activityDays} icon="award" />
                 </View>
               </View>
 
               {/* Gym list */}
               {stats.gyms.length === 0 ? (
-                <View className="bg-background-secondary rounded-2xl p-6 items-center">
-                  <Text className="text-text-secondary text-base">
+                <View className="bg-background-secondary rounded-2xl p-6 border border-border-subtle items-center">
+                  <Feather name="activity" size={24} color="#a1a1aa" className="mb-2" />
+                  <Text className="text-text-secondary text-sm">
                     아직 운동 기록이 없어요
                   </Text>
-                  <Text className="text-text-tertiary text-sm mt-1">
+                  <Text className="text-text-tertiary text-xs mt-1">
                     기록 탭에서 첫 세션을 추가해보세요
                   </Text>
                 </View>
@@ -154,17 +165,18 @@ export default function ProfileScreen() {
   );
 }
 
-function SummaryMetric({ label, value }: { label: string; value: number }) {
+function SummaryMetric({ label, value, icon }: { label: string; value: number; icon: 'calendar' | 'check-circle' | 'award' }) {
   return (
-    <View className="flex-1 items-center">
-      <Text className="text-text-muted text-xs mb-1">{label}</Text>
-      <Text className="text-brand-primary text-2xl font-bold">{value}</Text>
+    <View className="flex-1 items-center gap-1">
+      <Feather name={icon} size={15} color="#0d9488" className="mb-0.5" />
+      <Text className="text-text-tertiary text-[10px] font-semibold">{label}</Text>
+      <Text className="text-text-primary text-lg font-black mt-0.5">{value}</Text>
     </View>
   );
 }
 
 function Divider() {
-  return <View className="w-px bg-border-subtle mx-2" />;
+  return <View className="w-px bg-border-subtle my-1" />;
 }
 
 function MembershipsSection() {
@@ -193,9 +205,10 @@ function MembershipsSection() {
         <Text className="text-text-primary text-xl font-bold">내 회원권</Text>
         <Pressable
           onPress={() => router.push('/membership/new')}
-          className="px-3 py-1.5 rounded-md bg-brand-primary active:opacity-80"
+          className="px-3 py-1.5 rounded-xl bg-brand-primary active:opacity-90 flex-row items-center gap-1 shadow-sm"
         >
-          <Text className="text-background-primary text-sm font-semibold">+ 추가</Text>
+          <Feather name="plus" size={14} color="white" />
+          <Text className="text-white text-xs font-bold">추가</Text>
         </Pressable>
       </View>
 
@@ -206,22 +219,23 @@ function MembershipsSection() {
       )}
 
       {error && (
-        <View className="border border-status-danger rounded-md p-3 bg-background-secondary">
+        <View className="border border-status-danger rounded-2xl p-4 bg-background-secondary">
           <Text className="text-status-danger">{error.message}</Text>
         </View>
       )}
 
       {data && active.length === 0 && expired.length === 0 && (
-        <View className="bg-background-secondary rounded-2xl p-6 items-center">
-          <Text className="text-text-secondary text-base">등록된 회원권이 없어요</Text>
-          <Text className="text-text-tertiary text-sm mt-1">
+        <View className="bg-background-secondary rounded-2xl p-6 border border-border-subtle items-center">
+          <Feather name="credit-card" size={24} color="#a1a1aa" className="mb-2" />
+          <Text className="text-text-secondary text-sm">등록된 회원권이 없어요</Text>
+          <Text className="text-text-tertiary text-xs mt-1">
             우측 상단 + 추가 버튼으로 등록하세요
           </Text>
         </View>
       )}
 
       {active.length > 0 && (
-        <View className="gap-2">
+        <View className="gap-2.5">
           {active.map((m) => (
             <MembershipCard key={m.id} membership={m} />
           ))}
@@ -229,8 +243,8 @@ function MembershipsSection() {
       )}
 
       {expired.length > 0 && (
-        <View className="mt-4 gap-2">
-          <Text className="text-text-tertiary text-xs px-1">지난 회원권</Text>
+        <View className="mt-6 gap-2.5">
+          <Text className="text-text-tertiary text-xs px-1 font-semibold">지난 회원권</Text>
           {expired.map((m) => (
             <MembershipCard key={m.id} membership={m} expired />
           ))}
@@ -246,6 +260,16 @@ function urgencyScore(m: MembershipRow): number {
   }
   if (m.end_date) return Math.max(0, daysFromTodayTo(m.end_date));
   return 9999;
+}
+
+function resolveTypeLabel(type: string): string {
+  switch (type) {
+    case 'monthly': return '월 회원권';
+    case 'passes': return '횟수권';
+    case 'period': return '기간권';
+    case 'single': return '1일권';
+    default: return '회원권';
+  }
 }
 
 function MembershipCard({
@@ -282,24 +306,55 @@ function MembershipCard({
     );
   }
 
+  const isPasses = membership.membership_type === 'passes';
+
   return (
     <View
-      className={`flex-row items-center border rounded-lg overflow-hidden ${
+      className={`flex-row items-center border rounded-2xl overflow-hidden shadow-sm ${
         expired
-          ? 'border-border-subtle bg-background-secondary opacity-60'
+          ? 'border-border-subtle bg-background-secondary/50 opacity-60'
           : expSoon
-            ? 'border-status-danger bg-background-primary'
-            : 'border-border-subtle bg-background-primary'
+            ? 'border-status-danger bg-status-danger/5'
+            : 'border-border-subtle bg-background-secondary'
       }`}
     >
       <Pressable
         onPress={() =>
           router.push({ pathname: '/membership/[id]', params: { id: membership.id } })
         }
-        className="flex-1 p-3 active:opacity-70"
+        className="flex-1 p-4 active:opacity-80"
       >
+        <View className="flex-row items-center gap-2 mb-1.5 flex-wrap">
+          <View
+            className={`px-2.5 py-0.5 rounded-full border ${
+              expired
+                ? 'border-border-subtle bg-background-tertiary'
+                : expSoon
+                  ? 'border-status-danger/30 bg-status-danger/10'
+                  : 'border-brand-primary/20 bg-brand-primary/10'
+            }`}
+          >
+            <Text
+              className={`text-[10px] font-bold ${
+                expired
+                  ? 'text-text-tertiary'
+                  : expSoon
+                    ? 'text-status-danger'
+                    : 'text-brand-primary'
+              }`}
+            >
+              {resolveTypeLabel(membership.membership_type)}
+            </Text>
+          </View>
+          {expSoon && (
+            <View className="px-2.5 py-0.5 rounded-full bg-status-danger/10 border border-status-danger/30">
+              <Text className="text-status-danger text-[10px] font-bold">만료 임박</Text>
+            </View>
+          )}
+        </View>
+
         <Text
-          className={`text-base font-semibold ${
+          className={`text-base font-extrabold ${
             expired ? 'text-text-tertiary' : 'text-text-primary'
           }`}
           numberOfLines={1}
@@ -307,7 +362,7 @@ function MembershipCard({
           {gymLabel}
         </Text>
         <Text
-          className={`text-sm mt-0.5 ${
+          className={`text-xs mt-1 ${
             expSoon ? 'text-status-danger font-medium' : 'text-text-secondary'
           }`}
         >
@@ -315,7 +370,7 @@ function MembershipCard({
         </Text>
       </Pressable>
 
-      {!expired && membership.membership_type === 'passes' && (
+      {!expired && isPasses && (
         <Pressable
           onPress={handleUsePass}
           disabled={
@@ -323,12 +378,15 @@ function MembershipCard({
             (membership.total_passes != null &&
               membership.used_passes >= membership.total_passes)
           }
-          className="px-3 py-3 border-l border-border-subtle active:bg-background-secondary"
+          className="mr-4 px-3.5 py-2 rounded-xl bg-brand-primary flex-row items-center gap-1 active:opacity-90 disabled:bg-background-tertiary"
         >
           {usePass.isPending ? (
-            <ActivityIndicator />
+            <ActivityIndicator size="small" color="white" />
           ) : (
-            <Text className="text-text-primary text-sm font-medium">1회 사용</Text>
+            <>
+              <Feather name="check" size={14} color="white" />
+              <Text className="text-white text-xs font-bold">사용</Text>
+            </>
           )}
         </Pressable>
       )}

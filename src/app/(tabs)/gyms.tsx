@@ -27,11 +27,11 @@ export default function GymsScreen() {
 
   const regions = ['전체', '서울', '경기', '인천'];
 
-  const facilityOptions = [
-    { label: '⚡️ 문보드', value: 'has_moonboard' },
-    { label: '⚡️ 킬터보드', value: 'has_kilter' },
-    { label: '🧗 리드벽', value: 'has_lead' },
-    { label: '🏢 300평+ 대형', value: 'large_size' },
+  const facilityOptions: { label: string; value: string; icon: 'zap' | 'activity' | 'maximize-2' }[] = [
+    { label: '문보드', value: 'has_moonboard', icon: 'zap' },
+    { label: '킬터보드', value: 'has_kilter', icon: 'zap' },
+    { label: '리드벽', value: 'has_lead', icon: 'activity' },
+    { label: '300평+ 대형', value: 'large_size', icon: 'maximize-2' },
   ];
 
   const matchRegion = (city: string, region: string) => {
@@ -179,12 +179,17 @@ export default function GymsScreen() {
               <Pressable
                 key={opt.value}
                 onPress={() => toggleFacility(opt.value)}
-                className={`px-3 py-1.5 rounded-lg border ${
+                className={`px-3 py-1.5 rounded-lg border flex-row items-center gap-1.5 ${
                   isSelected
                     ? 'border-brand-primary bg-brand-primary/10'
                     : 'border-border-subtle bg-background-primary'
                 }`}
               >
+                <Feather
+                  name={opt.icon}
+                  size={12}
+                  color={isSelected ? '#0d9488' : '#71717a'}
+                />
                 <Text
                   className={`text-xs font-semibold ${
                     isSelected ? 'text-brand-primary' : 'text-text-tertiary'
