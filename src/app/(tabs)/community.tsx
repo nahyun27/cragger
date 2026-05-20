@@ -85,23 +85,13 @@ export default function CommunityScreen() {
           <Text style={s.headerTitle}>커뮤니티</Text>
           <Text style={s.headerSubtitle}>클라이머들의 소통과 정보 공유</Text>
         </View>
-        <View style={s.headerActions}>
-          <Pressable
-            onPress={() => router.push('/community/search')}
-            style={({ pressed }) => [s.headerBtn, { opacity: pressed ? 0.6 : 1 }]}
-            hitSlop={6}
-          >
-            <Feather name="search" size={18} color="#0f172a" />
-          </Pressable>
-          <Pressable
-            onPress={() => router.push('/community/new')}
-            style={({ pressed }) => [s.writeBtn, { opacity: pressed ? 0.85 : 1 }]}
-            hitSlop={6}
-          >
-            <Feather name="edit-3" size={14} color="#ffffff" />
-            <Text style={s.writeBtnText}>글쓰기</Text>
-          </Pressable>
-        </View>
+        <Pressable
+          onPress={() => router.push('/community/search')}
+          style={({ pressed }) => [s.headerBtn, { opacity: pressed ? 0.6 : 1 }]}
+          hitSlop={6}
+        >
+          <Feather name="search" size={18} color="#0f172a" />
+        </Pressable>
       </View>
 
       {/* Filter Pills */}
@@ -205,6 +195,14 @@ export default function CommunityScreen() {
         />
       )}
 
+      {/* Floating write button (avoids dev-menu overlay in top-right) */}
+      <Pressable
+        onPress={() => router.push('/community/new')}
+        style={({ pressed }) => [s.fab, { opacity: pressed ? 0.85 : 1 }]}
+      >
+        <Feather name="edit-3" size={18} color="#ffffff" />
+        <Text style={s.fabText}>글쓰기</Text>
+      </Pressable>
     </SafeAreaView>
   );
 }
@@ -349,10 +347,6 @@ const s = StyleSheet.create({
     color: '#64748b',
     marginTop: 2,
   },
-  headerActions: {
-    flexDirection: 'row',
-    gap: 8,
-  },
   headerBtn: {
     width: 38,
     height: 38,
@@ -361,23 +355,26 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  writeBtn: {
+  fab: {
+    position: 'absolute',
+    bottom: 24,
+    right: 20,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 12,
-    height: 38,
-    borderRadius: 12,
+    gap: 8,
+    paddingHorizontal: 18,
+    height: 52,
+    borderRadius: 26,
     backgroundColor: '#0d9488',
     shadowColor: '#0d9488',
-    shadowOpacity: 0.25,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 2,
+    shadowOpacity: 0.4,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 6,
   },
-  writeBtnText: {
+  fabText: {
     color: '#ffffff',
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '800',
     letterSpacing: -0.2,
   },
