@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Alert } from 'react-native';
 
 import { useAuth } from '@/lib/auth-context';
 import { supabase } from '@/lib/supabase';
@@ -58,10 +59,15 @@ export function useToggleFavorite() {
       }
       return { prev };
     },
-    onError: (_err, _vars, ctx) => {
+    onError: (err, _vars, ctx) => {
       const userId = authSession?.user.id;
-      if (!userId || !ctx?.prev) return;
-      queryClient.setQueryData(['gym-favorites', userId], ctx.prev);
+      if (userId && ctx?.prev) {
+        queryClient.setQueryData(['gym-favorites', userId], ctx.prev);
+      }
+      Alert.alert(
+        '즐겨찾기 실패',
+        err instanceof Error ? err.message : '알 수 없는 오류',
+      );
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['gym-favorites'] });

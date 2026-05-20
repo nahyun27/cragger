@@ -27,6 +27,7 @@ import { supabase } from '@/lib/supabase';
 const DEFAULT_EXPANDED_COUNT = 2;
 
 export default function ProfileScreen() {
+  const router = useRouter();
   const { session } = useAuth();
   const { data: profile } = useProfile();
   const { data: stats, isLoading, error } = useUserStats();
@@ -50,6 +51,19 @@ export default function ProfileScreen() {
             <Text className="text-text-tertiary text-xs" numberOfLines={1}>
               {email}
             </Text>
+            <Pressable
+              onPress={() => router.push('/profile/edit')}
+              className="mt-1.5 self-start active:opacity-60"
+              hitSlop={6}
+            >
+              {profile?.instagram_handle ? (
+                <Text className="text-brand-primary text-xs font-medium">
+                  📷 @{profile.instagram_handle}
+                </Text>
+              ) : (
+                <Text className="text-text-tertiary text-xs">+ Instagram 추가</Text>
+              )}
+            </Pressable>
           </View>
           <Pressable
             onPress={() => supabase.auth.signOut()}
