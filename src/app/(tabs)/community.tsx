@@ -195,15 +195,20 @@ export default function CommunityScreen() {
         />
       )}
 
-      {/* Floating write button — absolute anchor on a static View
-          so the position survives Pressable's style-array quirks. */}
+      {/* Floating write button — absolute anchor on a static View;
+          Pressable uses children-as-function so the fab visual styles
+          stay on a real View (Pressable's style-array form has been
+          eating width/bg/etc. elsewhere). */}
       <View pointerEvents="box-none" style={s.fabAnchor}>
         <Pressable
           onPress={() => router.push('/community/new')}
           hitSlop={6}
-          style={({ pressed }) => [s.fabContent, { opacity: pressed ? 0.85 : 1 }]}
         >
-          <Feather name="edit-3" size={22} color="#ffffff" />
+          {({ pressed }) => (
+            <View style={[s.fabContent, { opacity: pressed ? 0.85 : 1 }]}>
+              <Feather name="edit-3" size={22} color="#ffffff" />
+            </View>
+          )}
         </Pressable>
       </View>
     </SafeAreaView>
