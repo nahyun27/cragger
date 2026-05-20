@@ -1,7 +1,7 @@
 export const CLIMB_COLOR_HEX: Record<string, string> = {
   red: '#E24B4A',
   yellow: '#EF9F27',
-  green: '#639922',
+  green: '#2F7A33',
   blue: '#378ADD',
   purple: '#7F77DD',
   pink: '#D4537E',
