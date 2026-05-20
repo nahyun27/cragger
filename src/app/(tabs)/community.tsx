@@ -2,7 +2,6 @@ import { useRouter } from 'expo-router';
 import React, { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   FlatList,
   Image,
   Pressable,
@@ -82,7 +81,7 @@ export default function CommunityScreen() {
         </View>
         <View style={s.headerActions}>
           <Pressable
-            onPress={() => Alert.alert('준비 중', '검색 기능은 준비 중입니다.')}
+            onPress={() => router.push('/community/search')}
             style={({ pressed }) => [s.headerBtn, { opacity: pressed ? 0.6 : 1 }]}
             hitSlop={6}
           >
@@ -367,28 +366,34 @@ const s = StyleSheet.create({
     backgroundColor: '#ffffff',
     borderBottomWidth: 1,
     borderColor: '#e2e8f0',
+    // subtle elevation for premium feel
+    shadowColor: '#0f172a',
+    shadowOpacity: 0.03,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 1,
   },
   segmentedControl: {
     flexDirection: 'row',
     backgroundColor: '#f1f5f9',
-    borderRadius: 12,
-    padding: 3,
+    borderRadius: 14,
+    padding: 4,
   },
   segmentBtn: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 8,
-    borderRadius: 9,
+    borderRadius: 12,
     backgroundColor: 'transparent',
   },
   segmentBtnActive: {
-    backgroundColor: '#ffffff',
-    shadowColor: '#000',
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    shadowOffset: { width: 0, height: 1 },
-    elevation: 1,
+    backgroundColor: '#0d9488',
+    shadowColor: '#0d9488',
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
   },
   segmentText: {
     fontSize: 13,
@@ -397,7 +402,7 @@ const s = StyleSheet.create({
   },
   segmentTextActive: {
     fontWeight: '800',
-    color: '#0d9488',
+    color: '#ffffff',
   },
   loadingContainer: {
     flex: 1,
