@@ -16,6 +16,7 @@ import { GymThumbnail } from '@/components/gym/gym-thumbnail';
 import { useGyms, type GymListItem } from '@/hooks/use-gyms';
 
 export default function GymsScreen() {
+  const router = useRouter();
   const { data, isLoading, error } = useGyms();
   const [query, setQuery] = useState('');
   const [isFocused, setIsFocused] = useState(false);
@@ -213,7 +214,27 @@ export default function GymsScreen() {
                 <Feather name="map-pin" size={40} color="#a1a1aa" />
                 <Text className="text-text-secondary font-medium text-base mt-2">검색 결과가 없어요</Text>
                 <Text className="text-text-muted text-xs">필터를 변경하거나 다른 검색어를 입력해 보세요.</Text>
+                <Pressable
+                  onPress={() => router.push('/gyms/request')}
+                  className="mt-4 border border-dashed border-border-default rounded-lg px-4 py-2.5 active:opacity-60"
+                >
+                  <Text className="text-text-secondary text-sm font-medium">
+                    + 찾는 암장 추가 요청
+                  </Text>
+                </Pressable>
               </View>
+            ) : null
+          }
+          ListFooterComponent={
+            data && filtered.length > 0 ? (
+              <Pressable
+                onPress={() => router.push('/gyms/request')}
+                className="mt-3 border border-dashed border-border-default rounded-lg py-3 items-center active:opacity-60"
+              >
+                <Text className="text-text-tertiary text-sm">
+                  + 찾는 암장이 없으면 추가 요청
+                </Text>
+              </Pressable>
             ) : null
           }
         />
