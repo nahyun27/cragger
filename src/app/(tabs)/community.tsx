@@ -195,16 +195,17 @@ export default function CommunityScreen() {
         />
       )}
 
-      {/* Floating write button */}
-      <Pressable
-        onPress={() => router.push('/community/new')}
-        style={({ pressed }) => [s.fabAnchor, { opacity: pressed ? 0.85 : 1 }]}
-        hitSlop={6}
-      >
-        <View style={s.fabContent}>
+      {/* Floating write button — absolute anchor on a static View
+          so the position survives Pressable's style-array quirks. */}
+      <View pointerEvents="box-none" style={s.fabAnchor}>
+        <Pressable
+          onPress={() => router.push('/community/new')}
+          hitSlop={6}
+          style={({ pressed }) => [s.fabContent, { opacity: pressed ? 0.85 : 1 }]}
+        >
           <Feather name="edit-3" size={22} color="#ffffff" />
-        </View>
-      </Pressable>
+        </Pressable>
+      </View>
     </SafeAreaView>
   );
 }
