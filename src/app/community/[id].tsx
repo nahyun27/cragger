@@ -233,15 +233,16 @@ export default function PostDetailScreen() {
               <View style={[s.metricIconWrapper, liked && s.metricIconWrapperLiked]}>
                 <Feather name="heart" size={16} color={liked ? '#ef4444' : '#71717a'} />
               </View>
-              <Text style={[s.metricText, liked && s.metricTextLiked]}>
-                {post.like_count}
-              </Text>
+              <Text
+                style={[s.metricText, liked && s.metricTextLiked]}
+                numberOfLines={1}
+              >{post.like_count}</Text>
             </Pressable>
             <View style={s.metricBtn}>
               <View style={s.metricIconWrapper}>
                 <Feather name="message-circle" size={16} color="#71717a" />
               </View>
-              <Text style={s.metricText}>{post.comment_count}</Text>
+              <Text style={s.metricText} numberOfLines={1}>{post.comment_count}</Text>
             </View>
           </View>
           <View style={s.postDivider} />
@@ -547,6 +548,7 @@ const s = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+    flexShrink: 0,
   },
   metricIconWrapper: {
     width: 32,
