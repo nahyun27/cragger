@@ -1,13 +1,15 @@
 import { useRouter } from 'expo-router';
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   FlatList,
   Image,
+  Keyboard,
   Pressable,
   ScrollView,
+  StyleSheet,
   Text,
+  TextInput,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -24,29 +26,32 @@ import {
 
 type FilterKey = 'all' | Exclude<PostType, 'meetup'>;
 
-const FILTER_TABS: { key: FilterKey; label: string; icon: string }[] = [
+const FILTER_TABS: {
+  key: FilterKey;
+  label: string;
+  icon: React.ComponentProps<typeof Feather>['name'];
+}[] = [
   { key: 'all', label: '전체', icon: 'layers' },
   { key: 'general', label: POST_TYPE_LABEL.general, icon: 'message-circle' },
   { key: 'question', label: POST_TYPE_LABEL.question, icon: 'help-circle' },
   { key: 'review', label: POST_TYPE_LABEL.review, icon: 'star' },
 ];
 
-const BADGE_CONFIG = {
+const BADGE_CONFIG: Record<string, { accent: string; label: string }> = {
   general: { accent: '#6366f1', label: '일반' },
   question: { accent: '#8b5cf6', label: '질문' },
   review: { accent: '#10b981', label: '후기' },
   meetup: { accent: '#f59e0b', label: '모임' },
-} as const;
-
-// Deterministic color from string
-function hashColor(name: string, palette: string[]) {
-  let sum = 0;
-  for (let i = 0; i < name.length; i++) sum += name.charCodeAt(i);
-  return palette[sum % palette.length];
-}
+};
 
 const AVATAR_BG = ['#e0e7ff', '#fce7f3', '#d1fae5', '#fef9c3', '#fee2e2', '#e0f2fe'];
 const AVATAR_FG = ['#4338ca', '#be185d', '#065f46', '#854d0e', '#b91c1c', '#0369a1'];
+
+function hashIndex(name: string, len: number) {
+  let sum = 0;
+  for (let i = 0; i < name.length; i++) sum += name.charCodeAt(i);
+  return sum % len;
+}
 
 function formatRelativeTime(iso: string): string {
   const d = new Date(iso);
@@ -61,84 +66,65 @@ function formatRelativeTime(iso: string): string {
   return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`;
 }
 
-// ─────────────────────────────────────────────
+function useDebounced<T>(value: T, ms = 300): T {
+  const [v, setV] = useState(value);
+  useEffect(() => {
+    const t = setTimeout(() => setV(value), ms);
+    return () => clearTimeout(t);
+  }, [value, ms]);
+  return v;
+}
+
+// ─────────────────────────────────────────────────────────────
 export default function CommunityScreen() {
   const router = useRouter();
   const [filter, setFilter] = useState<FilterKey>('all');
-  const feed = useCommunityFeed(filter);
+  const [searchInput, setSearchInput] = useState('');
+  const searchTerm = useDebounced(searchInput.trim(), 300);
+  const feed = useCommunityFeed(filter, searchTerm);
   const { data: likedSet } = useMyLikes();
   const posts = useMemo<PostRow[]>(() => feed.data?.pages.flat() ?? [], [feed.data]);
+  const isSearching = searchTerm.length > 0;
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#fafafa' }} edges={['top']}>
-      {/* ── Header ─────────────────────────────── */}
-      <View
-        style={{
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          paddingHorizontal: 20,
-          paddingTop: 16,
-          paddingBottom: 10,
-          backgroundColor: '#fafafa',
-        }}
-      >
-        <Text style={{ fontSize: 28, fontWeight: '900', color: '#0f172a', letterSpacing: -1 }}>
-          커뮤니티
-        </Text>
-
-        <View style={{ flexDirection: 'row', gap: 6 }}>
-          <Pressable
-            onPress={() =>
-              Alert.alert('준비 중', '검색 기능은 다음 업데이트에 추가됩니다.')
-            }
-            style={({ pressed }) => ({
-              width: 38,
-              height: 38,
-              borderRadius: 19,
-              backgroundColor: pressed ? '#f1f5f9' : '#f1f5f9',
-              alignItems: 'center',
-              justifyContent: 'center',
-              opacity: pressed ? 0.6 : 1,
-            })}
-          >
-            <Feather name="search" size={17} color="#64748b" />
-          </Pressable>
-
-          <Pressable
-            onPress={() => router.push('/community/new')}
-            style={({ pressed }) => ({
-              width: 38,
-              height: 38,
-              borderRadius: 19,
-              backgroundColor: pressed ? '#0f766e' : '#0d9488',
-              alignItems: 'center',
-              justifyContent: 'center',
-              opacity: pressed ? 0.9 : 1,
-              shadowColor: '#0d9488',
-              shadowOpacity: 0.25,
-              shadowRadius: 6,
-              shadowOffset: { width: 0, height: 3 },
-              elevation: 3,
-            })}
-          >
-            <Feather name="edit-3" size={16} color="#fff" />
-          </Pressable>
+    <SafeAreaView style={s.screen} edges={['top']}>
+      {/* HEADER */}
+      <View style={s.header}>
+        <View>
+          <Text style={s.headerTitle}>커뮤니티</Text>
+          <Text style={s.headerSub}>클라이머들의 소통 공간</Text>
         </View>
       </View>
 
-      {/* ── Tab Filter (underline style) ────────── */}
-      <View
-        style={{
-          backgroundColor: '#fafafa',
-          borderBottomWidth: 1,
-          borderBottomColor: '#f1f5f9',
-        }}
-      >
+      {/* SEARCH BAR */}
+      <View style={s.searchWrap}>
+        <View style={s.searchBox}>
+          <Feather name="search" size={16} color="#94a3b8" />
+          <TextInput
+            value={searchInput}
+            onChangeText={setSearchInput}
+            placeholder="제목·본문 검색"
+            placeholderTextColor="#94a3b8"
+            style={s.searchInput}
+            returnKeyType="search"
+            onSubmitEditing={Keyboard.dismiss}
+            autoCorrect={false}
+            autoCapitalize="none"
+          />
+          {searchInput.length > 0 && (
+            <Pressable onPress={() => setSearchInput('')} hitSlop={8}>
+              <Feather name="x-circle" size={16} color="#94a3b8" />
+            </Pressable>
+          )}
+        </View>
+      </View>
+
+      {/* TAB FILTER */}
+      <View style={s.tabsWrapper}>
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ paddingHorizontal: 18, gap: 0 }}
+          contentContainerStyle={s.tabsScroll}
         >
           {FILTER_TABS.map((t) => {
             const active = filter === t.key;
@@ -146,119 +132,64 @@ export default function CommunityScreen() {
               <Pressable
                 key={t.key}
                 onPress={() => setFilter(t.key)}
-                style={({ pressed }) => ({
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  gap: 5,
-                  paddingHorizontal: 4,
-                  paddingVertical: 14,
-                  marginRight: 20,
-                  borderBottomWidth: 2,
-                  borderBottomColor: active ? '#0d9488' : 'transparent',
-                  opacity: pressed ? 0.7 : 1,
-                })}
+                style={({ pressed }) => [s.tab, active && s.tabActive, { opacity: pressed ? 0.7 : 1 }]}
               >
-                <Feather
-                  name={t.icon as any}
-                  size={13}
-                  color={active ? '#0d9488' : '#94a3b8'}
-                />
-                <Text
-                  style={{
-                    fontSize: 14,
-                    fontWeight: active ? '800' : '500',
-                    color: active ? '#0d9488' : '#94a3b8',
-                    letterSpacing: active ? -0.2 : 0,
-                  }}
-                >
-                  {t.label}
-                </Text>
+                <Feather name={t.icon} size={13} color={active ? '#0d9488' : '#94a3b8'} />
+                <Text style={[s.tabLabel, active && s.tabLabelActive]}>{t.label}</Text>
               </Pressable>
             );
           })}
         </ScrollView>
       </View>
 
-      {/* ── States ─────────────────────────────── */}
-      {feed.isLoading && (
-        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+      {/* CONTENT */}
+      {feed.isLoading ? (
+        <View style={s.center}>
           <ActivityIndicator size="large" color="#0d9488" />
         </View>
-      )}
-
-      {feed.error && (
-        <View
-          style={{
-            margin: 20,
-            padding: 16,
-            borderRadius: 16,
-            backgroundColor: '#fef2f2',
-            borderWidth: 1,
-            borderColor: '#fecaca',
-          }}
-        >
-          <Text style={{ color: '#ef4444', fontSize: 13, fontWeight: '600' }}>
-            {feed.error.message}
-          </Text>
+      ) : feed.error ? (
+        <View style={s.errorBox}>
+          <Text style={s.errorText}>{feed.error.message}</Text>
         </View>
-      )}
-
-      {!feed.isLoading && !feed.error && posts.length === 0 && (
-        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 40, gap: 12 }}>
-          <View
-            style={{
-              width: 72,
-              height: 72,
-              borderRadius: 36,
-              backgroundColor: '#f1f5f9',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <Feather name="message-square" size={28} color="#94a3b8" />
+      ) : posts.length === 0 ? (
+        <View style={s.center}>
+          <View style={s.emptyIcon}>
+            <Feather name={isSearching ? 'search' : 'message-square'} size={28} color="#94a3b8" />
           </View>
-          <Text style={{ fontSize: 17, fontWeight: '800', color: '#0f172a' }}>
-            아직 글이 없어요
+          <Text style={s.emptyTitle}>
+            {isSearching ? '검색 결과가 없어요' : '아직 글이 없어요'}
           </Text>
-          <Text style={{ fontSize: 13, color: '#94a3b8', textAlign: 'center', lineHeight: 20 }}>
-            클라이머들의 첫 이야기를{'\n'}여기서 시작해보세요!
+          <Text style={s.emptyBody}>
+            {isSearching
+              ? '다른 단어로 검색해보세요'
+              : '클라이머들의 첫 이야기를\n여기서 시작해보세요!'}
           </Text>
-          <Pressable
-            onPress={() => router.push('/community/new')}
-            style={({ pressed }) => ({
-              marginTop: 4,
-              paddingHorizontal: 20,
-              paddingVertical: 11,
-              borderRadius: 24,
-              backgroundColor: '#0d9488',
-              opacity: pressed ? 0.85 : 1,
-            })}
-          >
-            <Text style={{ color: '#fff', fontWeight: '800', fontSize: 14 }}>
-              첫 글 쓰기
-            </Text>
-          </Pressable>
+          {!isSearching && (
+            <Pressable
+              onPress={() => router.push('/community/new')}
+              style={({ pressed }) => [s.emptyBtn, { opacity: pressed ? 0.85 : 1 }]}
+            >
+              <Text style={s.emptyBtnText}>첫 글 쓰기</Text>
+            </Pressable>
+          )}
         </View>
-      )}
-
-      {/* ── Feed ───────────────────────────────── */}
-      {posts.length > 0 && (
+      ) : (
         <FlatList
+          style={s.list}
           data={posts}
           keyExtractor={(p) => p.id}
-          contentContainerStyle={{ paddingBottom: 110 }}
+          contentContainerStyle={s.listContent}
+          keyboardShouldPersistTaps="handled"
           onEndReached={() => {
             if (feed.hasNextPage && !feed.isFetchingNextPage) feed.fetchNextPage();
           }}
           onEndReachedThreshold={0.4}
           refreshing={feed.isRefetching}
           onRefresh={() => feed.refetch()}
-          ItemSeparatorComponent={() => (
-            <View style={{ height: 1, backgroundColor: '#f1f5f9' }} />
-          )}
+          ItemSeparatorComponent={() => <View style={s.separator} />}
           ListFooterComponent={
             feed.isFetchingNextPage ? (
-              <View style={{ paddingVertical: 24 }}>
+              <View style={s.footerLoader}>
                 <ActivityIndicator color="#0d9488" />
               </View>
             ) : null
@@ -267,6 +198,7 @@ export default function CommunityScreen() {
             <PostCard
               post={item}
               liked={likedSet?.has(item.id) ?? false}
+              highlight={searchTerm}
               onPress={() =>
                 router.push({ pathname: '/community/[id]', params: { id: item.id } })
               }
@@ -274,216 +206,335 @@ export default function CommunityScreen() {
           )}
         />
       )}
+
+      {/* FAB */}
+      <Pressable
+        onPress={() => router.push('/community/new')}
+        style={({ pressed }) => [s.fab, { opacity: pressed ? 0.85 : 1 }]}
+      >
+        <Feather name="edit-3" size={20} color="white" />
+      </Pressable>
     </SafeAreaView>
   );
 }
 
-// ─────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────
 function PostCard({
   post,
   liked,
+  highlight,
   onPress,
 }: {
   post: PostRow;
   liked: boolean;
+  highlight: string;
   onPress: () => void;
 }) {
   const toggle = useToggleLike();
   const authorName = post.author?.display_name ?? post.author?.username ?? '익명';
   const firstChar = authorName.charAt(0).toUpperCase() || '?';
-  const avatarBg = hashColor(authorName, AVATAR_BG);
-  const avatarFg = hashColor(authorName, AVATAR_FG);
+  const idx = hashIndex(authorName, AVATAR_BG.length);
   const badge = BADGE_CONFIG[post.post_type] ?? BADGE_CONFIG.general;
   const firstImage = post.image_urls[0];
+  const avatarUrl = post.author?.avatar_url;
 
   return (
     <Pressable
       onPress={onPress}
-      style={({ pressed }) => ({
-        flexDirection: 'row',
-        gap: 12,
-        paddingHorizontal: 20,
-        paddingVertical: 16,
-        backgroundColor: pressed ? '#f8fafc' : '#fafafa',
-      })}
+      style={({ pressed }) => [s.card, { backgroundColor: pressed ? '#f8fafc' : '#fff' }]}
     >
-      {/* Left column: avatar + vertical thread line */}
-      <View style={{ alignItems: 'center', gap: 0 }}>
-        <View
-          style={{
-            width: 42,
-            height: 42,
-            borderRadius: 21,
-            backgroundColor: avatarBg,
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          <Text style={{ color: avatarFg, fontWeight: '800', fontSize: 16 }}>
-            {firstChar}
-          </Text>
-        </View>
+      {/* Avatar */}
+      <View style={[s.avatar, { backgroundColor: AVATAR_BG[idx] }]}>
+        {avatarUrl ? (
+          <Image source={{ uri: avatarUrl }} style={s.avatarImage} resizeMode="cover" />
+        ) : (
+          <Text style={[s.avatarText, { color: AVATAR_FG[idx] }]}>{firstChar}</Text>
+        )}
       </View>
 
-      {/* Right column: content */}
-      <View style={{ flex: 1 }}>
+      {/* Content */}
+      <View style={s.cardContent}>
         {/* Name row */}
-        <View
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            marginBottom: 2,
-          }}
-        >
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-            <Text style={{ fontWeight: '800', fontSize: 14, color: '#0f172a' }}>
-              {authorName}
-            </Text>
-            {/* Accent dot */}
-            <View
-              style={{
-                width: 5,
-                height: 5,
-                borderRadius: 3,
-                backgroundColor: badge.accent,
-              }}
-            />
-            <Text style={{ fontSize: 12, color: '#94a3b8', fontWeight: '500' }}>
-              {badge.label}
-            </Text>
-          </View>
-          <Text style={{ fontSize: 11, color: '#cbd5e1', fontWeight: '500' }}>
-            {formatRelativeTime(post.created_at)}
+        <View style={s.nameRow}>
+          <Text style={s.authorName} numberOfLines={1}>
+            {authorName}
           </Text>
+          <View style={[s.accentDot, { backgroundColor: badge.accent }]} />
+          <Text style={s.badgeLabel}>{badge.label}</Text>
+          <View style={s.nameSpacer} />
+          <Text style={s.timestamp}>{formatRelativeTime(post.created_at)}</Text>
         </View>
 
         {/* Title */}
-        {post.title ? (
-          <Text
-            style={{
-              fontSize: 15,
-              fontWeight: '800',
-              color: '#0f172a',
-              lineHeight: 22,
-              marginBottom: 4,
-              letterSpacing: -0.3,
-            }}
+        {!!post.title && (
+          <HighlightedText
+            text={post.title}
+            term={highlight}
+            style={s.postTitle}
             numberOfLines={2}
-          >
-            {post.title}
-          </Text>
-        ) : null}
+          />
+        )}
 
         {/* Body */}
-        <Text
-          style={{
-            fontSize: 14,
-            color: '#475569',
-            lineHeight: 22,
-            marginBottom: 10,
-          }}
+        <HighlightedText
+          text={post.body}
+          term={highlight}
+          style={s.postBody}
           numberOfLines={4}
-        >
-          {post.body}
-        </Text>
+        />
 
         {/* Image */}
-        {firstImage && (
-          <View
-            style={{
-              borderRadius: 16,
-              overflow: 'hidden',
-              marginBottom: 10,
-              borderWidth: 1,
-              borderColor: '#f1f5f9',
-            }}
-          >
-            <Image
-              source={{ uri: firstImage }}
-              style={{ width: '100%', height: 200 }}
-              resizeMode="cover"
-            />
+        {!!firstImage && (
+          <View style={s.imageWrapper}>
+            <Image source={{ uri: firstImage }} style={s.postImage} resizeMode="cover" />
           </View>
         )}
 
         {/* Gym tag */}
-        {post.gym && (
-          <View
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: 4,
-              alignSelf: 'flex-start',
-              backgroundColor: '#f8fafc',
-              borderWidth: 1,
-              borderColor: '#e2e8f0',
-              paddingHorizontal: 8,
-              paddingVertical: 3,
-              borderRadius: 8,
-              marginBottom: 10,
-            }}
-          >
+        {!!post.gym && (
+          <View style={s.gymTag}>
             <Feather name="map-pin" size={10} color="#94a3b8" />
-            <Text style={{ fontSize: 11, color: '#64748b', fontWeight: '600' }}>
+            <Text style={s.gymTagText}>
               {post.gym.name}
               {post.gym.branch ? ` ${post.gym.branch}` : ''}
             </Text>
           </View>
         )}
 
-        {/* Action bar */}
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 20 }}>
-          {/* Like */}
+        {/* Actions */}
+        <View style={s.actions}>
           <Pressable
             hitSlop={8}
             onPress={(e) => {
               e.stopPropagation();
-              if (!toggle.isPending) {
-                toggle.mutate({ postId: post.id, currentlyLiked: liked });
-              }
+              if (!toggle.isPending) toggle.mutate({ postId: post.id, currentlyLiked: liked });
             }}
-            style={({ pressed }) => ({
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: 5,
-              opacity: pressed ? 0.6 : 1,
-            })}
+            style={({ pressed }) => [s.actionBtn, { opacity: pressed ? 0.6 : 1 }]}
           >
-            <Feather
-              name="heart"
-              size={16}
-              color={liked ? '#ef4444' : '#94a3b8'}
-            />
-            <Text
-              style={{
-                fontSize: 13,
-                fontWeight: '600',
-                color: liked ? '#ef4444' : '#94a3b8',
-              }}
-            >
-              {post.like_count}
-            </Text>
+            <Feather name="heart" size={16} color={liked ? '#ef4444' : '#94a3b8'} />
+            <Text style={[s.actionCount, liked && { color: '#ef4444' }]}>{post.like_count}</Text>
           </Pressable>
 
-          {/* Comment */}
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+          <View style={s.actionBtn}>
             <Feather name="message-circle" size={16} color="#94a3b8" />
-            <Text style={{ fontSize: 13, fontWeight: '600', color: '#94a3b8' }}>
-              {post.comment_count}
-            </Text>
+            <Text style={s.actionCount}>{post.comment_count}</Text>
           </View>
-
-          {/* Share placeholder */}
-          <Pressable
-            hitSlop={8}
-            onPress={(e) => e.stopPropagation()}
-            style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
-          >
-            <Feather name="share" size={16} color="#94a3b8" />
-          </Pressable>
         </View>
       </View>
     </Pressable>
   );
 }
+
+function HighlightedText({
+  text,
+  term,
+  style,
+  numberOfLines,
+}: {
+  text: string;
+  term: string;
+  style: object;
+  numberOfLines?: number;
+}) {
+  if (!term) {
+    return (
+      <Text style={style} numberOfLines={numberOfLines}>
+        {text}
+      </Text>
+    );
+  }
+  const lower = text.toLowerCase();
+  const lowerTerm = term.toLowerCase();
+  const parts: React.ReactNode[] = [];
+  let i = 0;
+  while (i < text.length) {
+    const found = lower.indexOf(lowerTerm, i);
+    if (found === -1) {
+      parts.push(text.slice(i));
+      break;
+    }
+    if (found > i) parts.push(text.slice(i, found));
+    parts.push(
+      <Text key={`m-${found}`} style={s.highlight}>
+        {text.slice(found, found + term.length)}
+      </Text>,
+    );
+    i = found + term.length;
+  }
+  return (
+    <Text style={style} numberOfLines={numberOfLines}>
+      {parts}
+    </Text>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+const s = StyleSheet.create({
+  screen: { flex: 1, backgroundColor: '#fff' },
+
+  header: {
+    paddingHorizontal: 20,
+    paddingTop: 14,
+    paddingBottom: 12,
+    backgroundColor: '#fff',
+  },
+  headerTitle: { fontSize: 26, fontWeight: '900', color: '#0f172a', letterSpacing: -0.8 },
+  headerSub: { fontSize: 11, color: '#94a3b8', fontWeight: '500', marginTop: 2 },
+
+  searchWrap: {
+    paddingHorizontal: 16,
+    paddingBottom: 10,
+    backgroundColor: '#fff',
+  },
+  searchBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    backgroundColor: '#f1f5f9',
+    borderRadius: 12,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 14,
+    color: '#0f172a',
+    padding: 0,
+  },
+
+  tabsWrapper: {
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#f1f5f9',
+  },
+  tabsScroll: { paddingHorizontal: 16, flexDirection: 'row' },
+  tab: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingVertical: 12,
+    paddingHorizontal: 6,
+    marginRight: 16,
+    borderBottomWidth: 2,
+    borderBottomColor: 'transparent',
+  },
+  tabActive: { borderBottomColor: '#0d9488' },
+  tabLabel: { fontSize: 14, fontWeight: '500', color: '#94a3b8' },
+  tabLabelActive: { fontWeight: '800', color: '#0d9488' },
+
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12, padding: 40 },
+  errorBox: {
+    margin: 20,
+    padding: 16,
+    borderRadius: 16,
+    backgroundColor: '#fef2f2',
+    borderWidth: 1,
+    borderColor: '#fecaca',
+  },
+  errorText: { color: '#ef4444', fontSize: 13, fontWeight: '600' },
+  emptyIcon: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: '#f1f5f9',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyTitle: { fontSize: 17, fontWeight: '800', color: '#0f172a' },
+  emptyBody: { fontSize: 13, color: '#94a3b8', textAlign: 'center', lineHeight: 20 },
+  emptyBtn: {
+    paddingHorizontal: 22,
+    paddingVertical: 12,
+    borderRadius: 24,
+    backgroundColor: '#0d9488',
+    marginTop: 4,
+  },
+  emptyBtnText: { color: '#fff', fontWeight: '800', fontSize: 14 },
+
+  list: { flex: 1 },
+  listContent: { paddingBottom: 120 },
+  separator: { height: 1, backgroundColor: '#f1f5f9' },
+  footerLoader: { paddingVertical: 24 },
+
+  card: {
+    flexDirection: 'row',
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    gap: 12,
+  },
+  avatar: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+    flexShrink: 0,
+  },
+  avatarImage: { width: '100%', height: '100%' },
+  avatarText: { fontWeight: '800', fontSize: 16 },
+  cardContent: { flex: 1, minWidth: 0 },
+
+  nameRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 6 },
+  authorName: { fontWeight: '800', fontSize: 14, color: '#0f172a', flexShrink: 1 },
+  accentDot: { width: 4, height: 4, borderRadius: 2, flexShrink: 0 },
+  badgeLabel: { fontSize: 12, color: '#64748b', fontWeight: '600', flexShrink: 0 },
+  nameSpacer: { flex: 1 },
+  timestamp: { fontSize: 11, color: '#cbd5e1', fontWeight: '500', flexShrink: 0 },
+
+  postTitle: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#0f172a',
+    lineHeight: 22,
+    marginBottom: 4,
+    letterSpacing: -0.3,
+  },
+  postBody: { fontSize: 14, color: '#475569', lineHeight: 22, marginBottom: 10 },
+  highlight: { backgroundColor: '#fef3c7', color: '#92400e', fontWeight: '700' },
+
+  imageWrapper: {
+    borderRadius: 16,
+    overflow: 'hidden',
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: '#f1f5f9',
+  },
+  postImage: { width: '100%', height: 200 },
+
+  gymTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    alignSelf: 'flex-start',
+    backgroundColor: '#f8fafc',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+    marginBottom: 10,
+  },
+  gymTagText: { fontSize: 11, color: '#64748b', fontWeight: '600' },
+
+  actions: { flexDirection: 'row', alignItems: 'center', gap: 18, marginTop: 4 },
+  actionBtn: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  actionCount: { fontSize: 13, fontWeight: '600', color: '#94a3b8' },
+
+  fab: {
+    position: 'absolute',
+    bottom: 28,
+    right: 20,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#0d9488',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#0d9488',
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 5 },
+    elevation: 6,
+  },
+});

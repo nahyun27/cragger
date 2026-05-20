@@ -47,10 +47,23 @@ export type PostRow = {
 
 const PAGE_SIZE = 20;
 
-// ── Feed (infinite, optional type filter) ──────────────────────
-export function useCommunityFeed(postType: PostType | 'all') {
+// Strip chars that would break PostgREST .or() syntax.
+function sanitizeSearch(term: string): string {
+  return term
+    .trim()
+    .replace(/[(),]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+// ── Feed (infinite, optional type filter + free-text search) ────
+export function useCommunityFeed(
+  postType: PostType | 'all',
+  searchTerm = '',
+) {
+  const cleaned = sanitizeSearch(searchTerm);
   return useInfiniteQuery({
-    queryKey: ['community', 'feed', postType] as const,
+    queryKey: ['community', 'feed', postType, cleaned] as const,
     initialPageParam: 0,
     queryFn: async ({ pageParam }): Promise<PostRow[]> => {
       const from = pageParam * PAGE_SIZE;
@@ -63,6 +76,7 @@ export function useCommunityFeed(postType: PostType | 'all') {
         .order('created_at', { ascending: false })
         .range(from, to);
       if (postType !== 'all') q = q.eq('post_type', postType);
+      if (cleaned) q = q.or(`title.ilike.*${cleaned}*,body.ilike.*${cleaned}*`);
       const { data, error } = await q;
       if (error) throw new Error(error.message);
       return (data ?? []) as unknown as PostRow[];
