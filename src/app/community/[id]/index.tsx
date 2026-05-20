@@ -649,8 +649,9 @@ const s = StyleSheet.create({
     borderColor: '#e2e8f0',
   },
   headerAction: {
-    width: 40,
-    height: 40,
+    width: 38,
+    height: 38,
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
   },

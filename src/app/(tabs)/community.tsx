@@ -90,7 +90,7 @@ export default function CommunityScreen() {
           style={({ pressed }) => [s.headerBtn, { opacity: pressed ? 0.6 : 1 }]}
           hitSlop={6}
         >
-          <Feather name="search" size={18} color="#0f172a" />
+          <Feather name="search" size={18} color="#64748b" />
         </Pressable>
       </View>
 
@@ -361,8 +361,7 @@ const s = StyleSheet.create({
   headerBtn: {
     width: 38,
     height: 38,
-    borderRadius: 12,
-    backgroundColor: '#f1f5f9',
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
   },

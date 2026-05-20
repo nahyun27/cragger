@@ -44,20 +44,22 @@ export default function ProfileScreen() {
       {/* Header bar */}
       <View className="flex-row items-center justify-between px-6 py-3 border-b border-border-subtle">
         <Text className="text-text-primary text-xl font-extrabold tracking-tight">마이페이지</Text>
-        <View className="flex-row gap-1">
+        <View className="flex-row items-center" style={{ gap: 2 }}>
           <Pressable
             onPress={() => router.push('/profile/edit')}
-            className="p-2 active:opacity-60"
-            hitSlop={8}
+            className="items-center justify-center rounded-[10px] active:opacity-60"
+            style={{ width: 38, height: 38 }}
+            hitSlop={6}
           >
-            <Feather name="edit-3" size={20} color="#64748b" />
+            <Feather name="edit-3" size={18} color="#64748b" />
           </Pressable>
           <Pressable
             onPress={() => supabase.auth.signOut()}
-            className="p-2 active:opacity-60"
-            hitSlop={8}
+            className="items-center justify-center rounded-[10px] active:opacity-60"
+            style={{ width: 38, height: 38 }}
+            hitSlop={6}
           >
-            <Feather name="log-out" size={20} color="#ef4444" />
+            <Feather name="log-out" size={18} color="#ef4444" />
           </Pressable>
         </View>
       </View>
