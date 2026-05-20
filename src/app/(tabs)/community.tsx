@@ -376,7 +376,7 @@ const s = StyleSheet.create({
     elevation: 6,
   },
   filterWrapper: {
-    backgroundColor: '#f1f5f9',
+    backgroundColor: '#ffffff',
   },
   filterScroll: {
     paddingHorizontal: 16,
