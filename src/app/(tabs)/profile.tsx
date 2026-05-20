@@ -3,6 +3,7 @@ import React from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Linking,
   Pressable,
   ScrollView,
   Text,
@@ -51,26 +52,46 @@ export default function ProfileScreen() {
             <Text className="text-text-tertiary text-xs" numberOfLines={1}>
               {email}
             </Text>
-            <Pressable
-              onPress={() => router.push('/profile/edit')}
-              className="mt-1.5 self-start active:opacity-60"
-              hitSlop={6}
-            >
-              {profile?.instagram_handle ? (
+            {profile?.instagram_handle ? (
+              <Pressable
+                onPress={() =>
+                  Linking.openURL(
+                    `https://instagram.com/${profile.instagram_handle}`,
+                  ).catch(() =>
+                    Alert.alert('열기 실패', 'Instagram 앱/브라우저를 찾을 수 없어요'),
+                  )
+                }
+                className="mt-1.5 self-start active:opacity-60"
+                hitSlop={6}
+              >
                 <Text className="text-brand-primary text-xs font-medium">
                   📷 @{profile.instagram_handle}
                 </Text>
-              ) : (
+              </Pressable>
+            ) : (
+              <Pressable
+                onPress={() => router.push('/profile/edit')}
+                className="mt-1.5 self-start active:opacity-60"
+                hitSlop={6}
+              >
                 <Text className="text-text-tertiary text-xs">+ Instagram 추가</Text>
-              )}
+              </Pressable>
+            )}
+          </View>
+          <View className="gap-1.5 items-end">
+            <Pressable
+              onPress={() => router.push('/profile/edit')}
+              className="px-3 py-1.5 rounded-md border border-border-default active:bg-background-secondary"
+            >
+              <Text className="text-text-secondary text-sm">프로필 수정</Text>
+            </Pressable>
+            <Pressable
+              onPress={() => supabase.auth.signOut()}
+              className="px-3 py-1.5 rounded-md border border-border-default active:bg-background-secondary"
+            >
+              <Text className="text-text-secondary text-sm">로그아웃</Text>
             </Pressable>
           </View>
-          <Pressable
-            onPress={() => supabase.auth.signOut()}
-            className="px-3 py-1.5 rounded-md border border-border-default active:bg-background-secondary"
-          >
-            <Text className="text-text-secondary text-sm">로그아웃</Text>
-          </Pressable>
         </View>
 
         {/* Stats section */}
