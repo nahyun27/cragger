@@ -325,6 +325,41 @@ export function useCreatePost() {
   });
 }
 
+export type UpdatePostArgs = {
+  postId: string;
+  postType: Exclude<PostType, 'meetup'>;
+  title: string | null;
+  body: string;
+  gymId: string | null;
+  imageUrls: string[];
+};
+
+export function useUpdatePost() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (args: UpdatePostArgs) => {
+      const body = args.body.trim();
+      if (!body) throw new Error('본문을 입력하세요');
+      const { error } = await supabase
+        .from('posts')
+        .update({
+          post_type: args.postType,
+          title: args.title?.trim() ? args.title.trim() : null,
+          body,
+          gym_id: args.gymId,
+          image_urls: args.imageUrls,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', args.postId);
+      if (error) throw new Error(error.message);
+    },
+    onSuccess: (_data, vars) => {
+      queryClient.invalidateQueries({ queryKey: ['community', 'post', vars.postId] });
+      queryClient.invalidateQueries({ queryKey: ['community', 'feed'] });
+    },
+  });
+}
+
 export function useDeletePost() {
   const queryClient = useQueryClient();
   return useMutation({

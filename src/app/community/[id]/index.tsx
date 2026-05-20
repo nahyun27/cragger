@@ -201,18 +201,29 @@ export default function PostDetailScreen() {
         </Pressable>
         <Text style={s.headerTitle}>상세 보기</Text>
         {isMine ? (
-          <Pressable
-            onPress={handleDeletePost}
-            disabled={deletePost.isPending}
-            style={({ pressed }) => [s.headerAction, { opacity: pressed ? 0.6 : 1 }]}
-            hitSlop={8}
-          >
-            {deletePost.isPending ? (
-              <ActivityIndicator size="small" color="#ef4444" />
-            ) : (
-              <Feather name="trash-2" size={20} color="#ef4444" />
-            )}
-          </Pressable>
+          <View style={s.headerRightGroup}>
+            <Pressable
+              onPress={() =>
+                router.push({ pathname: '/community/[id]/edit', params: { id: id! } })
+              }
+              style={({ pressed }) => [s.headerAction, { opacity: pressed ? 0.6 : 1 }]}
+              hitSlop={8}
+            >
+              <Feather name="edit-3" size={20} color="#64748b" />
+            </Pressable>
+            <Pressable
+              onPress={handleDeletePost}
+              disabled={deletePost.isPending}
+              style={({ pressed }) => [s.headerAction, { opacity: pressed ? 0.6 : 1 }]}
+              hitSlop={8}
+            >
+              {deletePost.isPending ? (
+                <ActivityIndicator size="small" color="#ef4444" />
+              ) : (
+                <Feather name="trash-2" size={20} color="#ef4444" />
+              )}
+            </Pressable>
+          </View>
         ) : (
           <View style={{ width: 40 }} />
         )}
@@ -504,6 +515,35 @@ function CommentItem({
             <Text style={s.commentAuthor}>{authorName}</Text>
             <Text style={s.commentTime}>{formatRelativeTime(comment.created_at)}</Text>
           </View>
+          {!isEditing && (
+            <View style={s.commentActions}>
+              <Pressable
+                onPress={onReply}
+                hitSlop={4}
+                style={({ pressed }) => [s.commentAction, { opacity: pressed ? 0.5 : 1 }]}
+              >
+                <Text style={s.commentActionText}>답글</Text>
+              </Pressable>
+              {isMine && (
+                <>
+                  <Pressable
+                    onPress={onStartEdit}
+                    hitSlop={4}
+                    style={({ pressed }) => [s.commentAction, { opacity: pressed ? 0.5 : 1 }]}
+                  >
+                    <Text style={s.commentActionText}>수정</Text>
+                  </Pressable>
+                  <Pressable
+                    onPress={onDelete}
+                    hitSlop={4}
+                    style={({ pressed }) => [s.commentAction, { opacity: pressed ? 0.5 : 1 }]}
+                  >
+                    <Text style={[s.commentActionText, { color: '#ef4444' }]}>삭제</Text>
+                  </Pressable>
+                </>
+              )}
+            </View>
+          )}
         </View>
 
         {isEditing ? (
@@ -544,39 +584,7 @@ function CommentItem({
             </View>
           </>
         ) : (
-          <>
-            <Text style={s.commentBody}>{comment.body}</Text>
-            <View style={s.commentActions}>
-              <Pressable
-                onPress={onReply}
-                hitSlop={4}
-                style={({ pressed }) => [s.commentAction, { opacity: pressed ? 0.5 : 1 }]}
-              >
-                <Feather name="corner-down-right" size={12} color="#64748b" />
-                <Text style={s.commentActionText}>답글</Text>
-              </Pressable>
-              {isMine && (
-                <>
-                  <Pressable
-                    onPress={onStartEdit}
-                    hitSlop={4}
-                    style={({ pressed }) => [s.commentAction, { opacity: pressed ? 0.5 : 1 }]}
-                  >
-                    <Feather name="edit-2" size={12} color="#64748b" />
-                    <Text style={s.commentActionText}>수정</Text>
-                  </Pressable>
-                  <Pressable
-                    onPress={onDelete}
-                    hitSlop={4}
-                    style={({ pressed }) => [s.commentAction, { opacity: pressed ? 0.5 : 1 }]}
-                  >
-                    <Feather name="trash-2" size={12} color="#ef4444" />
-                    <Text style={[s.commentActionText, { color: '#ef4444' }]}>삭제</Text>
-                  </Pressable>
-                </>
-              )}
-            </View>
-          </>
+          <Text style={s.commentBody}>{comment.body}</Text>
         )}
       </View>
     </View>
@@ -635,6 +643,9 @@ const s = StyleSheet.create({
     height: 40,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  headerRightGroup: {
+    flexDirection: 'row',
   },
   headerTitle: {
     fontSize: 16,
@@ -860,13 +871,10 @@ const s = StyleSheet.create({
   },
   commentActions: {
     flexDirection: 'row',
-    gap: 14,
-    marginTop: 6,
+    gap: 12,
   },
   commentAction: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 3,
+    paddingHorizontal: 2,
   },
   commentActionText: {
     fontSize: 11,

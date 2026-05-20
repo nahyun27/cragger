@@ -325,7 +325,7 @@ function PostCard({
 const s = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8fafc',
+    backgroundColor: '#ffffff',
   },
   header: {
     flexDirection: 'row',
@@ -335,8 +335,6 @@ const s = StyleSheet.create({
     paddingTop: 16,
     paddingBottom: 14,
     backgroundColor: '#ffffff',
-    borderBottomWidth: 1,
-    borderColor: '#e2e8f0',
   },
   headerTitle: {
     fontSize: 24,
@@ -378,9 +376,7 @@ const s = StyleSheet.create({
     elevation: 6,
   },
   filterWrapper: {
-    backgroundColor: '#ffffff',
-    borderBottomWidth: 1,
-    borderColor: '#e2e8f0',
+    backgroundColor: '#f1f5f9',
   },
   filterScroll: {
     paddingHorizontal: 16,
@@ -481,7 +477,7 @@ const s = StyleSheet.create({
   // Card styles
   card: {
     borderWidth: 1,
-    borderColor: '#f1f5f9',
+    borderColor: '#e2e8f0',
     borderRadius: 20,
     padding: 18,
   },
