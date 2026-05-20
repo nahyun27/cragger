@@ -3,8 +3,8 @@ import React, { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
-  FlatList,
   Pressable,
+  ScrollView,
   Text,
   View,
 } from 'react-native';
@@ -30,12 +30,23 @@ export default function GymVoteScreen() {
   const submitVote = useSubmitGradeVote();
 
   const [pickerColor, setPickerColor] = useState<string | null>(null);
+  // 미투표 색깔을 디폴트로 숨김. 사용자가 "난이도 추가" 탭하면 펼침.
+  const [showUnvoted, setShowUnvoted] = useState(false);
 
   const avgByColor = useMemo(() => {
     const m = new Map<string, GymColorAvg>();
     for (const a of avgs ?? []) m.set(a.color, a);
     return m;
   }, [avgs]);
+
+  const { voted, unvoted } = useMemo(() => {
+    const v: VoteableColor[] = [];
+    const u: VoteableColor[] = [];
+    for (const c of colors ?? []) {
+      (c.currentVote ? v : u).push(c);
+    }
+    return { voted: v, unvoted: u };
+  }, [colors]);
 
   const activePickerColorData = useMemo(() => {
     if (!pickerColor) return null;
@@ -91,15 +102,54 @@ export default function GymVoteScreen() {
       )}
 
       {colors && (
-        <FlatList
-          data={colors}
-          keyExtractor={(item) => item.color}
-          renderItem={({ item }) => (
-            <VoteRow color={item} onPress={() => setPickerColor(item.color)} />
+        <ScrollView contentContainerClassName="px-4 pb-6">
+          {voted.length === 0 ? (
+            <View className="py-8 items-center">
+              <Text className="text-text-secondary text-center">
+                아직 평가한 색깔이 없어요
+              </Text>
+              <Text className="text-text-tertiary text-xs text-center mt-1">
+                아래 "난이도 추가" 버튼으로 시작하세요
+              </Text>
+            </View>
+          ) : (
+            <View>
+              {voted.map((c, i) => (
+                <View key={c.color}>
+                  {i > 0 && <View className="h-px bg-border-subtle" />}
+                  <VoteRow color={c} onPress={() => setPickerColor(c.color)} />
+                </View>
+              ))}
+            </View>
           )}
-          contentContainerClassName="px-4 pb-6"
-          ItemSeparatorComponent={() => <View className="h-px bg-border-subtle" />}
-        />
+
+          {unvoted.length > 0 && (
+            <Pressable
+              onPress={() => setShowUnvoted((v) => !v)}
+              className="border border-dashed border-border-default rounded-lg py-3 items-center mt-4 active:opacity-60"
+            >
+              <Text className="text-text-secondary text-sm font-medium">
+                {showUnvoted
+                  ? `− 닫기`
+                  : `+ 난이도 추가 (${unvoted.length}색)`}
+              </Text>
+            </Pressable>
+          )}
+
+          {showUnvoted && unvoted.length > 0 && (
+            <View className="mt-3">
+              <Text className="text-text-tertiary text-xs px-1 mb-1">
+                아직 평가하지 않은 색깔
+              </Text>
+              {unvoted.map((c, i) => (
+                <View key={c.color}>
+                  {i > 0 && <View className="h-px bg-border-subtle" />}
+                  <VoteRow color={c} onPress={() => setPickerColor(c.color)} />
+                </View>
+              ))}
+            </View>
+          )}
+        </ScrollView>
       )}
 
       <GradePickerModal
