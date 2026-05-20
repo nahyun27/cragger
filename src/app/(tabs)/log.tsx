@@ -300,12 +300,12 @@ const s = StyleSheet.create({
     paddingHorizontal: 4,
   },
 
-  // Stats Card
+  // Stats Card (hero tier)
   statsCard: {
-    backgroundColor: '#ffffff',
+    backgroundColor: '#f8fafc',
     borderWidth: 1,
-    borderColor: '#f1f5f9',
-    borderRadius: 20,
+    borderColor: '#e2e8f0',
+    borderRadius: 22,
     padding: 18,
     marginBottom: 20,
     shadowColor: '#0f172a',
@@ -358,15 +358,16 @@ const s = StyleSheet.create({
     marginTop: 4,
   },
 
-  // Empty View
+  // Empty View (empty tier)
   emptyCard: {
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: '#cbd5e1',
     borderStyle: 'dashed',
-    borderRadius: 20,
+    borderRadius: 22,
     padding: 28,
     alignItems: 'center',
     marginTop: 4,
+    backgroundColor: '#ffffff',
   },
   emptyIconWrapper: {
     width: 56,
