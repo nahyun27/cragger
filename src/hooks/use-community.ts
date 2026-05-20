@@ -191,6 +191,7 @@ export type CommentRow = {
   author_id: string;
   body: string;
   created_at: string;
+  parent_comment_id: string | null;
   author: PostAuthor | null;
 };
 
@@ -202,7 +203,7 @@ export function useComments(postId: string | undefined) {
       const { data, error } = await supabase
         .from('post_comments')
         .select(
-          'id, post_id, author_id, body, created_at, author:profiles!post_comments_author_id_fkey(id, username, display_name, avatar_url)',
+          'id, post_id, author_id, body, created_at, parent_comment_id, author:profiles!post_comments_author_id_fkey(id, username, display_name, avatar_url)',
         )
         .eq('post_id', postId!)
         .order('created_at', { ascending: true });
@@ -216,20 +217,56 @@ export function useCreateComment() {
   const queryClient = useQueryClient();
   const { session: authSession } = useAuth();
   return useMutation({
-    mutationFn: async ({ postId, body }: { postId: string; body: string }) => {
+    mutationFn: async ({
+      postId,
+      body,
+      parentCommentId,
+    }: {
+      postId: string;
+      body: string;
+      parentCommentId?: string | null;
+    }) => {
       const userId = authSession?.user.id;
       if (!userId) throw new Error('Not authenticated');
       const trimmed = body.trim();
       if (!trimmed) throw new Error('댓글 내용을 입력하세요');
-      const { error } = await supabase
-        .from('post_comments')
-        .insert({ post_id: postId, author_id: userId, body: trimmed });
+      const { error } = await supabase.from('post_comments').insert({
+        post_id: postId,
+        author_id: userId,
+        body: trimmed,
+        parent_comment_id: parentCommentId ?? null,
+      });
       if (error) throw new Error(error.message);
     },
     onSuccess: (_data, vars) => {
       queryClient.invalidateQueries({ queryKey: ['community', 'comments', vars.postId] });
       queryClient.invalidateQueries({ queryKey: ['community', 'post', vars.postId] });
       queryClient.invalidateQueries({ queryKey: ['community', 'feed'] });
+    },
+  });
+}
+
+export function useUpdateComment() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      commentId,
+      body,
+    }: {
+      commentId: string;
+      body: string;
+      postId: string;
+    }) => {
+      const trimmed = body.trim();
+      if (!trimmed) throw new Error('댓글 내용을 입력하세요');
+      const { error } = await supabase
+        .from('post_comments')
+        .update({ body: trimmed })
+        .eq('id', commentId);
+      if (error) throw new Error(error.message);
+    },
+    onSuccess: (_data, vars) => {
+      queryClient.invalidateQueries({ queryKey: ['community', 'comments', vars.postId] });
     },
   });
 }

@@ -25,6 +25,7 @@ import {
   useMyLikes,
   usePost,
   useToggleLike,
+  useUpdateComment,
   type CommentRow,
   type PostRow,
   type PostType,
@@ -85,10 +86,16 @@ export default function PostDetailScreen() {
   const { data: likedSet } = useMyLikes();
   const toggleLike = useToggleLike();
   const createComment = useCreateComment();
+  const updateComment = useUpdateComment();
   const deleteComment = useDeleteComment();
   const deletePost = useDeletePost();
 
   const [commentBody, setCommentBody] = useState('');
+  const [replyToId, setReplyToId] = useState<string | null>(null);
+  const [replyToName, setReplyToName] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingBody, setEditingBody] = useState('');
+  const commentInputRef = React.useRef<TextInput>(null);
 
   if (postQ.isLoading) {
     return (
@@ -137,10 +144,51 @@ export default function PostDetailScreen() {
   async function handleSubmitComment() {
     if (!id || !commentBody.trim() || createComment.isPending) return;
     try {
-      await createComment.mutateAsync({ postId: id, body: commentBody });
+      await createComment.mutateAsync({
+        postId: id,
+        body: commentBody,
+        parentCommentId: replyToId,
+      });
       setCommentBody('');
+      setReplyToId(null);
+      setReplyToName(null);
     } catch (e) {
       Alert.alert('댓글 실패', e instanceof Error ? e.message : '알 수 없는 오류');
+    }
+  }
+
+  function startReply(c: CommentRow) {
+    setReplyToId(c.parent_comment_id ?? c.id);
+    setReplyToName(c.author?.display_name ?? c.author?.username ?? '익명');
+    commentInputRef.current?.focus();
+  }
+
+  function cancelReply() {
+    setReplyToId(null);
+    setReplyToName(null);
+  }
+
+  function startEdit(c: CommentRow) {
+    setEditingId(c.id);
+    setEditingBody(c.body);
+  }
+
+  function cancelEdit() {
+    setEditingId(null);
+    setEditingBody('');
+  }
+
+  async function saveEdit() {
+    if (!id || !editingId || !editingBody.trim() || updateComment.isPending) return;
+    try {
+      await updateComment.mutateAsync({
+        commentId: editingId,
+        body: editingBody,
+        postId: id,
+      });
+      cancelEdit();
+    } catch (e) {
+      Alert.alert('수정 실패', e instanceof Error ? e.message : '알 수 없는 오류');
     }
   }
 
@@ -179,26 +227,26 @@ export default function PostDetailScreen() {
           <View style={s.postCard}>
             <PostHeader post={post} />
 
-            {/* Location pill above title */}
+            {/* Location pill above title — wrapped in a flex-row container
+                so the Pressable can hug its content width inside the column
+                postCard. */}
             {post.gym && (
-              <Pressable
-                onPress={() =>
-                  router.push({ pathname: '/gym/[id]', params: { id: post.gym!.id } })
-                }
-                style={({ pressed }) => ({
-                  opacity: pressed ? 0.7 : 1,
-                  alignSelf: 'flex-start',
-                  marginBottom: 12,
-                })}
-              >
-                <View style={s.gymPill}>
-                  <Feather name="map-pin" size={11} color="#64748b" />
-                  <Text style={s.gymPillText} numberOfLines={1}>
-                    {post.gym.name}
-                    {post.gym.branch ? ` ${post.gym.branch}` : ''}
-                  </Text>
-                </View>
-              </Pressable>
+              <View style={s.gymPillRow}>
+                <Pressable
+                  onPress={() =>
+                    router.push({ pathname: '/gym/[id]', params: { id: post.gym!.id } })
+                  }
+                  style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
+                >
+                  <View style={s.gymPill}>
+                    <Feather name="map-pin" size={11} color="#64748b" />
+                    <Text style={s.gymPillText} numberOfLines={1}>
+                      {post.gym.name}
+                      {post.gym.branch ? ` ${post.gym.branch}` : ''}
+                    </Text>
+                  </View>
+                </Pressable>
+              </View>
             )}
 
             {post.title && <Text style={s.postTitle}>{post.title}</Text>}
@@ -265,34 +313,96 @@ export default function PostDetailScreen() {
               </Text>
             )}
 
-            {commentsQ.data?.map((c) => (
-              <CommentItem
-                key={c.id}
-                comment={c}
-                isMine={c.author_id === meId}
-                onDelete={() =>
-                  deleteComment.mutate(
-                    { commentId: c.id, postId: post.id },
-                    {
-                      onError: (e) =>
-                        Alert.alert(
-                          '삭제 실패',
-                          e instanceof Error ? e.message : '알 수 없는 오류',
-                        ),
-                    },
-                  )
+            {(() => {
+              const all = commentsQ.data ?? [];
+              const topLevel = all.filter((c) => !c.parent_comment_id);
+              const repliesByParent = new Map<string, CommentRow[]>();
+              for (const c of all) {
+                if (c.parent_comment_id) {
+                  const list = repliesByParent.get(c.parent_comment_id) ?? [];
+                  list.push(c);
+                  repliesByParent.set(c.parent_comment_id, list);
                 }
-              />
-            ))}
+              }
+              const confirmDelete = (c: CommentRow) =>
+                Alert.alert('댓글을 삭제할까요?', '되돌릴 수 없어요.', [
+                  { text: '취소', style: 'cancel' },
+                  {
+                    text: '삭제',
+                    style: 'destructive',
+                    onPress: () =>
+                      deleteComment.mutate(
+                        { commentId: c.id, postId: post.id },
+                        {
+                          onError: (e) =>
+                            Alert.alert(
+                              '삭제 실패',
+                              e instanceof Error ? e.message : '알 수 없는 오류',
+                            ),
+                        },
+                      ),
+                  },
+                ]);
+
+              return topLevel.map((c) => (
+                <View key={c.id}>
+                  <CommentItem
+                    comment={c}
+                    isMine={c.author_id === meId}
+                    isReply={false}
+                    isEditing={editingId === c.id}
+                    editingBody={editingBody}
+                    onEditingBodyChange={setEditingBody}
+                    onStartEdit={() => startEdit(c)}
+                    onSaveEdit={saveEdit}
+                    onCancelEdit={cancelEdit}
+                    savingEdit={updateComment.isPending}
+                    onReply={() => startReply(c)}
+                    onDelete={() => confirmDelete(c)}
+                  />
+                  {(repliesByParent.get(c.id) ?? []).map((r) => (
+                    <CommentItem
+                      key={r.id}
+                      comment={r}
+                      isMine={r.author_id === meId}
+                      isReply
+                      isEditing={editingId === r.id}
+                      editingBody={editingBody}
+                      onEditingBodyChange={setEditingBody}
+                      onStartEdit={() => startEdit(r)}
+                      onSaveEdit={saveEdit}
+                      onCancelEdit={cancelEdit}
+                      savingEdit={updateComment.isPending}
+                      onReply={() => startReply(r)}
+                      onDelete={() => confirmDelete(r)}
+                    />
+                  ))}
+                </View>
+              ));
+            })()}
           </View>
         </ScrollView>
+
+        {/* Reply context banner */}
+        {replyToId && (
+          <View style={s.replyBanner}>
+            <Feather name="corner-down-right" size={12} color="#0d9488" />
+            <Text style={s.replyBannerText} numberOfLines={1}>
+              {replyToName ?? '댓글'}에게 답글 작성 중
+            </Text>
+            <Pressable onPress={cancelReply} hitSlop={6}>
+              <Feather name="x" size={14} color="#64748b" />
+            </Pressable>
+          </View>
+        )}
 
         {/* Comment Input Box */}
         <View style={[s.commentInputBar, { paddingBottom: 10 + insets.bottom }]}>
           <TextInput
+            ref={commentInputRef}
             value={commentBody}
             onChangeText={(t) => setCommentBody(t.slice(0, COMMENT_MAX))}
-            placeholder="따뜻한 댓글을 남겨보세요..."
+            placeholder={replyToId ? '답글 입력...' : '따뜻한 댓글을 남겨보세요...'}
             placeholderTextColor="#94a3b8"
             maxLength={COMMENT_MAX}
             multiline
@@ -302,21 +412,21 @@ export default function PostDetailScreen() {
             onPress={handleSubmitComment}
             disabled={!commentBody.trim() || createComment.isPending}
             hitSlop={6}
-            style={({ pressed }) => [
-              s.sendBtn,
-              !commentBody.trim() && s.sendBtnDisabled,
-              { opacity: pressed ? 0.85 : 1 },
-            ]}
+            style={({ pressed }) => ({ opacity: pressed ? 0.85 : 1 })}
           >
-            {createComment.isPending ? (
-              <ActivityIndicator size="small" color="#ffffff" />
-            ) : (
-              <Feather
-                name="send"
-                size={18}
-                color={!commentBody.trim() ? '#94a3b8' : '#ffffff'}
-              />
-            )}
+            <View
+              style={[s.sendBtn, !commentBody.trim() && s.sendBtnDisabled]}
+            >
+              {createComment.isPending ? (
+                <ActivityIndicator size="small" color="#ffffff" />
+              ) : (
+                <Feather
+                  name="send"
+                  size={18}
+                  color={!commentBody.trim() ? '#94a3b8' : '#ffffff'}
+                />
+              )}
+            </View>
           </Pressable>
         </View>
       </KeyboardAvoidingView>
@@ -352,18 +462,37 @@ function PostHeader({ post }: { post: PostRow }) {
 function CommentItem({
   comment,
   isMine,
+  isReply,
+  isEditing,
+  editingBody,
+  onEditingBodyChange,
+  onStartEdit,
+  onSaveEdit,
+  onCancelEdit,
+  savingEdit,
+  onReply,
   onDelete,
 }: {
   comment: CommentRow;
   isMine: boolean;
+  isReply: boolean;
+  isEditing: boolean;
+  editingBody: string;
+  onEditingBodyChange: (t: string) => void;
+  onStartEdit: () => void;
+  onSaveEdit: () => void;
+  onCancelEdit: () => void;
+  savingEdit: boolean;
+  onReply: () => void;
   onDelete: () => void;
 }) {
   const authorName = comment.author?.display_name ?? comment.author?.username ?? '익명';
   const avatarBg = getAvatarBgColor(authorName);
   const avatarText = getAvatarTextColor(authorName);
+  const canSaveEdit = editingBody.trim().length > 0 && !savingEdit;
 
   return (
-    <View style={s.commentItem}>
+    <View style={[s.commentItem, isReply && s.commentItemReply]}>
       <View style={[s.avatarSmall, { backgroundColor: avatarBg }]}>
         <Text style={[s.avatarTextValSmall, { color: avatarText }]}>
           {(authorName[0] ?? '?').toUpperCase()}
@@ -375,13 +504,80 @@ function CommentItem({
             <Text style={s.commentAuthor}>{authorName}</Text>
             <Text style={s.commentTime}>{formatRelativeTime(comment.created_at)}</Text>
           </View>
-          {isMine && (
-            <Pressable onPress={onDelete} hitSlop={8} style={({ pressed }) => [{ opacity: pressed ? 0.6 : 1 }]}>
-              <Feather name="x" size={14} color="#94a3b8" />
-            </Pressable>
-          )}
         </View>
-        <Text style={s.commentBody}>{comment.body}</Text>
+
+        {isEditing ? (
+          <>
+            <TextInput
+              value={editingBody}
+              onChangeText={(t) => onEditingBodyChange(t.slice(0, COMMENT_MAX))}
+              multiline
+              autoFocus
+              style={s.commentEditInput}
+              maxLength={COMMENT_MAX}
+            />
+            <View style={s.commentEditActions}>
+              <Pressable
+                onPress={onCancelEdit}
+                hitSlop={6}
+                style={({ pressed }) => [s.commentEditBtn, { opacity: pressed ? 0.6 : 1 }]}
+              >
+                <Text style={s.commentEditCancelText}>취소</Text>
+              </Pressable>
+              <Pressable
+                onPress={onSaveEdit}
+                disabled={!canSaveEdit}
+                hitSlop={6}
+                style={({ pressed }) => [
+                  s.commentEditBtn,
+                  s.commentEditSaveBtn,
+                  !canSaveEdit && s.commentEditSaveBtnDisabled,
+                  { opacity: pressed ? 0.85 : 1 },
+                ]}
+              >
+                {savingEdit ? (
+                  <ActivityIndicator size="small" color="#ffffff" />
+                ) : (
+                  <Text style={s.commentEditSaveText}>저장</Text>
+                )}
+              </Pressable>
+            </View>
+          </>
+        ) : (
+          <>
+            <Text style={s.commentBody}>{comment.body}</Text>
+            <View style={s.commentActions}>
+              <Pressable
+                onPress={onReply}
+                hitSlop={4}
+                style={({ pressed }) => [s.commentAction, { opacity: pressed ? 0.5 : 1 }]}
+              >
+                <Feather name="corner-down-right" size={12} color="#64748b" />
+                <Text style={s.commentActionText}>답글</Text>
+              </Pressable>
+              {isMine && (
+                <>
+                  <Pressable
+                    onPress={onStartEdit}
+                    hitSlop={4}
+                    style={({ pressed }) => [s.commentAction, { opacity: pressed ? 0.5 : 1 }]}
+                  >
+                    <Feather name="edit-2" size={12} color="#64748b" />
+                    <Text style={s.commentActionText}>수정</Text>
+                  </Pressable>
+                  <Pressable
+                    onPress={onDelete}
+                    hitSlop={4}
+                    style={({ pressed }) => [s.commentAction, { opacity: pressed ? 0.5 : 1 }]}
+                  >
+                    <Feather name="trash-2" size={12} color="#ef4444" />
+                    <Text style={[s.commentActionText, { color: '#ef4444' }]}>삭제</Text>
+                  </Pressable>
+                </>
+              )}
+            </View>
+          </>
+        )}
       </View>
     </View>
   );
@@ -461,6 +657,10 @@ const s = StyleSheet.create({
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 4 },
     elevation: 1,
+  },
+  gymPillRow: {
+    flexDirection: 'row',
+    marginBottom: 12,
   },
   gymPill: {
     flexDirection: 'row',
@@ -649,6 +849,86 @@ const s = StyleSheet.create({
     color: '#334155',
     lineHeight: 18,
   },
+  commentItemReply: {
+    marginLeft: 36,
+    backgroundColor: '#f8fafc',
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderRadius: 10,
+    marginVertical: 4,
+    borderBottomWidth: 0,
+  },
+  commentActions: {
+    flexDirection: 'row',
+    gap: 14,
+    marginTop: 6,
+  },
+  commentAction: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+  },
+  commentActionText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#64748b',
+  },
+  commentEditInput: {
+    borderWidth: 1,
+    borderColor: '#cbd5e1',
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    fontSize: 13,
+    color: '#0f172a',
+    backgroundColor: '#ffffff',
+    minHeight: 40,
+    maxHeight: 120,
+    marginTop: 4,
+  },
+  commentEditActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 6,
+    marginTop: 6,
+  },
+  commentEditBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  commentEditCancelText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#64748b',
+  },
+  commentEditSaveBtn: {
+    backgroundColor: '#0d9488',
+  },
+  commentEditSaveBtnDisabled: {
+    backgroundColor: '#cbd5e1',
+  },
+  commentEditSaveText: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#ffffff',
+  },
+  replyBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    backgroundColor: '#f0fdfa',
+    borderTopWidth: 1,
+    borderColor: '#99f6e4',
+  },
+  replyBannerText: {
+    flex: 1,
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#0f766e',
+  },
   commentInputBar: {
     paddingHorizontal: 12,
     paddingVertical: 10,
@@ -661,6 +941,7 @@ const s = StyleSheet.create({
   },
   textInput: {
     flex: 1,
+    minWidth: 0,
     borderWidth: 1,
     borderColor: '#e2e8f0',
     borderRadius: 22,
@@ -679,6 +960,7 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#0d9488',
+    flexShrink: 0,
     shadowColor: '#0d9488',
     shadowOpacity: 0.25,
     shadowRadius: 6,
