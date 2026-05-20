@@ -16,9 +16,9 @@ export default function TabLayout() {
         tabBarStyle: {
           backgroundColor: isDark ? '#09090b' : '#ffffff', // background-primary
           borderTopColor: isDark ? '#27272a' : '#e4e4e7', // border-subtle
-          paddingBottom: 4,
+          paddingBottom: 20, // Increased padding to prevent overlap with iOS home indicator
           paddingTop: 8,
-          height: 60,
+          height: 80, // Increased overall height
         },
         tabBarLabelStyle: {
           fontSize: 12,
@@ -46,6 +46,13 @@ export default function TabLayout() {
         options={{
           title: '암장',
           tabBarIcon: ({ color, size }) => <Feather name="map-pin" size={size} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="community"
+        options={{
+          title: '커뮤니티',
+          tabBarIcon: ({ color, size }) => <Feather name="users" size={size} color={color} />,
         }}
       />
       <Tabs.Screen
