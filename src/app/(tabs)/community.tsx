@@ -5,6 +5,7 @@ import {
   FlatList,
   Image,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -23,11 +24,16 @@ import {
 
 type FilterKey = 'all' | Exclude<PostType, 'meetup'>;
 
-const FILTER_TABS: { key: FilterKey; label: string }[] = [
-  { key: 'all', label: '전체' },
-  { key: 'general', label: POST_TYPE_LABEL.general },
-  { key: 'question', label: POST_TYPE_LABEL.question },
-  { key: 'review', label: POST_TYPE_LABEL.review },
+const FILTER_TABS: {
+  key: FilterKey;
+  label: string;
+  icon: React.ComponentProps<typeof Feather>['name'];
+  accent: string;
+}[] = [
+  { key: 'all', label: '전체', icon: 'layers', accent: '#0d9488' },
+  { key: 'general', label: POST_TYPE_LABEL.general, icon: 'message-circle', accent: '#2563eb' },
+  { key: 'question', label: POST_TYPE_LABEL.question, icon: 'help-circle', accent: '#7c3aed' },
+  { key: 'review', label: POST_TYPE_LABEL.review, icon: 'star', accent: '#059669' },
 ];
 
 const BADGE_COLORS: Record<string, { bg: string; text: string; border: string }> = {
@@ -98,28 +104,42 @@ export default function CommunityScreen() {
         </View>
       </View>
 
-      {/* Segmented Filter Control */}
+      {/* Filter Pills */}
       <View style={s.filterWrapper}>
-        <View style={s.segmentedControl}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={s.filterScroll}
+        >
           {FILTER_TABS.map((t) => {
             const active = filter === t.key;
             return (
               <Pressable
                 key={t.key}
                 onPress={() => setFilter(t.key)}
-                style={({ pressed }) => [
-                  s.segmentBtn,
-                  active && s.segmentBtnActive,
-                  { opacity: pressed ? 0.8 : 1 },
-                ]}
+                style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]}
               >
-                <Text style={[s.segmentText, active && s.segmentTextActive]}>
-                  {t.label}
-                </Text>
+                <View
+                  style={[
+                    s.chip,
+                    active
+                      ? { backgroundColor: t.accent, borderColor: t.accent }
+                      : s.chipInactive,
+                  ]}
+                >
+                  <Feather
+                    name={t.icon}
+                    size={13}
+                    color={active ? '#ffffff' : t.accent}
+                  />
+                  <Text style={[s.chipText, active && s.chipTextActive]}>
+                    {t.label}
+                  </Text>
+                </View>
               </Pressable>
             );
           })}
-        </View>
+        </ScrollView>
       </View>
 
       {/* List States */}
@@ -361,48 +381,38 @@ const s = StyleSheet.create({
     letterSpacing: -0.2,
   },
   filterWrapper: {
-    paddingHorizontal: 20,
-    paddingVertical: 12,
     backgroundColor: '#ffffff',
     borderBottomWidth: 1,
     borderColor: '#e2e8f0',
-    // subtle elevation for premium feel
-    shadowColor: '#0f172a',
-    shadowOpacity: 0.03,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 1,
   },
-  segmentedControl: {
+  filterScroll: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    gap: 8,
     flexDirection: 'row',
-    backgroundColor: '#f1f5f9',
-    borderRadius: 14,
-    padding: 4,
   },
-  segmentBtn: {
-    flex: 1,
+  chip: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    gap: 6,
+    paddingHorizontal: 14,
     paddingVertical: 8,
-    borderRadius: 12,
-    backgroundColor: 'transparent',
+    borderRadius: 999,
+    borderWidth: 1,
   },
-  segmentBtnActive: {
-    backgroundColor: '#0d9488',
-    shadowColor: '#0d9488',
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 2,
+  chipInactive: {
+    backgroundColor: '#ffffff',
+    borderColor: '#e2e8f0',
   },
-  segmentText: {
+  chipText: {
     fontSize: 13,
-    fontWeight: '600',
-    color: '#64748b',
+    fontWeight: '700',
+    color: '#475569',
+    letterSpacing: -0.2,
   },
-  segmentTextActive: {
-    fontWeight: '800',
+  chipTextActive: {
     color: '#ffffff',
+    fontWeight: '800',
   },
   loadingContainer: {
     flex: 1,
