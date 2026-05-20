@@ -22,6 +22,7 @@ import { GymPickerModal } from '@/components/session/gym-picker-modal';
 import { Chip } from '@/components/ui/chip';
 import { Section } from '@/components/ui/section';
 import { useGyms } from '@/hooks/use-gyms';
+import { useGymRegisteredColors } from '@/hooks/use-gym-registered-colors';
 import { useRecentColorActivity } from '@/hooks/use-recent-color-activity';
 import { useRecentGyms } from '@/hooks/use-recent-gyms';
 import { useRecordSession } from '@/hooks/use-record-session';
@@ -72,20 +73,42 @@ export default function NewSessionScreen() {
 
   const { data: recentGyms } = useRecentGyms();
   const { data: recentColors } = useRecentColorActivity(gymId);
-  // 사용자가 자주 푼 색깔 위로 → 안 푼 색깔은 난이도 기본순.
-  const colorOrder = useMemo<readonly GridColor[]>(() => {
-    if (!recentColors || recentColors.length === 0) return GRID_COLORS;
+  const { data: registeredColors } = useGymRegisteredColors(gymId);
+  // primary = 그 암장에 등록된 색깔 (recent activity desc). secondary = 나머지.
+  // 등록 정보 없으면 primary=전체 14색 (이전과 동일 동작).
+  const { colorOrder, primaryCount } = useMemo<{
+    colorOrder: readonly GridColor[];
+    primaryCount: number;
+  }>(() => {
+    // 등록된 색깔이 GRID_COLORS와 교집합
+    const registered = new Set(
+      (registeredColors ?? []).filter((c) =>
+        (GRID_COLORS as readonly string[]).includes(c),
+      ),
+    );
+    // 최근 활동순으로 head 만들기 (전체 컬러)
     const seen = new Set<string>();
-    const head: GridColor[] = [];
-    for (const c of recentColors) {
+    const orderHead: GridColor[] = [];
+    for (const c of recentColors ?? []) {
       if ((GRID_COLORS as readonly string[]).includes(c) && !seen.has(c)) {
-        head.push(c as GridColor);
+        orderHead.push(c as GridColor);
         seen.add(c);
       }
     }
-    const tail = GRID_COLORS.filter((c) => !seen.has(c));
-    return [...head, ...tail];
-  }, [recentColors]);
+    const orderTail = GRID_COLORS.filter((c) => !seen.has(c));
+    const order: GridColor[] = [...orderHead, ...orderTail];
+
+    if (registered.size === 0) {
+      return { colorOrder: order, primaryCount: order.length };
+    }
+    // 등록된 색깔이 앞으로 오게 재정렬 (등록 색깔끼리는 위 order 순서 유지)
+    const primary = order.filter((c) => registered.has(c));
+    const secondary = order.filter((c) => !registered.has(c));
+    return {
+      colorOrder: [...primary, ...secondary],
+      primaryCount: primary.length,
+    };
+  }, [recentColors, registeredColors]);
   const { data: allGyms } = useGyms();
   const selectedGym = useMemo(
     () => allGyms?.find((g) => g.id === gymId) ?? null,
@@ -225,6 +248,7 @@ export default function NewSessionScreen() {
             value={colorCounts}
             onChange={setColorCounts}
             colors={colorOrder}
+            primaryCount={primaryCount}
           />
         </Section>
 

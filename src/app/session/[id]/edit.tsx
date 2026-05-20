@@ -22,6 +22,7 @@ import { GymPickerModal } from '@/components/session/gym-picker-modal';
 import { Chip } from '@/components/ui/chip';
 import { Section } from '@/components/ui/section';
 import { useGyms } from '@/hooks/use-gyms';
+import { useGymRegisteredColors } from '@/hooks/use-gym-registered-colors';
 import { useRecentColorActivity } from '@/hooks/use-recent-color-activity';
 import { useRecentGyms } from '@/hooks/use-recent-gyms';
 import { useSessionDetail, useUpdateSession } from '@/hooks/use-session';
@@ -71,19 +72,37 @@ export default function EditSessionScreen() {
   const [prefilled, setPrefilled] = useState(false);
 
   const { data: recentColors } = useRecentColorActivity(gymId);
-  const colorOrder = useMemo<readonly GridColor[]>(() => {
-    if (!recentColors || recentColors.length === 0) return GRID_COLORS;
+  const { data: registeredColors } = useGymRegisteredColors(gymId);
+  // primary = 그 암장에 등록된 색깔만 우선 노출. 나머지는 secondary (난이도 추가).
+  const { colorOrder, primaryCount } = useMemo<{
+    colorOrder: readonly GridColor[];
+    primaryCount: number;
+  }>(() => {
+    const registered = new Set(
+      (registeredColors ?? []).filter((c) =>
+        (GRID_COLORS as readonly string[]).includes(c),
+      ),
+    );
     const seen = new Set<string>();
-    const head: GridColor[] = [];
-    for (const c of recentColors) {
+    const orderHead: GridColor[] = [];
+    for (const c of recentColors ?? []) {
       if ((GRID_COLORS as readonly string[]).includes(c) && !seen.has(c)) {
-        head.push(c as GridColor);
+        orderHead.push(c as GridColor);
         seen.add(c);
       }
     }
-    const tail = GRID_COLORS.filter((c) => !seen.has(c));
-    return [...head, ...tail];
-  }, [recentColors]);
+    const orderTail = GRID_COLORS.filter((c) => !seen.has(c));
+    const order: GridColor[] = [...orderHead, ...orderTail];
+    if (registered.size === 0) {
+      return { colorOrder: order, primaryCount: order.length };
+    }
+    const primary = order.filter((c) => registered.has(c));
+    const secondary = order.filter((c) => !registered.has(c));
+    return {
+      colorOrder: [...primary, ...secondary],
+      primaryCount: primary.length,
+    };
+  }, [recentColors, registeredColors]);
 
   // 첫 fetch 완료 시 한 번만 prefill — 이후 사용자 편집 보존
   useEffect(() => {
@@ -263,6 +282,7 @@ export default function EditSessionScreen() {
             value={colorCounts}
             onChange={setColorCounts}
             colors={colorOrder}
+            primaryCount={primaryCount}
           />
         </Section>
 
