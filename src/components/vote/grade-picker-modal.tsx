@@ -10,8 +10,19 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { resolveColorHex, resolveColorLabel } from '@/constants/climb-colors';
 
-// 3x3 그리드. V8+는 그 이상을 묶음.
-const GRADES = ['V0', 'V1', 'V2', 'V3', 'V4', 'V5', 'V6', 'V7', 'V8+'] as const;
+// V0 ~ V8+ + 사이마다 + variants = 17개. 3 col 그리드에 flex-wrap (마지막 줄 2 cell).
+// 'V8+'는 V8 이상 묶음.
+const GRADES = [
+  'V0', 'V0+',
+  'V1', 'V1+',
+  'V2', 'V2+',
+  'V3', 'V3+',
+  'V4', 'V4+',
+  'V5', 'V5+',
+  'V6', 'V6+',
+  'V7', 'V7+',
+  'V8+',
+] as const;
 
 // anchoring 회피: vote count 10 미만이면 평균 안 보여줌.
 const SHOW_AVG_THRESHOLD = 10;

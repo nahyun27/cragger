@@ -4,14 +4,17 @@ import { Pressable, Text, View } from 'react-native';
 import { resolveColorHex, resolveColorLabel } from '@/constants/climb-colors';
 
 // 4×2 그리드, 8색 하드코딩. 암장별 색깔 체계 동적 로딩은 v1.1.
+// 순서는 일반 난이도 desc (시드 시트 기준): 검정 ≫ 보라 ≫ 핑크/빨강 ≫
+// 파랑 ≫ 초록 ≫ 노랑 ≫ 흰. 모든 색깔 그리드 (기록 카운터, 투표 row, 통계)가
+// 이 순서를 공유.
 export const GRID_COLORS = [
-  'red',
-  'yellow',
-  'green',
-  'blue',
+  'black',
   'purple',
   'pink',
-  'black',
+  'red',
+  'blue',
+  'green',
+  'yellow',
   'white',
 ] as const;
 
