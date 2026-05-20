@@ -4,17 +4,18 @@
 
 @layer base {
   :root {
+    /* Bluish slate gray palette — matches the community/log tab background. */
     --background-primary: #ffffff;
-    --background-secondary: #f4f4f5;
-    --background-tertiary: #e4e4e7;
-    
-    --text-primary: #18181b;
-    --text-secondary: #3f3f46;
-    --text-tertiary: #71717a;
-    --text-muted: #a1a1aa;
-    
-    --border-default: #d4d4d8;
-    --border-subtle: #e4e4e7;
+    --background-secondary: #f8fafc; /* slate-50 */
+    --background-tertiary: #f1f5f9;  /* slate-100 */
+
+    --text-primary: #0f172a;   /* slate-900 */
+    --text-secondary: #334155; /* slate-700 */
+    --text-tertiary: #64748b;  /* slate-500 */
+    --text-muted: #94a3b8;     /* slate-400 */
+
+    --border-default: #cbd5e1; /* slate-300 */
+    --border-subtle: #e2e8f0;  /* slate-200 */
     
     --brand-primary: #0d9488;
     --brand-accent: #14b8a6;
@@ -37,17 +38,17 @@
   }
 
   .dark {
-    --background-primary: #09090b;
-    --background-secondary: #18181b;
-    --background-tertiary: #27272a;
-    
-    --text-primary: #fafafa;
-    --text-secondary: #a1a1aa;
-    --text-tertiary: #71717a;
-    --text-muted: #52525b;
-    
-    --border-default: #3f3f46;
-    --border-subtle: #27272a;
+    --background-primary: #020617; /* slate-950 */
+    --background-secondary: #0f172a; /* slate-900 */
+    --background-tertiary: #1e293b;  /* slate-800 */
+
+    --text-primary: #f8fafc;   /* slate-50 */
+    --text-secondary: #94a3b8; /* slate-400 */
+    --text-tertiary: #64748b;  /* slate-500 */
+    --text-muted: #475569;     /* slate-600 */
+
+    --border-default: #334155; /* slate-700 */
+    --border-subtle: #1e293b;  /* slate-800 */
     
     --brand-primary: #2dd4bf;
     --brand-accent: #5eead4;

@@ -215,7 +215,7 @@ export default function PostDetailScreen() {
                 {post.gym.name}
                 {post.gym.branch ? ` ${post.gym.branch}` : ''}
               </Text>
-              <Feather name="chevron-right" size={16} color="#a1a1aa" />
+              <Feather name="chevron-right" size={16} color="#94a3b8" />
             </Pressable>
           )}
 
@@ -231,7 +231,7 @@ export default function PostDetailScreen() {
               hitSlop={8}
             >
               <View style={[s.metricIconWrapper, liked && s.metricIconWrapperLiked]}>
-                <Feather name="heart" size={16} color={liked ? '#ef4444' : '#71717a'} />
+                <Feather name="heart" size={16} color={liked ? '#ef4444' : '#64748b'} />
               </View>
               <Text
                 style={[s.metricText, liked && s.metricTextLiked]}
@@ -240,7 +240,7 @@ export default function PostDetailScreen() {
             </Pressable>
             <View style={s.metricBtn}>
               <View style={s.metricIconWrapper}>
-                <Feather name="message-circle" size={16} color="#71717a" />
+                <Feather name="message-circle" size={16} color="#64748b" />
               </View>
               <Text style={s.metricText} numberOfLines={1}>{post.comment_count}</Text>
             </View>

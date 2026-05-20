@@ -22,7 +22,7 @@ const BG_COLORS = [
   { value: '#ffffff', name: '화이트', isDark: false },
   { value: '#fafaf9', name: '크림', isDark: false },
   { value: '#ecfdf5', name: '민트', isDark: false },
-  { value: '#18181b', name: '차콜', isDark: true },
+  { value: '#0f172a', name: '차콜', isDark: true },
   { value: '#0f766e', name: '딥틸', isDark: true },
   { value: '#3b0764', name: '퍼플', isDark: true },
 ];
@@ -165,7 +165,6 @@ export default function SessionShareScreen() {
     );
   }
 
-  // Calculate dynamic dimensions for container bounds in the preview area
   const previewSize = ratio === '9:16' ? 200 : ratio === '4:5' ? 250 : 280;
   const previewHeight = ratio === '9:16' ? 355 : ratio === '4:5' ? 312 : 280;
 
@@ -183,10 +182,14 @@ export default function SessionShareScreen() {
 
       <ScrollView className="flex-1 bg-background-secondary" showsVerticalScrollIndicator={false}>
         {/* Preview Area */}
-        <View className="items-center justify-center py-6 px-4 bg-background-tertiary/20">
+        <View
+          className="items-center justify-center py-6 px-4"
+          style={{ backgroundColor: 'rgba(244, 244, 245, 0.4)' }}
+        >
           <View
-            className="rounded-2xl overflow-hidden border border-border-subtle bg-white"
+            className="rounded-2xl overflow-hidden border border-border-subtle"
             style={{
+              backgroundColor: bgColor,
               shadowColor: '#000',
               shadowOpacity: 0.08,
               shadowOffset: { width: 0, height: 6 },
@@ -224,16 +227,26 @@ export default function SessionShareScreen() {
                   <Pressable
                     key={item.value}
                     onPress={() => setRatio(item.value)}
-                    className={`flex-1 flex-row items-center justify-center gap-1.5 py-2.5 rounded-xl border ${
-                      active
-                        ? 'border-brand-primary bg-brand-primary/5'
-                        : 'border-border-subtle bg-background-primary'
-                    }`}
+                    style={({ pressed }) => [
+                      {
+                        flex: 1,
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: 6,
+                        paddingVertical: 10,
+                        borderRadius: 12,
+                        borderWidth: 1,
+                        borderColor: active ? '#0d9488' : '#e2e8f0',
+                        backgroundColor: active ? 'rgba(13, 148, 136, 0.05)' : '#ffffff',
+                        opacity: pressed ? 0.8 : 1,
+                      }
+                    ]}
                   >
                     <Feather
                       name={item.icon}
                       size={14}
-                      color={active ? '#0d9488' : '#71717a'}
+                      color={active ? '#0d9488' : '#64748b'}
                     />
                     <Text
                       className={`text-xs font-bold ${
@@ -258,16 +271,26 @@ export default function SessionShareScreen() {
                   <Pressable
                     key={item.value}
                     onPress={() => setLayoutType(item.value)}
-                    className={`flex-1 flex-row items-center justify-center gap-1.5 py-2.5 rounded-xl border ${
-                      active
-                        ? 'border-brand-primary bg-brand-primary/5'
-                        : 'border-border-subtle bg-background-primary'
-                    }`}
+                    style={({ pressed }) => [
+                      {
+                        flex: 1,
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: 6,
+                        paddingVertical: 10,
+                        borderRadius: 12,
+                        borderWidth: 1,
+                        borderColor: active ? '#0d9488' : '#e2e8f0',
+                        backgroundColor: active ? 'rgba(13, 148, 136, 0.05)' : '#ffffff',
+                        opacity: pressed ? 0.8 : 1,
+                      }
+                    ]}
                   >
                     <Feather
                       name={item.icon}
                       size={14}
-                      color={active ? '#0d9488' : '#71717a'}
+                      color={active ? '#0d9488' : '#64748b'}
                     />
                     <Text
                       className={`text-xs font-bold ${
@@ -292,10 +315,20 @@ export default function SessionShareScreen() {
                   <Pressable
                     key={color.value}
                     onPress={() => setBgColor(color.value)}
-                    className={`w-10 h-10 rounded-full items-center justify-center border ${
-                      active ? 'border-brand-primary scale-105' : 'border-border-subtle'
-                    }`}
-                    style={{ backgroundColor: color.value }}
+                    style={({ pressed }) => [
+                      {
+                        width: 40,
+                        height: 40,
+                        borderRadius: 20,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        borderWidth: active ? 2 : 1,
+                        borderColor: active ? '#0d9488' : '#e2e8f0',
+                        backgroundColor: color.value,
+                        opacity: pressed ? 0.8 : 1,
+                        transform: [{ scale: active ? 1.05 : 1 }],
+                      }
+                    ]}
                   >
                     {active && (
                       <Feather
@@ -320,9 +353,22 @@ export default function SessionShareScreen() {
               <View className="flex-row items-center gap-2">
                 <Pressable
                   onPress={pickBackgroundImage}
-                  className="px-3.5 py-1.5 rounded-xl border border-border-subtle bg-background-secondary active:opacity-60 flex-row items-center gap-1"
+                  style={({ pressed }) => [
+                    {
+                      paddingHorizontal: 14,
+                      paddingVertical: 6,
+                      borderRadius: 12,
+                      borderWidth: 1,
+                      borderColor: '#e2e8f0',
+                      backgroundColor: '#f8fafc',
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 4,
+                      opacity: pressed ? 0.7 : 1,
+                    }
+                  ]}
                 >
-                  <Feather name="image" size={12} color="#71717a" />
+                  <Feather name="image" size={12} color="#64748b" />
                   <Text className="text-text-secondary text-xs font-bold">
                     {bgImageUri ? '변경' : '등록'}
                   </Text>
@@ -330,7 +376,12 @@ export default function SessionShareScreen() {
                 {bgImageUri && (
                   <Pressable
                     onPress={() => setBgImageUri(null)}
-                    className="p-1.5 active:opacity-60"
+                    style={({ pressed }) => [
+                      {
+                        padding: 6,
+                        opacity: pressed ? 0.6 : 1,
+                      }
+                    ]}
                   >
                     <Feather name="trash-2" size={14} color="#ef4444" />
                   </Pressable>
@@ -348,11 +399,18 @@ export default function SessionShareScreen() {
                       <Pressable
                         key={p.value}
                         onPress={() => setBgOpacity(p.value)}
-                        className={`flex-1 py-2 rounded-lg border items-center ${
-                          active
-                            ? 'border-brand-primary bg-brand-primary/5'
-                            : 'border-border-subtle bg-background-secondary'
-                        }`}
+                        style={({ pressed }) => [
+                          {
+                            flex: 1,
+                            paddingVertical: 8,
+                            borderRadius: 8,
+                            borderWidth: 1,
+                            alignItems: 'center',
+                            borderColor: active ? '#0d9488' : '#e2e8f0',
+                            backgroundColor: active ? 'rgba(13, 148, 136, 0.05)' : '#f8fafc',
+                            opacity: pressed ? 0.8 : 1,
+                          }
+                        ]}
                       >
                         <Text
                           className={`text-xs ${
@@ -376,7 +434,21 @@ export default function SessionShareScreen() {
         <Pressable
           onPress={handleSave}
           disabled={busy !== null}
-          className="flex-1 rounded-xl py-3.5 items-center justify-center border border-border-subtle bg-background-secondary active:opacity-80 flex-row gap-1.5"
+          style={({ pressed }) => [
+            {
+              flex: 1,
+              borderRadius: 14,
+              paddingVertical: 14,
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderWidth: 1,
+              borderColor: '#e2e8f0',
+              backgroundColor: '#f8fafc',
+              flexDirection: 'row',
+              gap: 6,
+              opacity: pressed ? 0.7 : 1,
+            }
+          ]}
         >
           {busy === 'save' ? (
             <ActivityIndicator size="small" />
@@ -390,7 +462,24 @@ export default function SessionShareScreen() {
         <Pressable
           onPress={handleShare}
           disabled={busy !== null}
-          className="flex-1 rounded-xl py-3.5 items-center justify-center bg-brand-primary active:opacity-90 flex-row gap-1.5 shadow-sm"
+          style={({ pressed }) => [
+            {
+              flex: 1,
+              borderRadius: 14,
+              paddingVertical: 14,
+              alignItems: 'center',
+              justifyContent: 'center',
+              backgroundColor: '#0d9488',
+              flexDirection: 'row',
+              gap: 6,
+              opacity: pressed ? 0.8 : 1,
+              shadowColor: '#0d9488',
+              shadowOpacity: 0.15,
+              shadowOffset: { width: 0, height: 4 },
+              shadowRadius: 6,
+              elevation: 2,
+            }
+          ]}
         >
           {busy === 'share' ? (
             <ActivityIndicator size="small" color="white" />

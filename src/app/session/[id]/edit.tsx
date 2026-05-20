@@ -50,7 +50,7 @@ const DURATION_CHIPS: { value: number; label: string }[] = [
 const CONDITION_OPTIONS: { value: number; icon: 'frown' | 'meh' | 'smile'; color: string; label: string }[] = [
   { value: 1, icon: 'frown', color: '#ef4444', label: '최악' },
   { value: 2, icon: 'frown', color: '#f97316', label: '안좋음' },
-  { value: 3, icon: 'meh', color: '#71717a', label: '보통' },
+  { value: 3, icon: 'meh', color: '#64748b', label: '보통' },
   { value: 4, icon: 'smile', color: '#84cc16', label: '좋음' },
   { value: 5, icon: 'smile', color: '#0d9488', label: '최상' },
 ];
@@ -208,7 +208,7 @@ export default function EditSessionScreen() {
           <View className="flex-row flex-wrap gap-2">
             <Chip
               label="장소 검색"
-              icon={<Feather name="search" size={14} color="#71717a" />}
+              icon={<Feather name="search" size={14} color="#64748b" />}
               selected={false}
               onPress={() => setShowGymModal(true)}
             />
@@ -262,7 +262,7 @@ export default function EditSessionScreen() {
                   <Feather
                     name={icon}
                     size={20}
-                    color={active ? color : '#a1a1aa'}
+                    color={active ? color : '#94a3b8'}
                   />
                   <Text
                     className={`text-[10px] ${

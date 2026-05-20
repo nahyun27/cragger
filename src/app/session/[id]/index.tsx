@@ -38,7 +38,7 @@ function formatDuration(min: number): string {
 const CONDITION_LABEL: Record<number, { icon: 'frown' | 'meh' | 'smile'; color: string; label: string }> = {
   1: { icon: 'frown', color: '#ef4444', label: '최악' },
   2: { icon: 'frown', color: '#f97316', label: '안좋음' },
-  3: { icon: 'meh', color: '#71717a', label: '보통' },
+  3: { icon: 'meh', color: '#64748b', label: '보통' },
   4: { icon: 'smile', color: '#84cc16', label: '좋음' },
   5: { icon: 'smile', color: '#0d9488', label: '최상' },
 };
@@ -126,7 +126,7 @@ export default function SessionDetailScreen() {
             className="p-2 active:opacity-60"
             hitSlop={8}
           >
-            <Feather name="share" size={20} color="#71717a" />
+            <Feather name="share" size={20} color="#64748b" />
           </Pressable>
           <Pressable
             onPress={() =>
@@ -135,7 +135,7 @@ export default function SessionDetailScreen() {
             className="p-2 active:opacity-60"
             hitSlop={8}
           >
-            <Feather name="edit-3" size={20} color="#71717a" />
+            <Feather name="edit-3" size={20} color="#64748b" />
           </Pressable>
           <Pressable
             onPress={handleDelete}
@@ -175,7 +175,7 @@ export default function SessionDetailScreen() {
         <View className="flex-row flex-wrap gap-4 bg-background-secondary p-4 rounded-2xl border border-border-subtle">
           {data.duration_min != null && (
             <View className="flex-row items-center gap-1.5">
-              <Feather name="clock" size={16} color="#71717a" />
+              <Feather name="clock" size={16} color="#64748b" />
               <Text className="text-text-secondary text-sm font-medium">
                 {formatDuration(data.duration_min)}
               </Text>
@@ -195,7 +195,7 @@ export default function SessionDetailScreen() {
           <Text className="text-text-primary text-lg font-bold">색깔별 기록</Text>
           {visibleColors.length === 0 ? (
             <View className="p-8 items-center justify-center bg-background-secondary rounded-2xl border border-border-subtle">
-              <Feather name="activity" size={24} color="#a1a1aa" className="mb-2" />
+              <Feather name="activity" size={24} color="#94a3b8" className="mb-2" />
               <Text className="text-text-secondary text-sm">기록된 등반이 없어요</Text>
             </View>
           ) : (

@@ -43,7 +43,7 @@ export default function EditMembershipScreen() {
 
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
-  const iconColor = isDark ? '#fafafa' : '#18181b';
+  const iconColor = isDark ? '#f8fafc' : '#0f172a';
 
   const [gymId, setGymId] = useState<string | null>(null);
   const [showGymModal, setShowGymModal] = useState(false);
@@ -214,7 +214,7 @@ export default function EditMembershipScreen() {
               className="flex-row items-center justify-between border border-border-subtle bg-background-secondary rounded-xl py-3 px-4 active:bg-background-tertiary"
             >
               <View className="flex-row items-center gap-2">
-                <Feather name="search" size={16} color="#71717a" />
+                <Feather name="search" size={16} color="#64748b" />
                 <Text
                   className={`text-base ${
                     selectedGym ? 'text-text-primary font-semibold' : 'text-text-muted'
@@ -225,14 +225,14 @@ export default function EditMembershipScreen() {
                     : '암장을 선택해주세요'}
                 </Text>
               </View>
-              <Feather name="chevron-down" size={16} color="#71717a" />
+              <Feather name="chevron-down" size={16} color="#64748b" />
             </Pressable>
           </Section>
 
           {/* Start Date Section (Read-Only Card) */}
           <Section title="시작일">
             <View className="px-4 py-3.5 rounded-xl bg-background-secondary border border-border-subtle flex-row items-center gap-2">
-              <Feather name="calendar" size={16} color="#71717a" />
+              <Feather name="calendar" size={16} color="#64748b" />
               <Text className="text-text-primary text-base font-semibold">{data.start_date}</Text>
             </View>
             <Text className="text-text-tertiary text-xs px-1 mt-0.5">
@@ -258,7 +258,7 @@ export default function EditMembershipScreen() {
                       <Feather
                         name="calendar"
                         size={18}
-                        color={type === 'monthly' ? '#0d9488' : '#71717a'}
+                        color={type === 'monthly' ? '#0d9488' : '#64748b'}
                       />
                       <Text
                         className={`text-base font-bold ${
@@ -293,7 +293,7 @@ export default function EditMembershipScreen() {
                       <Feather
                         name="layers"
                         size={18}
-                        color={type === 'passes' ? '#0d9488' : '#71717a'}
+                        color={type === 'passes' ? '#0d9488' : '#64748b'}
                       />
                       <Text
                         className={`text-base font-bold ${
@@ -330,7 +330,7 @@ export default function EditMembershipScreen() {
                       <Feather
                         name="clock"
                         size={18}
-                        color={type === 'period' ? '#0d9488' : '#71717a'}
+                        color={type === 'period' ? '#0d9488' : '#64748b'}
                       />
                       <Text
                         className={`text-base font-bold ${
@@ -365,7 +365,7 @@ export default function EditMembershipScreen() {
                       <Feather
                         name="tag"
                         size={18}
-                        color={type === 'single' ? '#0d9488' : '#71717a'}
+                        color={type === 'single' ? '#0d9488' : '#64748b'}
                       />
                       <Text
                         className={`text-base font-bold ${
@@ -433,7 +433,7 @@ export default function EditMembershipScreen() {
                 <Section title="총 횟수" required>
                   <TextInput
                     placeholder="10"
-                    placeholderTextColor="#a1a1aa"
+                    placeholderTextColor="#94a3b8"
                     value={totalPasses}
                     onChangeText={(t) => setTotalPasses(t.replace(/[^\d]/g, '').slice(0, 4))}
                     keyboardType="number-pad"
@@ -451,7 +451,7 @@ export default function EditMembershipScreen() {
                 <Section title="사용한 횟수">
                   <TextInput
                     placeholder="0"
-                    placeholderTextColor="#a1a1aa"
+                    placeholderTextColor="#94a3b8"
                     value={usedPasses}
                     onChangeText={(t) => setUsedPasses(t.replace(/[^\d]/g, '').slice(0, 4))}
                     keyboardType="number-pad"
@@ -480,7 +480,7 @@ export default function EditMembershipScreen() {
               <Text className="text-text-muted text-base mr-1.5">₩</Text>
               <TextInput
                 placeholder="선택 사항"
-                placeholderTextColor="#a1a1aa"
+                placeholderTextColor="#94a3b8"
                 value={price}
                 onChangeText={(t) => setPrice(t.replace(/[^\d]/g, '').slice(0, 8))}
                 keyboardType="number-pad"
@@ -502,7 +502,7 @@ export default function EditMembershipScreen() {
             >
               <TextInput
                 placeholder="메모를 입력해 주세요 (선택 사항)"
-                placeholderTextColor="#a1a1aa"
+                placeholderTextColor="#94a3b8"
                 value={notes}
                 onChangeText={(t) => setNotes(t.slice(0, 200))}
                 maxLength={200}
@@ -541,7 +541,7 @@ export default function EditMembershipScreen() {
                 <Feather
                   name="check-circle"
                   size={18}
-                  color={!canSubmit ? '#a1a1aa' : '#ffffff'}
+                  color={!canSubmit ? '#94a3b8' : '#ffffff'}
                 />
                 <Text
                   className={`font-bold text-base ${

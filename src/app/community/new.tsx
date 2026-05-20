@@ -182,7 +182,7 @@ export default function NewPostScreen() {
             <View className="flex-row flex-wrap gap-2">
               <Chip
                 label="장소 검색"
-                icon={<Feather name="search" size={14} color="#71717a" />}
+                icon={<Feather name="search" size={14} color="#64748b" />}
                 selected={false}
                 onPress={() => setShowGymModal(true)}
               />
@@ -227,7 +227,7 @@ export default function NewPostScreen() {
                     hitSlop={6}
                     className="absolute -top-1.5 -right-1.5 w-6 h-6 rounded-full bg-background-primary border border-border-default items-center justify-center active:opacity-70"
                   >
-                    <Feather name="x" size={12} color="#71717a" />
+                    <Feather name="x" size={12} color="#64748b" />
                   </Pressable>
                 </View>
               ))}
@@ -236,7 +236,7 @@ export default function NewPostScreen() {
                   onPress={handlePickImages}
                   className="w-20 h-20 rounded-xl border border-dashed border-border-default items-center justify-center bg-background-secondary active:opacity-70"
                 >
-                  <Feather name="plus" size={18} color="#71717a" />
+                  <Feather name="plus" size={18} color="#64748b" />
                   <Text className="text-text-tertiary text-[10px] mt-1">
                     {pickedAssets.length}/{MAX_IMAGES}
                   </Text>

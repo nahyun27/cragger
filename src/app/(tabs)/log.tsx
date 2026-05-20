@@ -4,6 +4,7 @@ import {
   ActivityIndicator,
   FlatList,
   Pressable,
+  StyleSheet,
   Text,
   View,
 } from 'react-native';
@@ -20,7 +21,13 @@ function formatDate(iso: string): string {
   const m = String(d.getMonth() + 1).padStart(2, '0');
   const day = String(d.getDate()).padStart(2, '0');
   const w = KO_WEEKDAYS[d.getDay()];
-  return `${y}.${m}.${day} ${w}`;
+  return `${y}.${m}.${day} (${w})`;
+}
+
+function formatDuration(min: number): string {
+  if (min < 60) return `${min}분`;
+  if (min % 60 === 0) return `${min / 60}시간`;
+  return `${(min / 60).toFixed(1)}시간`;
 }
 
 export default function LogScreen() {
@@ -28,7 +35,6 @@ export default function LogScreen() {
   const { data: sessions, isLoading, error } = useRecentSessions(20);
   const isEmpty = !isLoading && (sessions?.length ?? 0) === 0;
 
-  // Calculate some simple stats for the dashboard
   const stats = useMemo(() => {
     if (!sessions) return { totalSessions: 0, totalSends: 0, latestGym: '-' };
     const totalSends = sessions.reduce((acc, s) => acc + (s.send_count || 0), 0);
@@ -41,20 +47,30 @@ export default function LogScreen() {
   }, [sessions]);
 
   return (
-    <SafeAreaView className="flex-1 bg-background-primary" edges={['top']}>
-      <View className="px-6 pt-4 pb-2">
-        <Text className="text-text-primary text-3xl font-bold tracking-tight">나의 기록</Text>
+    <SafeAreaView style={s.container} edges={['top']}>
+      {/* Header */}
+      <View style={s.header}>
+        <View>
+          <Text style={s.headerTitle}>기록 피드</Text>
+          <Text style={s.headerSubtitle}>등반 세션 기록 및 대시보드</Text>
+        </View>
+        <Pressable
+          onPress={() => router.push('/session/new')}
+          style={({ pressed }) => [s.headerBtn, { opacity: pressed ? 0.85 : 1 }]}
+        >
+          <Feather name="plus" size={20} color="#ffffff" />
+        </Pressable>
       </View>
 
       {isLoading && (
-        <View className="flex-1 items-center justify-center">
+        <View style={s.loadingContainer}>
           <ActivityIndicator size="large" color="#0d9488" />
         </View>
       )}
 
       {error && (
-        <View className="mx-6 mt-4 border border-status-danger/30 rounded-xl p-4 bg-status-danger/10">
-          <Text className="text-status-danger">{error.message}</Text>
+        <View style={s.errorContainer}>
+          <Text style={s.errorText}>{error.message}</Text>
         </View>
       )}
 
@@ -62,54 +78,77 @@ export default function LogScreen() {
         <FlatList
           data={sessions}
           keyExtractor={(item) => item.id}
-          contentContainerClassName="px-6 pb-24 pt-4"
+          contentContainerStyle={s.listContent}
           ListHeaderComponent={
             <>
-              {/* Dashboard Summary Card */}
-              <View className="bg-background-secondary rounded-2xl p-5 mb-8 shadow-sm border border-border-subtle/50">
-                <Text className="text-text-secondary text-sm font-semibold mb-4">최근 활동 요약</Text>
-                <View className="flex-row justify-between">
-                  <View className="flex-1 items-center">
-                    <Text className="text-text-muted text-xs mb-1">총 세션</Text>
-                    <Text className="text-brand-primary text-2xl font-bold">{stats.totalSessions}</Text>
+              {/* Dashboard summary card */}
+              <View style={s.statsCard}>
+                <View style={s.statsCardHeader}>
+                  <Feather name="trending-up" size={14} color="#0d9488" />
+                  <Text style={s.statsCardTitle}>최근 등반 통계</Text>
+                </View>
+                <View style={s.statsRow}>
+                  <View style={s.statCol}>
+                    <Text style={s.statLabel}>총 세션</Text>
+                    <Text style={s.statVal}>{stats.totalSessions}</Text>
                   </View>
-                  <View className="w-px bg-border-subtle mx-2" />
-                  <View className="flex-1 items-center">
-                    <Text className="text-text-muted text-xs mb-1">총 완등</Text>
-                    <Text className="text-brand-primary text-2xl font-bold">{stats.totalSends}</Text>
+                  <View style={s.statDivider} />
+                  <View style={s.statCol}>
+                    <Text style={s.statLabel}>총 완등</Text>
+                    <Text style={s.statVal}>{stats.totalSends}</Text>
                   </View>
-                  <View className="w-px bg-border-subtle mx-2" />
-                  <View className="flex-1 items-center">
-                    <Text className="text-text-muted text-xs mb-1">최근 암장</Text>
-                    <Text className="text-text-primary text-base font-bold mt-1" numberOfLines={1}>{stats.latestGym}</Text>
+                  <View style={s.statDivider} />
+                  <View style={s.statCol}>
+                    <Text style={s.statLabel}>최근 암장</Text>
+                    <Text style={s.statValLatest} numberOfLines={1}>
+                      {stats.latestGym}
+                    </Text>
                   </View>
                 </View>
               </View>
 
-              <Text className="text-text-primary text-xl font-bold mb-4">세션 기록</Text>
+              <Text style={s.sectionTitle}>지난 세션 목록</Text>
 
               {isEmpty && (
-                <View className="bg-background-secondary rounded-2xl p-8 items-center mt-2 border border-border-subtle border-dashed">
-                  <Feather name="activity" size={48} color="#a1a1aa" className="mb-4" />
-                  <Text className="text-text-secondary font-semibold text-lg mb-1">아직 기록이 없어요</Text>
-                  <Text className="text-text-tertiary text-sm text-center">
-                    오른쪽 아래 ⊕ 버튼을 눌러 첫 등반을 기록해보세요!
+                <View style={s.emptyCard}>
+                  <View style={s.emptyIconWrapper}>
+                    <Feather name="activity" size={28} color="#94a3b8" />
+                  </View>
+                  <Text style={s.emptyTitle}>기록이 존재하지 않습니다</Text>
+                  <Text style={s.emptySubtitle}>
+                    첫 번째 등반 흔적을 남기고 기록을 쌓아가보세요!
                   </Text>
+                  <Pressable
+                    onPress={() => router.push('/session/new')}
+                    style={({ pressed }) => [s.emptyBtn, { opacity: pressed ? 0.9 : 1 }]}
+                  >
+                    <Text style={s.emptyBtnText}>등반 기록 추가하기</Text>
+                  </Pressable>
                 </View>
               )}
             </>
           }
           renderItem={({ item }) => <SessionCard session={item} />}
-          ItemSeparatorComponent={() => <View className="h-4" />}
+          ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
         />
       )}
 
       {/* Floating Action Button */}
       <Pressable
         onPress={() => router.push('/session/new')}
-        className="absolute bottom-6 right-6 w-16 h-16 bg-brand-primary rounded-full items-center justify-center shadow-lg active:bg-brand-accent elevation-md"
+        style={({ pressed }) => [
+          s.fab,
+          {
+            opacity: pressed ? 0.9 : 1,
+            shadowColor: '#0d9488',
+            shadowOpacity: 0.3,
+            shadowRadius: 10,
+            shadowOffset: { width: 0, height: 6 },
+            elevation: 6,
+          },
+        ]}
       >
-        <Feather name="plus" size={32} color="#ffffff" />
+        <Feather name="plus" size={24} color="#ffffff" />
       </Pressable>
     </SafeAreaView>
   );
@@ -119,33 +158,41 @@ function SessionCard({ session }: { session: RecentSession }) {
   const router = useRouter();
   const gymName = session.gym?.name || '암장 미선택';
   const branchName = session.gym?.branch ? ` ${session.gym.branch}` : '';
-  
+
   return (
     <Pressable
       onPress={() => router.push({ pathname: '/session/[id]', params: { id: session.id } })}
-      className="bg-background-primary border border-border-subtle rounded-2xl p-4 active:bg-background-secondary shadow-sm"
+      style={({ pressed }) => [
+        s.card,
+        {
+          backgroundColor: '#ffffff',
+          opacity: pressed ? 0.97 : 1,
+          shadowColor: '#0f172a',
+          shadowOpacity: 0.03,
+          shadowRadius: 12,
+          shadowOffset: { width: 0, height: 4 },
+          elevation: 1,
+        },
+      ]}
     >
-      <View className="flex-row justify-between items-start mb-3">
-        <View className="flex-1 pr-4">
-          <Text className="text-text-primary text-lg font-bold" numberOfLines={1}>
-            {gymName}{branchName}
+      <View style={s.cardTop}>
+        <View style={s.gymInfo}>
+          <Text style={s.cardGymName} numberOfLines={1}>
+            {gymName}
+            {branchName}
           </Text>
-          <Text className="text-text-tertiary text-sm mt-0.5">
-            {formatDate(session.session_date)}
-          </Text>
+          <Text style={s.cardDate}>{formatDate(session.session_date)}</Text>
         </View>
-        <View className="bg-brand-primary/10 px-3 py-1.5 rounded-full">
-          <Text className="text-brand-primary font-bold text-sm">
-            완등 {session.send_count}
-          </Text>
+        <View style={s.sendBadge}>
+          <Text style={s.sendBadgeText}>완등 {session.send_count}</Text>
         </View>
       </View>
-      
+
       {session.duration_min != null && (
-        <View className="flex-row items-center mt-2 bg-background-secondary self-start px-2 py-1 rounded-md">
-          <Feather name="clock" size={12} color="#71717a" />
-          <Text className="text-text-secondary text-xs ml-1 font-medium">
-            {formatDuration(session.duration_min)}
+        <View style={s.durationRow}>
+          <Feather name="clock" size={11} color="#64748b" />
+          <Text style={s.durationText}>
+            {formatDuration(session.duration_min)} 등반 진행
           </Text>
         </View>
       )}
@@ -153,8 +200,237 @@ function SessionCard({ session }: { session: RecentSession }) {
   );
 }
 
-function formatDuration(min: number): string {
-  if (min < 60) return `${min}분`;
-  if (min % 60 === 0) return `${min / 60}시간`;
-  return `${(min / 60).toFixed(1)}시간`;
-}
+const s = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#f8fafc',
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 24,
+    paddingTop: 16,
+    paddingBottom: 14,
+    backgroundColor: '#ffffff',
+    borderBottomWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  headerTitle: {
+    fontSize: 24,
+    fontWeight: '800',
+    color: '#0f172a',
+    letterSpacing: -0.5,
+  },
+  headerSubtitle: {
+    fontSize: 12,
+    color: '#64748b',
+    marginTop: 2,
+  },
+  headerBtn: {
+    padding: 8,
+    borderRadius: 12,
+    backgroundColor: '#0d9488',
+  },
+  loadingContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  errorContainer: {
+    margin: 24,
+    padding: 16,
+    borderRadius: 16,
+    backgroundColor: '#fef2f2',
+    borderWidth: 1,
+    borderColor: '#fecaca',
+  },
+  errorText: {
+    color: '#ef4444',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  listContent: {
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 120,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#0f172a',
+    marginBottom: 12,
+    marginTop: 8,
+    paddingHorizontal: 4,
+  },
+
+  // Stats Card
+  statsCard: {
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#f1f5f9',
+    borderRadius: 20,
+    padding: 18,
+    marginBottom: 20,
+    shadowColor: '#0f172a',
+    shadowOpacity: 0.03,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 1,
+  },
+  statsCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 14,
+  },
+  statsCardTitle: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#0d9488',
+    letterSpacing: 0.3,
+  },
+  statsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  statCol: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  statDivider: {
+    width: 1,
+    height: 32,
+    backgroundColor: '#e2e8f0',
+  },
+  statLabel: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#94a3b8',
+    marginBottom: 4,
+  },
+  statVal: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: '#0f172a',
+  },
+  statValLatest: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#334155',
+    marginTop: 4,
+  },
+
+  // Empty View
+  emptyCard: {
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    borderStyle: 'dashed',
+    borderRadius: 20,
+    padding: 28,
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  emptyIconWrapper: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#f1f5f9',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
+  },
+  emptyTitle: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#0f172a',
+  },
+  emptySubtitle: {
+    fontSize: 11,
+    color: '#64748b',
+    textAlign: 'center',
+    lineHeight: 16,
+    marginVertical: 10,
+  },
+  emptyBtn: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 10,
+    backgroundColor: '#0d9488',
+  },
+  emptyBtnText: {
+    color: '#ffffff',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+
+  // Card
+  card: {
+    borderWidth: 1,
+    borderColor: '#f1f5f9',
+    borderRadius: 20,
+    padding: 16,
+  },
+  cardTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  gymInfo: {
+    flex: 1,
+    paddingRight: 12,
+  },
+  cardGymName: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#0f172a',
+  },
+  cardDate: {
+    fontSize: 11,
+    color: '#94a3b8',
+    marginTop: 4,
+  },
+  sendBadge: {
+    backgroundColor: '#ecfdf5',
+    borderWidth: 1,
+    borderColor: '#a7f3d0',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  sendBadgeText: {
+    color: '#059669',
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  durationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    alignSelf: 'flex-start',
+    backgroundColor: '#f8fafc',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    marginTop: 12,
+  },
+  durationText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#475569',
+  },
+  fab: {
+    position: 'absolute',
+    bottom: 24,
+    right: 24,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#0d9488',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+});

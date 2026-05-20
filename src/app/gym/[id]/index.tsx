@@ -121,7 +121,7 @@ export default function GymDetailScreen() {
           </View>
           {location && (
             <View className="flex-row items-start gap-1.5 mt-1.5">
-              <Feather name="map-pin" size={14} color="#71717a" style={{ marginTop: 2 }} />
+              <Feather name="map-pin" size={14} color="#64748b" style={{ marginTop: 2 }} />
               <Text className="text-text-secondary text-sm flex-1 leading-5">
                 {[location, data.address].filter(Boolean).join(' · ')}
               </Text>
@@ -189,7 +189,7 @@ export default function GymDetailScreen() {
           </Text>
           {data.color_stats.length === 0 ? (
             <View className="p-8 items-center justify-center bg-background-secondary rounded-2xl border border-border-subtle">
-              <Feather name="bar-chart-2" size={24} color="#a1a1aa" className="mb-2" />
+              <Feather name="bar-chart-2" size={24} color="#94a3b8" className="mb-2" />
               <Text className="text-text-secondary text-sm">아직 투표가 없습니다</Text>
             </View>
           ) : (
@@ -246,7 +246,7 @@ function ColorStatRow({ stat }: { stat: ColorStat }) {
           />
           <Text
             className="text-xs font-bold"
-            style={{ color: needsBorder ? '#27272a' : hex }}
+            style={{ color: needsBorder ? '#1e293b' : hex }}
           >
             {label}
           </Text>

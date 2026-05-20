@@ -12,10 +12,10 @@ export default function TabLayout() {
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: '#0d9488', // brand-primary
-        tabBarInactiveTintColor: isDark ? '#71717a' : '#a1a1aa',
+        tabBarInactiveTintColor: isDark ? '#64748b' : '#94a3b8',
         tabBarStyle: {
           backgroundColor: isDark ? '#09090b' : '#ffffff', // background-primary
-          borderTopColor: isDark ? '#27272a' : '#e4e4e7', // border-subtle
+          borderTopColor: isDark ? '#1e293b' : '#e2e8f0', // border-subtle
           paddingBottom: 20, // Increased padding to prevent overlap with iOS home indicator
           paddingTop: 8,
           height: 80, // Increased overall height

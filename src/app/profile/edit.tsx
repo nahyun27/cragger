@@ -391,7 +391,7 @@ export default function ProfileEditScreen() {
                 >
                   {formatLongDate(climbingStartDate)}
                 </Text>
-                <Feather name="calendar" size={16} color="#71717a" />
+                <Feather name="calendar" size={16} color="#64748b" />
               </Pressable>
               {climbingStartDate && (
                 <Pressable

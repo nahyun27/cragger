@@ -50,7 +50,7 @@ export default function ProfileScreen() {
             className="p-2 active:opacity-60"
             hitSlop={8}
           >
-            <Feather name="edit-3" size={20} color="#71717a" />
+            <Feather name="edit-3" size={20} color="#64748b" />
           </Pressable>
           <Pressable
             onPress={() => supabase.auth.signOut()}
@@ -106,7 +106,7 @@ export default function ProfileScreen() {
                 className="flex-row items-center gap-1 mt-1 active:opacity-60 self-start"
                 hitSlop={6}
               >
-                <Feather name="plus" size={12} color="#a1a1aa" />
+                <Feather name="plus" size={12} color="#94a3b8" />
                 <Text className="text-text-tertiary text-xs">Instagram 연결</Text>
               </Pressable>
             )}
@@ -152,7 +152,7 @@ export default function ProfileScreen() {
               {/* Gym list */}
               {stats.gyms.length === 0 ? (
                 <View className="bg-background-secondary rounded-2xl p-6 border border-border-subtle items-center">
-                  <Feather name="activity" size={24} color="#a1a1aa" className="mb-2" />
+                  <Feather name="activity" size={24} color="#94a3b8" className="mb-2" />
                   <Text className="text-text-secondary text-sm">
                     아직 운동 기록이 없어요
                   </Text>
@@ -234,7 +234,7 @@ function BodyInfoStrip({
           onPress={onEdit}
           className="flex-row items-center justify-center gap-2 px-3 py-2.5 rounded-xl border border-dashed border-border-default active:opacity-70"
         >
-          <Feather name="plus" size={14} color="#a1a1aa" />
+          <Feather name="plus" size={14} color="#94a3b8" />
           <Text className="text-text-tertiary text-xs font-semibold">
             키 · 리치 · 클라이밍 시작일 추가
           </Text>
@@ -340,7 +340,7 @@ function MembershipsSection() {
 
       {data && active.length === 0 && expired.length === 0 && (
         <View className="bg-background-secondary rounded-2xl p-6 border border-border-subtle items-center">
-          <Feather name="credit-card" size={24} color="#a1a1aa" className="mb-2" />
+          <Feather name="credit-card" size={24} color="#94a3b8" className="mb-2" />
           <Text className="text-text-secondary text-sm">등록된 회원권이 없어요</Text>
           <Text className="text-text-tertiary text-xs mt-1">
             우측 상단 + 추가 버튼으로 등록하세요

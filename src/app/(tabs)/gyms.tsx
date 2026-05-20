@@ -114,10 +114,10 @@ export default function GymsScreen() {
             isFocused ? 'border-brand-primary bg-background-primary' : 'border-border-subtle'
           }`}
         >
-          <Feather name="search" size={18} color={isFocused ? '#0d9488' : '#71717a'} />
+          <Feather name="search" size={18} color={isFocused ? '#0d9488' : '#64748b'} />
           <TextInput
             placeholder="이름·지점·지역 검색"
-            placeholderTextColor="#a1a1aa"
+            placeholderTextColor="#94a3b8"
             value={query}
             onChangeText={setQuery}
             autoCapitalize="none"
@@ -128,7 +128,7 @@ export default function GymsScreen() {
           />
           {query.length > 0 && (
             <Pressable onPress={() => setQuery('')} className="p-1">
-              <Feather name="x-circle" size={16} color="#71717a" />
+              <Feather name="x-circle" size={16} color="#64748b" />
             </Pressable>
           )}
         </View>
@@ -188,7 +188,7 @@ export default function GymsScreen() {
                 <Feather
                   name={opt.icon}
                   size={12}
-                  color={isSelected ? '#0d9488' : '#71717a'}
+                  color={isSelected ? '#0d9488' : '#64748b'}
                 />
                 <Text
                   className={`text-xs font-semibold ${
@@ -229,7 +229,7 @@ export default function GymsScreen() {
           ListEmptyComponent={
             data && !isLoading ? (
               <View className="p-12 items-center justify-center gap-2">
-                <Feather name="map-pin" size={40} color="#a1a1aa" />
+                <Feather name="map-pin" size={40} color="#94a3b8" />
                 <Text className="text-text-secondary font-medium text-base mt-2">검색 결과가 없어요</Text>
                 <Text className="text-text-muted text-xs">필터를 변경하거나 다른 검색어를 입력해 보세요.</Text>
                 <Pressable
@@ -296,14 +296,14 @@ function GymCard({ gym, isFavorite }: { gym: GymListItem; isFavorite: boolean })
         {/* Location & Size Info */}
         <View className="flex-row items-center gap-3">
           <View className="flex-row items-center gap-1">
-            <Feather name="map-pin" size={12} color="#71717a" />
+            <Feather name="map-pin" size={12} color="#64748b" />
             <Text className="text-text-tertiary text-xs">
               {location}
             </Text>
           </View>
           {sizeBit && (
             <View className="flex-row items-center gap-1">
-              <Feather name="grid" size={12} color="#71717a" />
+              <Feather name="grid" size={12} color="#64748b" />
               <Text className="text-text-tertiary text-xs">
                 {sizeBit}
               </Text>
@@ -363,11 +363,11 @@ function GymCard({ gym, isFavorite }: { gym: GymListItem; isFavorite: boolean })
           <Feather
             name="star"
             size={20}
-            color={isFavorite ? '#f59e0b' : '#a1a1aa'}
+            color={isFavorite ? '#f59e0b' : '#94a3b8'}
             fill={isFavorite ? '#f59e0b' : 'transparent'}
           />
         </Pressable>
-        <Feather name="chevron-right" size={18} color="#a1a1aa" />
+        <Feather name="chevron-right" size={18} color="#94a3b8" />
       </View>
     </Pressable>
   );

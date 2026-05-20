@@ -67,10 +67,10 @@ export const SessionShareCard = forwardRef<View, Props>(
       }
     }
 
-    const isDarkBg = ['#18181b', '#0f766e', '#3b0764'].includes(backgroundColor);
-    const textColor = isDarkBg ? '#ffffff' : '#18181b';
-    const textMutedColor = isDarkBg ? '#a1a1aa' : '#71717a';
-    const textSubtleColor = isDarkBg ? '#71717a' : '#cbd5e1';
+    const isDarkBg = ['#0f172a', '#0f766e', '#3b0764'].includes(backgroundColor);
+    const textColor = isDarkBg ? '#ffffff' : '#0f172a';
+    const textMutedColor = isDarkBg ? '#94a3b8' : '#64748b';
+    const textSubtleColor = isDarkBg ? '#64748b' : '#cbd5e1';
     const itemBg = isDarkBg ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.03)';
     const itemBorder = isDarkBg ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.05)';
 
@@ -182,7 +182,7 @@ export const SessionShareCard = forwardRef<View, Props>(
                         borderRadius: dotSize / 2,
                         backgroundColor: hex,
                         borderWidth: needsBorder ? 1 : 0,
-                        borderColor: '#d4d4d8',
+                        borderColor: '#cbd5e1',
                         shadowColor: hex,
                         shadowOpacity: 0.2,
                         shadowRadius: 2,
@@ -228,7 +228,7 @@ export const SessionShareCard = forwardRef<View, Props>(
                             borderRadius: 7,
                             backgroundColor: hex,
                             borderWidth: c.color === 'white' ? 1 : 0,
-                            borderColor: '#d4d4d8',
+                            borderColor: '#cbd5e1',
                           }}
                         />
                         <Text style={{ color: textColor, fontWeight: '700', fontSize: size * 0.038 }}>
@@ -303,7 +303,7 @@ export const SessionShareCard = forwardRef<View, Props>(
                           borderRadius: 4,
                           backgroundColor: resolveColorHex(c.color),
                           borderWidth: c.color === 'white' ? 0.5 : 0,
-                          borderColor: '#d4d4d8',
+                          borderColor: '#cbd5e1',
                         }}
                       />
                       <Text style={{ color: textColor, fontSize: size * 0.03, fontWeight: '800' }}>
