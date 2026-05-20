@@ -229,6 +229,7 @@ function PostCard({
   const firstChar = authorName.length > 0 ? authorName.charAt(0).toUpperCase() : '?';
   const avatarBg = getAvatarBgColor(authorName);
   const avatarText = getAvatarTextColor(authorName);
+  const avatarUrl = post.author?.avatar_url;
   const badge = BADGE_COLORS[post.post_type] || BADGE_COLORS.general;
   const label = post.post_type === 'meetup' ? '모임' : POST_TYPE_LABEL[post.post_type as Exclude<PostType, 'meetup'>];
   const firstImage = post.image_urls[0];
@@ -253,7 +254,11 @@ function PostCard({
       <View style={s.cardHeader}>
         <View style={s.userInfo}>
           <View style={[s.avatar, { backgroundColor: avatarBg }]}>
-            <Text style={[s.avatarTextVal, { color: avatarText }]}>{firstChar}</Text>
+            {avatarUrl ? (
+              <Image source={{ uri: avatarUrl }} style={s.avatarImage} resizeMode="cover" />
+            ) : (
+              <Text style={[s.avatarTextVal, { color: avatarText }]}>{firstChar}</Text>
+            )}
           </View>
           <View style={s.userText}>
             <Text style={s.userName} numberOfLines={1}>{authorName}</Text>
@@ -510,7 +515,9 @@ const s = StyleSheet.create({
     borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
   },
+  avatarImage: { width: '100%', height: '100%' },
   avatarTextVal: {
     fontWeight: '800',
     fontSize: 14,

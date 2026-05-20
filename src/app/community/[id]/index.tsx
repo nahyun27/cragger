@@ -450,14 +450,19 @@ function PostHeader({ post }: { post: PostRow }) {
   const label = post.post_type === 'meetup' ? '모임' : POST_TYPE_LABEL[post.post_type as Exclude<PostType, 'meetup'>];
   const avatarBg = getAvatarBgColor(authorName);
   const avatarText = getAvatarTextColor(authorName);
+  const avatarUrl = post.author?.avatar_url;
   const badge = BADGE_COLORS[post.post_type] || BADGE_COLORS.general;
 
   return (
     <View style={s.postHeader}>
       <View style={[s.avatar, { backgroundColor: avatarBg }]}>
-        <Text style={[s.avatarTextVal, { color: avatarText }]}>
-          {(authorName[0] ?? '?').toUpperCase()}
-        </Text>
+        {avatarUrl ? (
+          <Image source={{ uri: avatarUrl }} style={s.avatarImage} resizeMode="cover" />
+        ) : (
+          <Text style={[s.avatarTextVal, { color: avatarText }]}>
+            {(authorName[0] ?? '?').toUpperCase()}
+          </Text>
+        )}
       </View>
       <View style={s.authorInfo}>
         <Text style={s.authorName}>{authorName}</Text>
@@ -500,14 +505,19 @@ function CommentItem({
   const authorName = comment.author?.display_name ?? comment.author?.username ?? '익명';
   const avatarBg = getAvatarBgColor(authorName);
   const avatarText = getAvatarTextColor(authorName);
+  const avatarUrl = comment.author?.avatar_url;
   const canSaveEdit = editingBody.trim().length > 0 && !savingEdit;
 
   return (
     <View style={[s.commentItem, isReply && s.commentItemReply]}>
       <View style={[s.avatarSmall, { backgroundColor: avatarBg }]}>
-        <Text style={[s.avatarTextValSmall, { color: avatarText }]}>
-          {(authorName[0] ?? '?').toUpperCase()}
-        </Text>
+        {avatarUrl ? (
+          <Image source={{ uri: avatarUrl }} style={s.avatarSmallImage} resizeMode="cover" />
+        ) : (
+          <Text style={[s.avatarTextValSmall, { color: avatarText }]}>
+            {(authorName[0] ?? '?').toUpperCase()}
+          </Text>
+        )}
       </View>
       <View style={s.commentContent}>
         <View style={s.commentHeader}>
@@ -705,7 +715,9 @@ const s = StyleSheet.create({
     borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
   },
+  avatarImage: { width: '100%', height: '100%' },
   avatarTextVal: {
     fontWeight: '800',
     fontSize: 15,
@@ -826,7 +838,9 @@ const s = StyleSheet.create({
     borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
   },
+  avatarSmallImage: { width: '100%', height: '100%' },
   avatarTextValSmall: {
     fontWeight: '800',
     fontSize: 11,

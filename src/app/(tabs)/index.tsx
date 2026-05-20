@@ -2,6 +2,7 @@ import { useRouter } from 'expo-router';
 import React, { useMemo } from 'react';
 import {
   ActivityIndicator,
+  Image,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -107,9 +108,17 @@ export default function HomeScreen() {
             style={({ pressed }) => [{ opacity: pressed ? 0.6 : 1 }]}
           >
             <View style={s.avatarBtn}>
-              <Text style={s.avatarBtnChar}>
-                {(username[0] ?? '?').toUpperCase()}
-              </Text>
+              {profileQ.data?.avatar_url ? (
+                <Image
+                  source={{ uri: profileQ.data.avatar_url }}
+                  style={s.avatarBtnImage}
+                  resizeMode="cover"
+                />
+              ) : (
+                <Text style={s.avatarBtnChar}>
+                  {(username[0] ?? '?').toUpperCase()}
+                </Text>
+              )}
             </View>
           </Pressable>
         </View>
@@ -394,7 +403,9 @@ const s = StyleSheet.create({
     backgroundColor: '#f1f5f9',
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
   },
+  avatarBtnImage: { width: '100%', height: '100%' },
   avatarBtnChar: { fontSize: 17, fontWeight: '800', color: '#334155' },
 
   quickActions: {
