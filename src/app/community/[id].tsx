@@ -185,13 +185,19 @@ export default function PostDetailScreen() {
                 onPress={() =>
                   router.push({ pathname: '/gym/[id]', params: { id: post.gym!.id } })
                 }
-                style={({ pressed }) => [s.gymPill, { opacity: pressed ? 0.7 : 1 }]}
+                style={({ pressed }) => ({
+                  opacity: pressed ? 0.7 : 1,
+                  alignSelf: 'flex-start',
+                  marginBottom: 12,
+                })}
               >
-                <Feather name="map-pin" size={11} color="#64748b" />
-                <Text style={s.gymPillText} numberOfLines={1}>
-                  {post.gym.name}
-                  {post.gym.branch ? ` ${post.gym.branch}` : ''}
-                </Text>
+                <View style={s.gymPill}>
+                  <Feather name="map-pin" size={11} color="#64748b" />
+                  <Text style={s.gymPillText} numberOfLines={1}>
+                    {post.gym.name}
+                    {post.gym.branch ? ` ${post.gym.branch}` : ''}
+                  </Text>
+                </View>
               </Pressable>
             )}
 
@@ -460,12 +466,10 @@ const s = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    alignSelf: 'flex-start',
     backgroundColor: '#f1f5f9',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 8,
-    marginBottom: 12,
   },
   gymPillText: {
     fontSize: 11,

@@ -198,10 +198,13 @@ export default function CommunityScreen() {
       {/* Floating write button (avoids dev-menu overlay in top-right) */}
       <Pressable
         onPress={() => router.push('/community/new')}
-        style={({ pressed }) => [s.fab, { opacity: pressed ? 0.85 : 1 }]}
+        style={({ pressed }) => [s.fabAnchor, { opacity: pressed ? 0.85 : 1 }]}
+        hitSlop={6}
       >
-        <Feather name="edit-3" size={18} color="#ffffff" />
-        <Text style={s.fabText}>글쓰기</Text>
+        <View style={s.fabContent}>
+          <Feather name="edit-3" size={18} color="#ffffff" />
+          <Text style={s.fabText}>글쓰기</Text>
+        </View>
       </Pressable>
     </SafeAreaView>
   );
@@ -355,10 +358,14 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  fab: {
+  fabAnchor: {
     position: 'absolute',
-    bottom: 96,
+    bottom: 24,
     right: 20,
+    zIndex: 10,
+    elevation: 10,
+  },
+  fabContent: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
