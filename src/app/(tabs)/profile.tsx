@@ -104,6 +104,13 @@ export default function ProfileScreen() {
           </View>
         </View>
 
+        <BodyInfoStrip
+          heightCm={profile?.height_cm ?? null}
+          reachCm={profile?.reach_cm ?? null}
+          climbingStartDate={profile?.climbing_start_date ?? null}
+          onEdit={() => router.push('/profile/edit')}
+        />
+
         {/* Stats section */}
         <View className="px-6 mt-4">
           <Text className="text-text-primary text-lg font-bold mb-3.5">나의 운동 통계</Text>
@@ -176,6 +183,104 @@ function SummaryMetric({ label, value, icon }: { label: string; value: number; i
 }
 
 function Divider() {
+  return <View className="w-px bg-border-subtle my-1" />;
+}
+
+function formatClimbingDuration(iso: string): string {
+  const start = new Date(`${iso}T00:00:00`);
+  if (Number.isNaN(start.getTime())) return '';
+  const now = new Date();
+  let months = (now.getFullYear() - start.getFullYear()) * 12 + (now.getMonth() - start.getMonth());
+  if (now.getDate() < start.getDate()) months -= 1;
+  if (months < 1) return '한 달 미만';
+  if (months < 12) return `${months}개월`;
+  const years = Math.floor(months / 12);
+  const rem = months % 12;
+  return rem === 0 ? `${years}년` : `${years}년 ${rem}개월`;
+}
+
+function formatStartDate(iso: string): string {
+  const d = new Date(`${iso}T00:00:00`);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  return `${y}.${m}`;
+}
+
+function BodyInfoStrip({
+  heightCm,
+  reachCm,
+  climbingStartDate,
+  onEdit,
+}: {
+  heightCm: number | null;
+  reachCm: number | null;
+  climbingStartDate: string | null;
+  onEdit: () => void;
+}) {
+  const hasAny = heightCm != null || reachCm != null || climbingStartDate != null;
+  if (!hasAny) {
+    return (
+      <View className="px-6">
+        <Pressable
+          onPress={onEdit}
+          className="flex-row items-center justify-center gap-2 px-3 py-2.5 rounded-xl border border-dashed border-border-default active:opacity-70"
+        >
+          <Feather name="plus" size={14} color="#a1a1aa" />
+          <Text className="text-text-tertiary text-xs font-semibold">
+            키 · 리치 · 클라이밍 시작일 추가
+          </Text>
+        </Pressable>
+      </View>
+    );
+  }
+
+  const apeIndex =
+    heightCm != null && reachCm != null ? reachCm - heightCm : null;
+
+  return (
+    <View className="px-6">
+      <View className="flex-row bg-background-secondary border border-border-subtle rounded-2xl px-3 py-3">
+        <BodyMetric label="키" value={heightCm != null ? `${heightCm}cm` : '-'} />
+        <BodyDivider />
+        <BodyMetric
+          label="리치"
+          value={reachCm != null ? `${reachCm}cm` : '-'}
+          sub={apeIndex != null ? `${apeIndex > 0 ? '+' : ''}${apeIndex}` : null}
+        />
+        <BodyDivider />
+        <BodyMetric
+          label="클라이밍"
+          value={
+            climbingStartDate
+              ? formatClimbingDuration(climbingStartDate)
+              : '-'
+          }
+          sub={climbingStartDate ? `${formatStartDate(climbingStartDate)} 시작` : null}
+        />
+      </View>
+    </View>
+  );
+}
+
+function BodyMetric({
+  label,
+  value,
+  sub,
+}: {
+  label: string;
+  value: string;
+  sub?: string | null;
+}) {
+  return (
+    <View className="flex-1 items-center gap-0.5">
+      <Text className="text-text-tertiary text-[10px] font-semibold">{label}</Text>
+      <Text className="text-text-primary text-sm font-extrabold">{value}</Text>
+      {sub ? <Text className="text-text-tertiary text-[10px]">{sub}</Text> : null}
+    </View>
+  );
+}
+
+function BodyDivider() {
   return <View className="w-px bg-border-subtle my-1" />;
 }
 
