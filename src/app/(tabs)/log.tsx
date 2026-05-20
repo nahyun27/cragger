@@ -51,14 +51,16 @@ export default function LogScreen() {
       {/* Header */}
       <View style={s.header}>
         <View>
-          <Text style={s.headerTitle}>기록 피드</Text>
-          <Text style={s.headerSubtitle}>등반 세션 기록 및 대시보드</Text>
+          <Text style={s.headerTitle}>기록</Text>
+          <Text style={s.headerSubtitle}>나의 등반 세션</Text>
         </View>
         <Pressable
           onPress={() => router.push('/session/new')}
-          style={({ pressed }) => [s.headerBtn, { opacity: pressed ? 0.85 : 1 }]}
+          style={({ pressed }) => [s.writeBtn, { opacity: pressed ? 0.85 : 1 }]}
+          hitSlop={6}
         >
-          <Feather name="plus" size={20} color="#ffffff" />
+          <Feather name="plus" size={14} color="#ffffff" />
+          <Text style={s.writeBtnText}>기록 추가</Text>
         </Pressable>
       </View>
 
@@ -133,23 +135,6 @@ export default function LogScreen() {
         />
       )}
 
-      {/* Floating Action Button */}
-      <Pressable
-        onPress={() => router.push('/session/new')}
-        style={({ pressed }) => [
-          s.fab,
-          {
-            opacity: pressed ? 0.9 : 1,
-            shadowColor: '#0d9488',
-            shadowOpacity: 0.3,
-            shadowRadius: 10,
-            shadowOffset: { width: 0, height: 6 },
-            elevation: 6,
-          },
-        ]}
-      >
-        <Feather name="plus" size={24} color="#ffffff" />
-      </Pressable>
     </SafeAreaView>
   );
 }
@@ -158,6 +143,7 @@ function SessionCard({ session }: { session: RecentSession }) {
   const router = useRouter();
   const gymName = session.gym?.name || '암장 미선택';
   const branchName = session.gym?.branch ? ` ${session.gym.branch}` : '';
+  const hasSends = session.send_count > 0;
 
   return (
     <Pressable
@@ -168,34 +154,41 @@ function SessionCard({ session }: { session: RecentSession }) {
           backgroundColor: '#ffffff',
           opacity: pressed ? 0.97 : 1,
           shadowColor: '#0f172a',
-          shadowOpacity: 0.03,
-          shadowRadius: 12,
-          shadowOffset: { width: 0, height: 4 },
+          shadowOpacity: 0.04,
+          shadowRadius: 10,
+          shadowOffset: { width: 0, height: 3 },
           elevation: 1,
         },
       ]}
     >
-      <View style={s.cardTop}>
-        <View style={s.gymInfo}>
+      <View style={s.cardBody}>
+        <View style={s.cardIcon}>
+          <Feather name="map-pin" size={16} color="#0d9488" />
+        </View>
+
+        <View style={s.cardText}>
           <Text style={s.cardGymName} numberOfLines={1}>
             {gymName}
             {branchName}
           </Text>
-          <Text style={s.cardDate}>{formatDate(session.session_date)}</Text>
+          <View style={s.metaRow}>
+            <Text style={s.metaText}>{formatDate(session.session_date)}</Text>
+            {session.duration_min != null && (
+              <>
+                <Text style={s.metaDot}>·</Text>
+                <Feather name="clock" size={11} color="#94a3b8" />
+                <Text style={s.metaText}>{formatDuration(session.duration_min)}</Text>
+              </>
+            )}
+          </View>
         </View>
-        <View style={s.sendBadge}>
-          <Text style={s.sendBadgeText}>완등 {session.send_count}</Text>
-        </View>
-      </View>
 
-      {session.duration_min != null && (
-        <View style={s.durationRow}>
-          <Feather name="clock" size={11} color="#64748b" />
-          <Text style={s.durationText}>
-            {formatDuration(session.duration_min)} 등반 진행
+        <View style={[s.sendBadge, !hasSends && s.sendBadgeMuted]}>
+          <Text style={[s.sendBadgeText, !hasSends && s.sendBadgeTextMuted]}>
+            완등 {session.send_count}
           </Text>
         </View>
-      )}
+      </View>
     </Pressable>
   );
 }
@@ -227,10 +220,25 @@ const s = StyleSheet.create({
     color: '#64748b',
     marginTop: 2,
   },
-  headerBtn: {
-    padding: 8,
+  writeBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    height: 38,
     borderRadius: 12,
     backgroundColor: '#0d9488',
+    shadowColor: '#0d9488',
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
+  },
+  writeBtnText: {
+    color: '#ffffff',
+    fontSize: 13,
+    fontWeight: '800',
+    letterSpacing: -0.2,
   },
   loadingContainer: {
     flex: 1,
@@ -365,72 +373,74 @@ const s = StyleSheet.create({
     fontWeight: '700',
   },
 
-  // Card
+  // Session Card
   card: {
     borderWidth: 1,
-    borderColor: '#f1f5f9',
-    borderRadius: 20,
-    padding: 16,
+    borderColor: '#e2e8f0',
+    borderRadius: 18,
+    padding: 14,
   },
-  cardTop: {
+  cardBody: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    alignItems: 'center',
+    gap: 12,
   },
-  gymInfo: {
+  cardIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: '#f0fdfa',
+    borderWidth: 1,
+    borderColor: '#99f6e4',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  cardText: {
     flex: 1,
-    paddingRight: 12,
+    minWidth: 0,
   },
   cardGymName: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '800',
     color: '#0f172a',
+    letterSpacing: -0.2,
   },
-  cardDate: {
+  metaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 4,
+  },
+  metaText: {
     fontSize: 11,
     color: '#94a3b8',
-    marginTop: 4,
+    fontWeight: '600',
+  },
+  metaDot: {
+    fontSize: 11,
+    color: '#cbd5e1',
+    marginHorizontal: 2,
   },
   sendBadge: {
     backgroundColor: '#ecfdf5',
     borderWidth: 1,
     borderColor: '#a7f3d0',
     paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 8,
+    paddingVertical: 5,
+    borderRadius: 999,
+    flexShrink: 0,
+  },
+  sendBadgeMuted: {
+    backgroundColor: '#f1f5f9',
+    borderColor: '#e2e8f0',
   },
   sendBadgeText: {
     color: '#059669',
     fontSize: 12,
     fontWeight: '800',
   },
-  durationRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    alignSelf: 'flex-start',
-    backgroundColor: '#f8fafc',
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-    marginTop: 12,
-  },
-  durationText: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: '#475569',
-  },
-  fab: {
-    position: 'absolute',
-    bottom: 24,
-    right: 24,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: '#0d9488',
-    alignItems: 'center',
-    justifyContent: 'center',
+  sendBadgeTextMuted: {
+    color: '#94a3b8',
   },
 });
