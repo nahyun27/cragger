@@ -1,11 +1,13 @@
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { zodResolver } from '@hookform/resolvers/zod';
+import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useMemo, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import {
   ActivityIndicator,
   Alert,
+  Image,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -20,6 +22,8 @@ import { z } from 'zod';
 
 import { Section } from '@/components/ui/section';
 import { useCheckUsername, useProfile, useUpdateProfile } from '@/hooks/use-profile';
+import { useAuth } from '@/lib/auth-context';
+import { deleteAvatarByUrl, uploadAvatarImage } from '@/lib/upload-image';
 
 const schema = z.object({
   username: z
@@ -88,6 +92,7 @@ function formatLongDate(s: string | null): string {
 
 export default function ProfileEditScreen() {
   const router = useRouter();
+  const { session: authSession } = useAuth();
   const { data: profile, isLoading } = useProfile();
   const updateProfile = useUpdateProfile();
 
@@ -107,6 +112,14 @@ export default function ProfileEditScreen() {
   const [startDateDirty, setStartDateDirty] = useState(false);
   const [showPicker, setShowPicker] = useState(false);
 
+  // Avatar: pending = newly picked but not yet uploaded; removeAvatar = user tapped 삭제
+  const [pendingAvatar, setPendingAvatar] = useState<ImagePicker.ImagePickerAsset | null>(null);
+  const [removeAvatar, setRemoveAvatar] = useState(false);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+
+  const avatarPreviewUri = pendingAvatar?.uri ?? (removeAvatar ? null : profile?.avatar_url ?? null);
+  const avatarDirty = pendingAvatar !== null || removeAvatar;
+
   useEffect(() => {
     if (profile) {
       reset({
@@ -117,8 +130,33 @@ export default function ProfileEditScreen() {
       });
       setClimbingStartDate(profile.climbing_start_date);
       setStartDateDirty(false);
+      setPendingAvatar(null);
+      setRemoveAvatar(false);
     }
   }, [profile, reset]);
+
+  async function handlePickAvatar() {
+    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!perm.granted) {
+      Alert.alert('권한 필요', '갤러리 접근을 허용해주세요');
+      return;
+    }
+    const res = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+      base64: true,
+    });
+    if (res.canceled || !res.assets || res.assets.length === 0) return;
+    setPendingAvatar(res.assets[0]);
+    setRemoveAvatar(false);
+  }
+
+  function handleRemoveAvatar() {
+    setPendingAvatar(null);
+    setRemoveAvatar(true);
+  }
 
   const usernameRaw = watch('username');
   const usernameDebounced = useDebounced(usernameRaw, 400);
@@ -137,14 +175,38 @@ export default function ProfileEditScreen() {
   }, [profile, usernameDebounced, usernameCheck.isLoading, usernameCheck.data]);
 
   const canSubmit =
-    (isDirty || startDateDirty) &&
+    (isDirty || startDateDirty || avatarDirty) &&
     !updateProfile.isPending &&
+    !uploadingAvatar &&
     (usernameStatus === 'unchanged' || usernameStatus === 'available');
 
   async function onSubmit(values: FormValues) {
     if (!profile) return;
     const cleanedInsta = (values.instagramHandle ?? '').replace(/^@/, '').trim();
     const usernameChanged = values.username.trim() !== profile.username;
+
+    // Resolve avatar update first — upload if pending, clear if removing.
+    let avatarUrlArg: string | null | undefined = undefined;
+    const oldUrl = profile.avatar_url;
+    if (pendingAvatar) {
+      const userId = authSession?.user.id;
+      if (!userId) {
+        Alert.alert('로그인 필요');
+        return;
+      }
+      setUploadingAvatar(true);
+      try {
+        avatarUrlArg = await uploadAvatarImage(pendingAvatar, userId);
+      } catch (e) {
+        setUploadingAvatar(false);
+        Alert.alert('업로드 실패', e instanceof Error ? e.message : '알 수 없는 오류');
+        return;
+      }
+      setUploadingAvatar(false);
+    } else if (removeAvatar) {
+      avatarUrlArg = null;
+    }
+
     try {
       await updateProfile.mutateAsync({
         username: usernameChanged ? values.username.trim() : undefined,
@@ -152,7 +214,12 @@ export default function ProfileEditScreen() {
         heightCm: values.heightCm.trim() ? Number(values.heightCm.trim()) : null,
         reachCm: values.reachCm.trim() ? Number(values.reachCm.trim()) : null,
         climbingStartDate: startDateDirty ? climbingStartDate : undefined,
+        avatarUrl: avatarUrlArg,
       });
+      // Best-effort: drop the old avatar object once the row is updated.
+      if (avatarUrlArg !== undefined && oldUrl && oldUrl !== avatarUrlArg) {
+        deleteAvatarByUrl(oldUrl).catch(() => undefined);
+      }
       router.back();
     } catch (e) {
       Alert.alert('저장 실패', e instanceof Error ? e.message : '알 수 없는 오류');
@@ -189,6 +256,41 @@ export default function ProfileEditScreen() {
         className="flex-1"
       >
         <ScrollView contentContainerClassName="p-4 gap-5" keyboardShouldPersistTaps="handled">
+          <Section title="프로필 사진">
+            <View className="flex-row items-center gap-4">
+              <AvatarPreview
+                uri={avatarPreviewUri}
+                fallbackChar={(profile.username[0] ?? '?').toUpperCase()}
+                uploading={uploadingAvatar}
+              />
+              <View className="flex-1 gap-2">
+                <Pressable
+                  onPress={handlePickAvatar}
+                  disabled={uploadingAvatar}
+                  className="flex-row items-center justify-center gap-1.5 px-3 py-2 rounded-md border border-border-default active:opacity-70"
+                >
+                  <Feather name="image" size={14} color="#0d9488" />
+                  <Text className="text-text-primary text-sm font-semibold">
+                    {avatarPreviewUri ? '변경' : '사진 선택'}
+                  </Text>
+                </Pressable>
+                {avatarPreviewUri && (
+                  <Pressable
+                    onPress={handleRemoveAvatar}
+                    disabled={uploadingAvatar}
+                    className="flex-row items-center justify-center gap-1.5 px-3 py-2 rounded-md border border-border-default active:opacity-70"
+                  >
+                    <Feather name="trash-2" size={14} color="#ef4444" />
+                    <Text className="text-status-danger text-sm font-semibold">삭제</Text>
+                  </Pressable>
+                )}
+              </View>
+            </View>
+            <Text className="text-text-tertiary text-xs">
+              비워두면 닉네임 첫 글자로 표시돼요.
+            </Text>
+          </Section>
+
           <Section title="닉네임" required>
             <Controller
               control={control}
@@ -383,6 +485,31 @@ export default function ProfileEditScreen() {
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
+  );
+}
+
+function AvatarPreview({
+  uri,
+  fallbackChar,
+  uploading,
+}: {
+  uri: string | null;
+  fallbackChar: string;
+  uploading: boolean;
+}) {
+  return (
+    <View className="w-20 h-20 rounded-full bg-brand-primary/10 border-2 border-brand-primary items-center justify-center overflow-hidden">
+      {uri ? (
+        <Image source={{ uri }} className="w-full h-full" resizeMode="cover" />
+      ) : (
+        <Text className="text-brand-primary text-3xl font-extrabold">{fallbackChar}</Text>
+      )}
+      {uploading && (
+        <View className="absolute inset-0 items-center justify-center bg-black/30">
+          <ActivityIndicator color="white" />
+        </View>
+      )}
+    </View>
   );
 }
 

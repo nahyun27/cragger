@@ -44,6 +44,7 @@ export type UpdateProfileArgs = {
   heightCm?: number | null;
   reachCm?: number | null;
   climbingStartDate?: string | null;
+  avatarUrl?: string | null;
 };
 
 export function useUpdateProfile() {
@@ -61,6 +62,7 @@ export function useUpdateProfile() {
       if (args.heightCm !== undefined) patch.height_cm = args.heightCm;
       if (args.reachCm !== undefined) patch.reach_cm = args.reachCm;
       if (args.climbingStartDate !== undefined) patch.climbing_start_date = args.climbingStartDate;
+      if (args.avatarUrl !== undefined) patch.avatar_url = args.avatarUrl;
       const { error } = await supabase.from('profiles').update(patch).eq('id', userId);
       if (error) {
         // Postgres unique violation on username

@@ -4,19 +4,17 @@ import { readAsStringAsync, EncodingType } from 'expo-file-system/legacy';
 
 import { supabase } from '@/lib/supabase';
 
-const BUCKET = 'post-images';
-
 function randomId(): string {
-  // Short opaque id (timestamp + random), enough to avoid collisions per-user.
   return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
 }
 
-// Reads an image picker asset, uploads it as JPEG under {userId}/{id}.jpg,
-// and returns the public URL.
-export async function uploadPostImage(
+// Uploads an image-picker asset as JPEG to {bucket}/{userId}/{id}.jpg
+// and returns its public URL.
+async function uploadImage(
   asset: ImagePicker.ImagePickerAsset,
+  bucket: string,
   userId: string,
-): Promise<string> {
+): Promise<{ publicUrl: string; path: string }> {
   const base64 =
     asset.base64 ??
     (await readAsStringAsync(asset.uri, { encoding: EncodingType.Base64 }));
@@ -24,13 +22,43 @@ export async function uploadPostImage(
 
   const path = `${userId}/${randomId()}.jpg`;
   const { error } = await supabase.storage
-    .from(BUCKET)
+    .from(bucket)
     .upload(path, decode(base64), {
       contentType: 'image/jpeg',
       upsert: false,
     });
   if (error) throw new Error(error.message);
 
-  const { data } = supabase.storage.from(BUCKET).getPublicUrl(path);
-  return data.publicUrl;
+  const { data } = supabase.storage.from(bucket).getPublicUrl(path);
+  return { publicUrl: data.publicUrl, path };
+}
+
+export async function uploadPostImage(
+  asset: ImagePicker.ImagePickerAsset,
+  userId: string,
+): Promise<string> {
+  const { publicUrl } = await uploadImage(asset, 'post-images', userId);
+  return publicUrl;
+}
+
+export async function uploadAvatarImage(
+  asset: ImagePicker.ImagePickerAsset,
+  userId: string,
+): Promise<string> {
+  const { publicUrl } = await uploadImage(asset, 'avatars', userId);
+  return publicUrl;
+}
+
+// Best-effort delete of an avatar by its public URL.
+// Errors are swallowed — orphaned files are harmless and we never block the UX.
+export async function deleteAvatarByUrl(publicUrl: string | null): Promise<void> {
+  if (!publicUrl) return;
+  // Public URL shape:
+  //   https://<project>.supabase.co/storage/v1/object/public/avatars/<userId>/<file>
+  const marker = '/storage/v1/object/public/avatars/';
+  const idx = publicUrl.indexOf(marker);
+  if (idx === -1) return;
+  const path = publicUrl.slice(idx + marker.length);
+  if (!path) return;
+  await supabase.storage.from('avatars').remove([path]);
 }

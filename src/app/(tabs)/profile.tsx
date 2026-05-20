@@ -3,6 +3,7 @@ import React from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Image,
   Linking,
   Pressable,
   ScrollView,
@@ -64,8 +65,16 @@ export default function ProfileScreen() {
       <ScrollView contentContainerClassName="pb-10">
         {/* Profile Card */}
         <View className="px-6 py-5 flex-row items-center gap-4">
-          <View className="w-16 h-16 rounded-full bg-brand-primary/10 border-2 border-brand-primary items-center justify-center shadow-sm">
-            <Text className="text-brand-primary text-2xl font-extrabold">{firstChar}</Text>
+          <View className="w-16 h-16 rounded-full bg-brand-primary/10 border-2 border-brand-primary items-center justify-center shadow-sm overflow-hidden">
+            {profile?.avatar_url ? (
+              <Image
+                source={{ uri: profile.avatar_url }}
+                className="w-full h-full"
+                resizeMode="cover"
+              />
+            ) : (
+              <Text className="text-brand-primary text-2xl font-extrabold">{firstChar}</Text>
+            )}
           </View>
           <View className="flex-1 gap-1">
             <Text className="text-text-primary text-xl font-extrabold tracking-tight" numberOfLines={1}>
