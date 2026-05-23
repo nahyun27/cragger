@@ -17,6 +17,7 @@ import type { ImageSourcePropType } from 'react-native';
 export const GYM_LOGOS: Record<string, ImageSourcePropType> = {
   'B Climbing':   require('../../assets/gym-logos/B-Climbing.png'),
   '경기레포츠':   require('../../assets/gym-logos/경기레포츠.png'),
+  '그래비티':     require('../../assets/gym-logos/그래비티.png'),
   '고릴라':       require('../../assets/gym-logos/고릴라.png'),
   '그루트':       require('../../assets/gym-logos/그루트.png'),
   '뀨':           require('../../assets/gym-logos/뀨.png'),
@@ -97,6 +98,7 @@ export const GYM_BG_DEFAULT: Record<string, string> = {
   '서울볼더스 선유': '#D3DCDE',
   '뀨':         '#F2A4A4',
   '경기레포츠': '#172F3A',  // 로고 어두운 청록 그라데이션
+  '그래비티':   '#000000',  // 로고 검정 배경 그대로
 };
 
 export const GYM_BG_BY_BRANCH: Record<string, Record<string, string>> = {
