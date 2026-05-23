@@ -16,6 +16,7 @@ import type { ImageSourcePropType } from 'react-native';
 // 결과의 brand 운영 방식 재현). 다른 brand 는 단일 로고만.
 export const GYM_LOGOS: Record<string, ImageSourcePropType> = {
   '그루트':       require('../../assets/gym-logos/그루트.png'),
+  '더플라스틱':   require('../../assets/gym-logos/더플라스틱.png'),
   // 더클라임은 지점별 배경색 — 흰 로고 사용
   '더클라임':     require('../../assets/gym-logos/더클라임-white.png'),
   '닷클라이밍':   require('../../assets/gym-logos/닷클라이밍짐.png'),
@@ -42,8 +43,9 @@ export const GYM_LOGOS: Record<string, ImageSourcePropType> = {
 // brand 자체에 단일 배경색 — 지점 무관. (지점별 매핑은 GYM_BG_BY_BRANCH 가
 // 우선이고, 거기 매칭 없으면 fallback 으로 여기를 봄.)
 export const GYM_BG_DEFAULT: Record<string, string> = {
-  '킨디':     '#251818',
-  '스파이시': '#1a1a1a',
+  '킨디':       '#251818',
+  '스파이시':   '#1a1a1a',
+  '더플라스틱': '#000000',  // brand 의 검정 + 주황 톤
 };
 
 export const GYM_BG_BY_BRANCH: Record<string, Record<string, string>> = {
