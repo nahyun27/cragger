@@ -16,20 +16,25 @@ import type { ImageSourcePropType } from 'react-native';
 // 결과의 brand 운영 방식 재현). 다른 brand 는 단일 로고만.
 export const GYM_LOGOS: Record<string, ImageSourcePropType> = {
   '그루트':       require('../../assets/gym-logos/그루트.png'),
+  '비숍':         require('../../assets/gym-logos/비숍.png'),
+  '어웨이크':     require('../../assets/gym-logos/어웨이크.png'),
+  '에이스':       require('../../assets/gym-logos/에이스.png'),
+  '치즈':         require('../../assets/gym-logos/치즈.png'),
+  '픽스볼더':     require('../../assets/gym-logos/픽스볼더.png'),
   '더플라스틱':   require('../../assets/gym-logos/더플라스틱.png'),
   // 더클라임은 지점별 배경색 — 흰 로고 사용
   '더클라임':     require('../../assets/gym-logos/더클라임-white.png'),
   '닷클라이밍':   require('../../assets/gym-logos/닷클라이밍짐.png'),
   '드림캐처':     require('../../assets/gym-logos/드림캐쳐.png'),
   '노루':         require('../../assets/gym-logos/노루.png'),
-  '락랜드':       require('../../assets/gym-logos/락랜드.png'),
   '락트리':       require('../../assets/gym-logos/락트리.png'),
   '레드원':       require('../../assets/gym-logos/레드원.png'),
   '볼더가든':     require('../../assets/gym-logos/볼더가든.png'),
   '볼더프렌즈':   require('../../assets/gym-logos/볼더프렌즈.png'),
   '브릭스':       require('../../assets/gym-logos/브릭스.png'),
   '캐치스톤':     require('../../assets/gym-logos/캐치스톤.png'),
-  '서울볼더스':   require('../../assets/gym-logos/서울볼더스.png'),
+  // 서울볼더스 기본 (지점별 매핑 없을 때 fallback) — 목동 캐릭터 로고
+  '서울볼더스':   require('../../assets/gym-logos/서울볼더스_목동.png'),
   '서울숲':       require('../../assets/gym-logos/서울숲-white.png'),
   '손상원':       require('../../assets/gym-logos/손상원-white.png'),
   '슈퍼비':       require('../../assets/gym-logos/슈퍼비.png'),
@@ -54,6 +59,15 @@ export const GYM_LOGOS: Record<string, ImageSourcePropType> = {
   '훅클라이밍':   require('../../assets/gym-logos/훅클라이밍.png'),
 };
 
+// (brand key) → (branch → logo). 지점별 로고가 다를 때.
+// 매칭 안 되면 GYM_LOGOS 기본 로고로 fallback.
+export const GYM_LOGOS_BY_BRANCH: Record<string, Record<string, ImageSourcePropType>> = {
+  '서울볼더스': {
+    '목동': require('../../assets/gym-logos/서울볼더스_목동.png'),
+    '선유': require('../../assets/gym-logos/서울볼더스_선유.png'),
+  },
+};
+
 // (brand key) → (branch → background hex). 매핑 없으면 흰 카드 그대로.
 // brand 자체에 단일 배경색 — 지점 무관. (지점별 매핑은 GYM_BG_BY_BRANCH 가
 // 우선이고, 거기 매칭 없으면 fallback 으로 여기를 봄.)
@@ -65,6 +79,8 @@ export const GYM_BG_DEFAULT: Record<string, string> = {
   '클라임잇':   '#323384',  // 로고 원본 남보라
   '원더월':     '#1a1a1a',  // 검정 brand 배경 (흰 로고)
   '클럽클라이밍': '#F2EEE5', // 로고 원본 베이지 — 누끼 X
+  '에이스':     '#1a1a1a',  // 사용자 지정 검정 배경
+  '서울볼더스': '#D3DCDE',  // 선유 로고 회색 — 두 지점 통일
 };
 
 export const GYM_BG_BY_BRANCH: Record<string, Record<string, string>> = {
@@ -128,10 +144,12 @@ export function matchGymStyle(name: string, branch?: string | null): GymVisualSt
   const keys = Object.keys(GYM_LOGOS).sort((a, b) => b.length - a.length);
   for (const key of keys) {
     if (!trimmed.includes(key)) continue;
+    const branchLogos = GYM_LOGOS_BY_BRANCH[key];
+    const branchLogo = branchLogos && branch && branchLogos[branch] ? branchLogos[branch] : null;
     const branchMap = GYM_BG_BY_BRANCH[key];
     const branchBg = branchMap && branch && branchMap[branch] ? branchMap[branch] : null;
     const bg = branchBg ?? GYM_BG_DEFAULT[key] ?? null;
-    return { logo: GYM_LOGOS[key], bg };
+    return { logo: branchLogo ?? GYM_LOGOS[key], bg };
   }
   return { logo: null, bg: null };
 }

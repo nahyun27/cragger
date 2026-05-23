@@ -39,8 +39,9 @@ export function GymThumbnail({ name, branch, size = 56 }: Props) {
   const fallback = useMemo(() => {
     const trimmed = name.trim();
     const hue = hashSeed(trimmed || '?');
+    // 산뜻한 파스텔 톤 — 채도 낮추고 명도 높여 카드/카드 사이 색감 부담↓
     return {
-      bg: hslToHex(hue, 48, 42),
+      bg: hslToHex(hue, 55, 72),
       initial: (trimmed.charAt(0) || '?').toUpperCase(),
     };
   }, [name]);
@@ -83,7 +84,7 @@ export function GymThumbnail({ name, branch, size = 56 }: Props) {
         justifyContent: 'center',
       }}
     >
-      <Text style={{ fontSize: size * 0.42, color: '#ffffff', fontWeight: 'bold' }}>
+      <Text style={{ fontSize: size * 0.42, color: '#1e293b', fontWeight: 'bold' }}>
         {fallback.initial}
       </Text>
     </View>
