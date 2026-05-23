@@ -47,6 +47,7 @@ export const GYM_LOGOS: Record<string, ImageSourcePropType> = {
   '웨이브락':     require('../../assets/gym-logos/웨이브락-white.png'),
   '피크닉':       require('../../assets/gym-logos/피크닉.png'),
   '플래시볼더스': require('../../assets/gym-logos/플래시볼더스.png'),
+  '피커스':       require('../../assets/gym-logos/피커스.png'),
   '허브':         require('../../assets/gym-logos/허브.png'),
   '훅클라이밍':   require('../../assets/gym-logos/훅클라이밍.png'),
 };
@@ -58,6 +59,7 @@ export const GYM_BG_DEFAULT: Record<string, string> = {
   '킨디':       '#251818',
   '스파이시':   '#1a1a1a',
   '더플라스틱': '#000000',  // brand 의 검정 + 주황 톤
+  '피커스':     '#F1F2EE',  // 로고 원본 베이지 — 누끼 X
 };
 
 export const GYM_BG_BY_BRANCH: Record<string, Record<string, string>> = {
@@ -67,10 +69,10 @@ export const GYM_BG_BY_BRANCH: Record<string, Record<string, string>> = {
     '종로점':   '#0EA5E9',  // 하늘
     '잠실점':   '#EC4899',  // 분홍
   },
-  // 클라임투게더 2개 지점
+  // 클라임투게더 2개 지점 — 진한 톤
   '클라임투게더': {
-    '수원점': '#2563EB',  // 파랑
-    '원주점': '#16A34A',  // 초록
+    '수원점': '#1E3A8A',  // 진한 남색
+    '원주점': '#14532D',  // 진한 초록
   },
   // 웨이브락 3개 지점 — 네이버 검색 결과 카드 배경색 기반
   '웨이브락': {
