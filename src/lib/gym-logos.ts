@@ -46,8 +46,11 @@ export const GYM_LOGOS: Record<string, ImageSourcePropType> = {
   '볼더프렌즈':   require('../../assets/gym-logos/볼더프렌즈.png'),
   '브릭스':       require('../../assets/gym-logos/브릭스.png'),
   '캐치스톤':     require('../../assets/gym-logos/캐치스톤.png'),
-  // 서울볼더스 기본 (지점별 매핑 없을 때 fallback) — 목동 캐릭터 로고
-  '서울볼더스':   require('../../assets/gym-logos/서울볼더스_목동.png'),
+  // 서울볼더스 — DB 는 name='서울볼더스 목동/선유', branch=null 구조라
+  // 긴 키로 직접 매칭 (matcher 가 긴 키 우선)
+  '서울볼더스 목동': require('../../assets/gym-logos/서울볼더스_목동.png'),
+  '서울볼더스 선유': require('../../assets/gym-logos/서울볼더스_선유.png'),
+  '서울볼더스':     require('../../assets/gym-logos/서울볼더스_목동.png'),
   '서울숲':       require('../../assets/gym-logos/서울숲-white.png'),
   '손상원':       require('../../assets/gym-logos/손상원-white.png'),
   '슈퍼비':       require('../../assets/gym-logos/슈퍼비.png'),
@@ -75,10 +78,7 @@ export const GYM_LOGOS: Record<string, ImageSourcePropType> = {
 // (brand key) → (branch → logo). 지점별 로고가 다를 때.
 // 매칭 안 되면 GYM_LOGOS 기본 로고로 fallback.
 export const GYM_LOGOS_BY_BRANCH: Record<string, Record<string, ImageSourcePropType>> = {
-  '서울볼더스': {
-    '목동': require('../../assets/gym-logos/서울볼더스_목동.png'),
-    '선유': require('../../assets/gym-logos/서울볼더스_선유.png'),
-  },
+  // 예약: 진짜 branch 컬럼 있는 brand 가 지점별 로고 다를 때.
 };
 
 // (brand key) → (branch → background hex). 매핑 없으면 흰 카드 그대로.
@@ -93,7 +93,9 @@ export const GYM_BG_DEFAULT: Record<string, string> = {
   '원더월':     '#1a1a1a',  // 검정 brand 배경 (흰 로고)
   '클럽클라이밍': '#F2EEE5', // 로고 원본 베이지 — 누끼 X
   '에이스':     '#1a1a1a',  // 사용자 지정 검정 배경
-  '서울볼더스': '#D3DCDE',  // 선유 로고 회색 — 두 지점 통일
+  '서울볼더스 목동': '#D3DCDE',
+  '서울볼더스 선유': '#D3DCDE',
+  '서울볼더스':     '#D3DCDE',
 };
 
 export const GYM_BG_BY_BRANCH: Record<string, Record<string, string>> = {
