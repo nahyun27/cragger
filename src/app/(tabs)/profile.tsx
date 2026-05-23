@@ -5,6 +5,7 @@ import {
   Alert,
   Image,
   Linking,
+  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -42,6 +43,7 @@ export default function ProfileScreen() {
   const { session } = useAuth();
   const { data: profile } = useProfile();
   const { data: stats, isLoading, error } = useUserStats();
+  const [menuVisible, setMenuVisible] = useState(false);
 
   const email = session?.user.email ?? '';
   const username = profile?.username ?? '...';
@@ -57,31 +59,11 @@ export default function ProfileScreen() {
         </View>
         <View style={s.headerActions}>
           <Pressable
-            onPress={() => router.push('/profile/edit')}
+            onPress={() => setMenuVisible(true)}
             style={({ pressed }) => [s.headerBtn, pressed && { opacity: 0.6 }]}
             hitSlop={6}
           >
-            <Feather name="edit-3" size={18} color="#64748b" />
-          </Pressable>
-          <Pressable
-            onPress={() => {
-              Alert.alert(
-                '로그아웃',
-                '정말 로그아웃 하시겠습니까?',
-                [
-                  { text: '취소', style: 'cancel' },
-                  {
-                    text: '로그아웃',
-                    style: 'destructive',
-                    onPress: () => supabase.auth.signOut(),
-                  },
-                ],
-              );
-            }}
-            style={({ pressed }) => [s.headerBtn, pressed && { opacity: 0.6 }]}
-            hitSlop={6}
-          >
-            <Feather name="log-out" size={18} color="#ef4444" />
+            <Feather name="menu" size={20} color="#0f172a" />
           </Pressable>
         </View>
       </View>
@@ -221,6 +203,26 @@ export default function ProfileScreen() {
 
         <ShoesSection />
       </ScrollView>
+
+      <ProfileMenuModal
+        visible={menuVisible}
+        onClose={() => setMenuVisible(false)}
+        onLogout={() => {
+          Alert.alert(
+            '로그아웃',
+            '정말 로그아웃 하시겠습니까?',
+            [
+              { text: '취소', style: 'cancel' },
+              {
+                text: '로그아웃',
+                style: 'destructive',
+                onPress: () => supabase.auth.signOut(),
+              },
+            ],
+          );
+        }}
+        onEditProfile={() => router.push('/profile/edit')}
+      />
     </SafeAreaView>
   );
 }
@@ -606,10 +608,13 @@ function ShoesSection() {
         </View>
         <Pressable
           onPress={() => router.push('/shoes/new')}
-          style={({ pressed }) => [s.addBtn, pressed && { opacity: 0.8 }]}
+          style={({ pressed }) => ({ opacity: pressed ? 0.8 : 1 })}
+          hitSlop={6}
         >
-          <Feather name="plus" size={14} color="#ffffff" />
-          <Text style={s.addBtnText}>추가</Text>
+          <View style={s.addBtn}>
+            <Feather name="plus" size={14} color="#ffffff" />
+            <Text style={s.addBtnText}>추가</Text>
+          </View>
         </Pressable>
       </View>
 
@@ -657,8 +662,9 @@ function ShoeCard({ shoe }: { shoe: ClimbingShoe }) {
       onPress={() =>
         router.push({ pathname: '/shoes/[id]', params: { id: shoe.id } })
       }
-      style={({ pressed }) => [s.shoeCard, pressed && { opacity: 0.92 }]}
+      style={({ pressed }) => ({ opacity: pressed ? 0.92 : 1 })}
     >
+      <View style={s.shoeCard}>
       <View style={s.shoeIcon}>
         <Feather name="package" size={18} color="#475569" />
       </View>
@@ -679,12 +685,33 @@ function ShoeCard({ shoe }: { shoe: ClimbingShoe }) {
             ]}
           >
             <Text style={[s.shoeStatusText, { color: palette.text }]}>
-              {SHOE_STATUS_LABEL[shoe.status]}
-            </Text>
+        <View style={s.shoeIcon}>
+          <Feather name="package" size={18} color="#475569" />
+        </View>
+        <View style={{ flex: 1, minWidth: 0 }}>
+          <Text style={s.shoeTitle} numberOfLines={1}>
+            {title}
+          </Text>
+          <View style={s.shoeMetaRow}>
+            {shoe.size ? (
+              <Text style={s.shoeMetaText}>{shoe.size}</Text>
+            ) : (
+              <Text style={s.shoeMetaText}>사이즈 미입력</Text>
+            )}
+            <View
+              style={[
+                s.shoeStatusBadge,
+                { backgroundColor: palette.bg, borderColor: palette.border },
+              ]}
+            >
+              <Text style={[s.shoeStatusText, { color: palette.text }]}>
+                {SHOE_STATUS_LABEL[shoe.status]}
+              </Text>
+            </View>
           </View>
         </View>
+        <Feather name="chevron-right" size={16} color="#cbd5e1" />
       </View>
-      <Feather name="chevron-right" size={16} color="#cbd5e1" />
     </Pressable>
   );
 }
@@ -697,6 +724,80 @@ const STATUS_PALETTE: Record<
   resole_pending: { bg: '#fff7ed', border: '#fed7aa', text: '#c2410c' },
   retired: { bg: '#f1f5f9', border: '#e2e8f0', text: '#64748b' },
 };
+
+function ProfileMenuModal({
+  visible,
+  onClose,
+  onLogout,
+  onEditProfile,
+}: {
+  visible: boolean;
+  onClose: () => void;
+  onLogout: () => void;
+  onEditProfile: () => void;
+}) {
+  return (
+    <Modal
+      transparent
+      visible={visible}
+      animationType="slide"
+      onRequestClose={onClose}
+    >
+      <View style={s.modalOverlay}>
+        <Pressable style={s.modalBackdrop} onPress={onClose} />
+        <View style={s.modalContent}>
+          <View style={s.modalDragHandle} />
+          
+          <Text style={s.modalTitle}>설정 및 메뉴</Text>
+
+          <MenuButton
+            icon="edit-3"
+            label="프로필 편집"
+            onPress={() => { onClose(); onEditProfile(); }}
+          />
+          <MenuButton
+            icon="bell"
+            label="알림 설정"
+            onPress={() => { onClose(); Alert.alert('알림 설정', '준비 중인 기능입니다.'); }}
+          />
+          <MenuButton
+            icon="lock"
+            label="개인정보 처리방침"
+            onPress={() => { onClose(); Alert.alert('안내', '준비 중인 기능입니다.'); }}
+          />
+          <MenuButton
+            icon="help-circle"
+            label="고객센터 / 문의하기"
+            onPress={() => { onClose(); Alert.alert('고객센터', '준비 중인 기능입니다.'); }}
+          />
+          
+          <View style={s.modalDivider} />
+          
+          <MenuButton
+            icon="log-out"
+            label="로그아웃"
+            color="#ef4444"
+            onPress={() => { onClose(); onLogout(); }}
+          />
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+function MenuButton({ icon, label, color = '#0f172a', onPress }: any) {
+  return (
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]}
+    >
+      <View style={s.menuBtn}>
+        <Feather name={icon} size={18} color={color} />
+        <Text style={[s.menuBtnText, { color }]}>{label}</Text>
+      </View>
+    </Pressable>
+  );
+}
 
 // ─── Styles ──────────────────────────────────────────────────
 const s = StyleSheet.create({
@@ -1276,5 +1377,52 @@ const s = StyleSheet.create({
   shoeStatusText: {
     fontSize: 10,
     fontWeight: '800',
+  },
+  
+  // Menu Modal Styles
+  modalOverlay: {
+    flex: 1,
+    justifyContent: 'flex-end',
+  },
+  modalBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(15, 23, 42, 0.4)',
+  },
+  modalContent: {
+    backgroundColor: '#ffffff',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingHorizontal: 24,
+    paddingBottom: 40,
+    paddingTop: 12,
+  },
+  modalDragHandle: {
+    width: 40,
+    height: 4,
+    backgroundColor: '#cbd5e1',
+    borderRadius: 2,
+    alignSelf: 'center',
+    marginBottom: 20,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#0f172a',
+    marginBottom: 16,
+  },
+  menuBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 14,
+    gap: 12,
+  },
+  menuBtnText: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  modalDivider: {
+    height: 1,
+    backgroundColor: '#e2e8f0',
+    marginVertical: 8,
   },
 });
