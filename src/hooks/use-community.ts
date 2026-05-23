@@ -11,10 +11,11 @@ import { supabase } from '@/lib/supabase';
 
 export type PostType = 'general' | 'question' | 'review' | 'meetup';
 
-export const POST_TYPE_LABEL: Record<Exclude<PostType, 'meetup'>, string> = {
+export const POST_TYPE_LABEL: Record<PostType, string> = {
   general: '일반',
   question: '질문',
   review: '후기',
+  meetup: '모임',
 };
 
 export type PostAuthor = {
@@ -41,9 +42,17 @@ export type PostRow = {
   like_count: number;
   comment_count: number;
   created_at: string;
+  // 모임 전용 — non-meetup 글은 모두 null/0
+  meetup_at: string | null;
+  meetup_capacity: number | null;
+  meetup_location: string | null;
+  participant_count: number;
   author: PostAuthor | null;
   gym: PostGym | null;
 };
+
+const POST_SELECT_COLS =
+  'id, author_id, post_type, title, body, gym_id, image_urls, like_count, comment_count, created_at, meetup_at, meetup_capacity, meetup_location, participant_count, author:profiles!posts_author_id_fkey(id, username, display_name, avatar_url), gym:gyms(id, name, branch)';
 
 const PAGE_SIZE = 20;
 
@@ -70,11 +79,14 @@ export function useCommunityFeed(
       const to = from + PAGE_SIZE - 1;
       let q = supabase
         .from('posts')
-        .select(
-          'id, author_id, post_type, title, body, gym_id, image_urls, like_count, comment_count, created_at, author:profiles!posts_author_id_fkey(id, username, display_name, avatar_url), gym:gyms(id, name, branch)',
-        )
-        .order('created_at', { ascending: false })
+        .select(POST_SELECT_COLS)
         .range(from, to);
+      // 모임 필터일 때만 meetup_at 빠른 순. 그 외엔 최신순.
+      if (postType === 'meetup') {
+        q = q.order('meetup_at', { ascending: true, nullsFirst: false });
+      } else {
+        q = q.order('created_at', { ascending: false });
+      }
       if (postType !== 'all') q = q.eq('post_type', postType);
       if (cleaned) q = q.or(`title.ilike.*${cleaned}*,body.ilike.*${cleaned}*`);
       const { data, error } = await q;
@@ -94,9 +106,7 @@ export function usePost(postId: string | undefined) {
     queryFn: async (): Promise<PostRow> => {
       const { data, error } = await supabase
         .from('posts')
-        .select(
-          'id, author_id, post_type, title, body, gym_id, image_urls, like_count, comment_count, created_at, author:profiles!posts_author_id_fkey(id, username, display_name, avatar_url), gym:gyms(id, name, branch)',
-        )
+        .select(POST_SELECT_COLS)
         .eq('id', postId!)
         .single();
       if (error) throw new Error(error.message);
@@ -288,11 +298,15 @@ export function useDeleteComment() {
 
 // ── Create / Delete post ───────────────────────────────────────
 export type CreatePostArgs = {
-  postType: Exclude<PostType, 'meetup'>;
+  postType: PostType;
   title: string | null;
   body: string;
   gymId: string | null;
   imageUrls?: string[];
+  // 모임 전용 — postType==='meetup' 일 때만 의미.
+  meetupAt?: string | null;          // ISO timestamptz
+  meetupCapacity?: number | null;
+  meetupLocation?: string | null;
 };
 
 export function useCreatePost() {
@@ -304,6 +318,7 @@ export function useCreatePost() {
       if (!userId) throw new Error('Not authenticated');
       const body = args.body.trim();
       if (!body) throw new Error('본문을 입력하세요');
+      const isMeetup = args.postType === 'meetup';
       const { data, error } = await supabase
         .from('posts')
         .insert({
@@ -313,6 +328,9 @@ export function useCreatePost() {
           body,
           gym_id: args.gymId,
           image_urls: args.imageUrls ?? [],
+          meetup_at: isMeetup ? (args.meetupAt ?? null) : null,
+          meetup_capacity: isMeetup ? (args.meetupCapacity ?? null) : null,
+          meetup_location: isMeetup ? (args.meetupLocation ?? null) : null,
         })
         .select('id')
         .single();
@@ -327,11 +345,14 @@ export function useCreatePost() {
 
 export type UpdatePostArgs = {
   postId: string;
-  postType: Exclude<PostType, 'meetup'>;
+  postType: PostType;
   title: string | null;
   body: string;
   gymId: string | null;
   imageUrls: string[];
+  meetupAt?: string | null;
+  meetupCapacity?: number | null;
+  meetupLocation?: string | null;
 };
 
 export function useUpdatePost() {
@@ -340,6 +361,7 @@ export function useUpdatePost() {
     mutationFn: async (args: UpdatePostArgs) => {
       const body = args.body.trim();
       if (!body) throw new Error('본문을 입력하세요');
+      const isMeetup = args.postType === 'meetup';
       const { error } = await supabase
         .from('posts')
         .update({
@@ -348,6 +370,9 @@ export function useUpdatePost() {
           body,
           gym_id: args.gymId,
           image_urls: args.imageUrls,
+          meetup_at: isMeetup ? (args.meetupAt ?? null) : null,
+          meetup_capacity: isMeetup ? (args.meetupCapacity ?? null) : null,
+          meetup_location: isMeetup ? (args.meetupLocation ?? null) : null,
           updated_at: new Date().toISOString(),
         })
         .eq('id', args.postId);

@@ -1,3 +1,4 @@
+import DateTimePicker from '@react-native-community/datetimepicker';
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 import React, { useMemo, useState } from 'react';
@@ -31,10 +32,21 @@ import { uploadPostImage } from '@/lib/upload-image';
 
 const MAX_IMAGES = 4;
 
-const TYPE_OPTIONS: Exclude<PostType, 'meetup'>[] = ['general', 'question', 'review'];
+const TYPE_OPTIONS: PostType[] = ['general', 'question', 'review', 'meetup'];
 
 const BODY_MAX = 1000;
 const TITLE_MAX = 60;
+const LOCATION_MAX = 80;
+
+const KO_WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
+function formatMeetupAt(d: Date): string {
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  const w = KO_WEEKDAYS[d.getDay()];
+  const hh = String(d.getHours()).padStart(2, '0');
+  const mi = String(d.getMinutes()).padStart(2, '0');
+  return `${d.getFullYear()}.${mm}.${dd} (${w}) ${hh}:${mi}`;
+}
 
 export default function NewPostScreen() {
   const router = useRouter();
@@ -43,7 +55,7 @@ export default function NewPostScreen() {
   const { data: recentGyms } = useRecentGyms();
   const { session: authSession } = useAuth();
 
-  const [postType, setPostType] = useState<Exclude<PostType, 'meetup'>>('general');
+  const [postType, setPostType] = useState<PostType>('general');
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
   const [gymId, setGymId] = useState<string | null>(null);
@@ -51,13 +63,23 @@ export default function NewPostScreen() {
   const [pickedAssets, setPickedAssets] = useState<ImagePicker.ImagePickerAsset[]>([]);
   const [uploading, setUploading] = useState(false);
 
+  // 모임 전용 필드
+  const [meetupAt, setMeetupAt] = useState<Date | null>(null);
+  const [datePickerMode, setDatePickerMode] = useState<'date' | 'time' | null>(null);
+  const [meetupLocation, setMeetupLocation] = useState('');
+  const [meetupCapacity, setMeetupCapacity] = useState('');
+
   const selectedGym = useMemo(
     () => allGyms?.find((g) => g.id === gymId) ?? null,
     [allGyms, gymId],
   );
 
+  const isMeetup = postType === 'meetup';
+  const meetupReady =
+    !isMeetup ||
+    (meetupAt != null && (gymId != null || meetupLocation.trim().length > 0));
   const canSubmit =
-    body.trim().length > 0 && !createPost.isPending && !uploading;
+    body.trim().length > 0 && meetupReady && !createPost.isPending && !uploading;
 
   async function handlePickImages() {
     const remaining = MAX_IMAGES - pickedAssets.length;
@@ -104,12 +126,17 @@ export default function NewPostScreen() {
       setUploading(false);
     }
     try {
+      const cap = meetupCapacity.trim() ? parseInt(meetupCapacity, 10) : NaN;
       const { id } = await createPost.mutateAsync({
         postType,
         title: title.trim() || null,
         body: body.trim(),
         gymId,
         imageUrls: uploadedUrls,
+        meetupAt: isMeetup && meetupAt ? meetupAt.toISOString() : null,
+        meetupCapacity: isMeetup && Number.isFinite(cap) && cap > 0 ? cap : null,
+        meetupLocation:
+          isMeetup && !gymId && meetupLocation.trim() ? meetupLocation.trim() : null,
       });
       router.replace({ pathname: '/community/[id]', params: { id } });
     } catch (e) {
@@ -139,7 +166,7 @@ export default function NewPostScreen() {
           keyboardShouldPersistTaps="handled"
         >
           <Section title="종류" required>
-            <View className="flex-row gap-2">
+            <View className="flex-row flex-wrap gap-2">
               {TYPE_OPTIONS.map((t) => (
                 <Chip
                   key={t}
@@ -150,6 +177,107 @@ export default function NewPostScreen() {
               ))}
             </View>
           </Section>
+
+          {isMeetup && (
+            <>
+              <Section title="모임 일시" required>
+                <View className="flex-row gap-2">
+                  <Pressable
+                    onPress={() => setDatePickerMode('date')}
+                    className="flex-1 flex-row items-center justify-between border border-border-default rounded-md px-3 py-2.5 active:opacity-70"
+                  >
+                    <View className="flex-row items-center gap-2">
+                      <Feather name="calendar" size={14} color="#64748b" />
+                      <Text className={`text-base ${meetupAt ? 'text-text-primary font-semibold' : 'text-text-muted'}`}>
+                        {meetupAt ? formatMeetupAt(meetupAt).slice(0, 16) : '날짜 선택'}
+                      </Text>
+                    </View>
+                    <Feather name="chevron-down" size={14} color="#94a3b8" />
+                  </Pressable>
+                  <Pressable
+                    onPress={() => setDatePickerMode('time')}
+                    disabled={!meetupAt}
+                    className={`flex-1 flex-row items-center justify-between border border-border-default rounded-md px-3 py-2.5 active:opacity-70 ${!meetupAt ? 'opacity-50' : ''}`}
+                  >
+                    <View className="flex-row items-center gap-2">
+                      <Feather name="clock" size={14} color="#64748b" />
+                      <Text className={`text-base ${meetupAt ? 'text-text-primary font-semibold' : 'text-text-muted'}`}>
+                        {meetupAt
+                          ? `${String(meetupAt.getHours()).padStart(2, '0')}:${String(meetupAt.getMinutes()).padStart(2, '0')}`
+                          : '시간 선택'}
+                      </Text>
+                    </View>
+                    <Feather name="chevron-down" size={14} color="#94a3b8" />
+                  </Pressable>
+                </View>
+                {datePickerMode && (
+                  <>
+                    <DateTimePicker
+                      value={meetupAt ?? new Date()}
+                      mode={datePickerMode}
+                      display={Platform.OS === 'ios' ? 'inline' : 'default'}
+                      minimumDate={datePickerMode === 'date' ? new Date() : undefined}
+                      onChange={(event, picked) => {
+                        if (Platform.OS !== 'ios') setDatePickerMode(null);
+                        if (event.type === 'dismissed') return;
+                        if (picked) {
+                          const base = meetupAt ?? new Date();
+                          const next = new Date(base);
+                          if (datePickerMode === 'date') {
+                            next.setFullYear(picked.getFullYear(), picked.getMonth(), picked.getDate());
+                          } else {
+                            next.setHours(picked.getHours(), picked.getMinutes(), 0, 0);
+                          }
+                          setMeetupAt(next);
+                        }
+                      }}
+                    />
+                    {Platform.OS === 'ios' && (
+                      <Pressable
+                        onPress={() => setDatePickerMode(null)}
+                        className="self-end px-3 py-1.5 mt-1 active:opacity-60"
+                      >
+                        <Text className="text-brand-primary text-sm font-semibold">완료</Text>
+                      </Pressable>
+                    )}
+                  </>
+                )}
+                {meetupAt && (
+                  <View className="mt-1 flex-row items-center gap-1.5 px-1">
+                    <Feather name="info" size={12} color="#64748b" />
+                    <Text className="text-text-tertiary text-xs font-semibold">
+                      {formatMeetupAt(meetupAt)}
+                    </Text>
+                  </View>
+                )}
+              </Section>
+
+              <Section title="자유 장소">
+                <TextInput
+                  placeholder={gymId ? '암장 선택됨 — 추가 안내 (선택)' : '예: 양재 시민의 숲, OO공원 입구 …'}
+                  placeholderTextColor="#9CA3AF"
+                  value={meetupLocation}
+                  onChangeText={(t) => setMeetupLocation(t.slice(0, LOCATION_MAX))}
+                  maxLength={LOCATION_MAX}
+                  className="border border-border-default rounded-md px-3 py-2.5 text-text-primary text-base"
+                />
+                <Text className="text-text-tertiary text-xs">
+                  암장 모임이면 아래 "관련 암장"에서 선택, 그 외면 여기에 자유 입력.
+                </Text>
+              </Section>
+
+              <Section title="정원 (선택)">
+                <TextInput
+                  placeholder="비워두면 무제한"
+                  placeholderTextColor="#9CA3AF"
+                  value={meetupCapacity}
+                  onChangeText={(t) => setMeetupCapacity(t.replace(/[^\d]/g, '').slice(0, 3))}
+                  keyboardType="number-pad"
+                  className="border border-border-default rounded-md px-3 py-2.5 text-text-primary text-base"
+                />
+              </Section>
+            </>
+          )}
 
           <Section title="제목">
             <TextInput

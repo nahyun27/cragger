@@ -28,11 +28,31 @@ import {
   useUpdateComment,
   type CommentRow,
   type PostRow,
-  type PostType,
 } from '@/hooks/use-community';
 import { useAuth } from '@/lib/auth-context';
 
 const KO_WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
+
+// 모임 일시 절대값 포맷 (2026.05.30 (토) 19:00)
+function formatMeetupAbsolute(iso: string): string {
+  const d = new Date(iso);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  const w = KO_WEEKDAYS[d.getDay()];
+  const hh = String(d.getHours()).padStart(2, '0');
+  const mi = String(d.getMinutes()).padStart(2, '0');
+  return `${y}.${m}.${dd} (${w}) ${hh}:${mi}`;
+}
+
+function describeMeetupCountdown(iso: string): { label: string; tone: 'urgent' | 'past' | 'soon' | 'far' } {
+  const diffHr = (new Date(iso).getTime() - Date.now()) / 3_600_000;
+  if (diffHr < 0) return { label: '종료된 모임', tone: 'past' };
+  if (diffHr < 6) return { label: `${Math.max(1, Math.round(diffHr))}시간 후`, tone: 'urgent' };
+  if (diffHr < 48) return { label: `${Math.round(diffHr)}시간 후`, tone: 'soon' };
+  const days = Math.floor(diffHr / 24);
+  return { label: `D-${days}`, tone: 'far' };
+}
 
 function formatRelativeTime(iso: string): string {
   const d = new Date(iso);
@@ -237,6 +257,9 @@ export default function PostDetailScreen() {
           {/* Post card (mirrors feed card style) */}
           <View style={s.postCard}>
             <PostHeader post={post} />
+
+            {/* Meetup info card — date / location / capacity */}
+            {post.post_type === 'meetup' && <MeetupInfoCard post={post} />}
 
             {/* Location pill above title — wrapped in a flex-row container
                 so the Pressable can hug its content width inside the column
@@ -447,7 +470,7 @@ export default function PostDetailScreen() {
 
 function PostHeader({ post }: { post: PostRow }) {
   const authorName = post.author?.display_name ?? post.author?.username ?? '익명';
-  const label = post.post_type === 'meetup' ? '모임' : POST_TYPE_LABEL[post.post_type as Exclude<PostType, 'meetup'>];
+  const label = POST_TYPE_LABEL[post.post_type];
   const avatarBg = getAvatarBgColor(authorName);
   const avatarText = getAvatarTextColor(authorName);
   const avatarUrl = post.author?.avatar_url;
@@ -470,6 +493,76 @@ function PostHeader({ post }: { post: PostRow }) {
       </View>
       <View style={[s.badge, { backgroundColor: badge.bg, borderColor: badge.border }]}>
         <Text style={[s.badgeText, { color: badge.text }]}>{label}</Text>
+      </View>
+    </View>
+  );
+}
+
+function MeetupInfoCard({ post }: { post: PostRow }) {
+  const cap = post.meetup_capacity;
+  const remaining = cap != null ? Math.max(0, cap - post.participant_count) : null;
+  const full = cap != null && post.participant_count >= cap;
+  const location = post.gym
+    ? `${post.gym.name}${post.gym.branch ? ` ${post.gym.branch}` : ''}`
+    : post.meetup_location;
+
+  let countdown: { label: string; tone: 'urgent' | 'past' | 'soon' | 'far' } | null = null;
+  if (post.meetup_at) countdown = describeMeetupCountdown(post.meetup_at);
+
+  const toneStyle: Record<string, { bg: string; fg: string }> = {
+    urgent: { bg: '#fee2e2', fg: '#dc2626' },
+    soon:   { bg: '#ffedd5', fg: '#c2410c' },
+    far:    { bg: '#e0f2fe', fg: '#0369a1' },
+    past:   { bg: '#f1f5f9', fg: '#64748b' },
+  };
+
+  return (
+    <View style={s.meetupCard}>
+      <View style={s.meetupCardHeaderRow}>
+        <View style={s.meetupCardTitleRow}>
+          <Feather name="calendar" size={14} color="#b45309" />
+          <Text style={s.meetupCardTitle}>모임 정보</Text>
+        </View>
+        {countdown && (
+          <View style={[s.meetupCardCountdown, { backgroundColor: toneStyle[countdown.tone].bg }]}>
+            <Text style={[s.meetupCardCountdownText, { color: toneStyle[countdown.tone].fg }]}>
+              {countdown.label}
+            </Text>
+          </View>
+        )}
+      </View>
+
+      <View style={s.meetupCardRow}>
+        <Feather name="clock" size={14} color="#92400e" />
+        <Text style={s.meetupCardRowText}>
+          {post.meetup_at ? formatMeetupAbsolute(post.meetup_at) : '날짜 미정'}
+        </Text>
+      </View>
+
+      {location && (
+        <View style={s.meetupCardRow}>
+          <Feather name="map-pin" size={14} color="#92400e" />
+          <Text style={s.meetupCardRowText}>{location}</Text>
+        </View>
+      )}
+
+      <View style={s.meetupCardRow}>
+        <Feather name="users" size={14} color="#92400e" />
+        <Text style={s.meetupCardRowText}>
+          {cap != null
+            ? `${post.participant_count} / ${cap}명`
+            : `정원 무제한 (현재 ${post.participant_count}명)`}
+          {cap != null && remaining != null && remaining > 0 && !full && (
+            <Text style={s.meetupCardRemainText}>  · 남은 자리 {remaining}</Text>
+          )}
+          {full && <Text style={s.meetupCardFullText}>  · 마감</Text>}
+        </Text>
+      </View>
+
+      {/* 참가 신청은 2단계 */}
+      <View style={s.meetupJoinPlaceholder}>
+        <Feather name="info" size={12} color="#64748b" />
+        <Text style={s.meetupJoinPlaceholderText}>참가 신청 기능은 곧 추가될 예정입니다</Text>
       </View>
     </View>
   );
@@ -994,5 +1087,77 @@ const s = StyleSheet.create({
     backgroundColor: '#e2e8f0',
     shadowOpacity: 0,
     elevation: 0,
+  },
+
+  // Meetup info card
+  meetupCard: {
+    backgroundColor: '#fffbeb',
+    borderWidth: 1,
+    borderColor: '#fde68a',
+    borderRadius: 14,
+    padding: 14,
+    marginBottom: 14,
+    gap: 8,
+  },
+  meetupCardHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  meetupCardTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  meetupCardTitle: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#b45309',
+    letterSpacing: -0.2,
+  },
+  meetupCardCountdown: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+  },
+  meetupCardCountdownText: {
+    fontSize: 11,
+    fontWeight: '800',
+  },
+  meetupCardRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  meetupCardRowText: {
+    flex: 1,
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#7c2d12',
+  },
+  meetupCardRemainText: {
+    color: '#92400e',
+    fontWeight: '700',
+  },
+  meetupCardFullText: {
+    color: '#64748b',
+    fontWeight: '800',
+  },
+  meetupJoinPlaceholder: {
+    marginTop: 4,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    backgroundColor: '#fefce8',
+    borderWidth: 1,
+    borderColor: '#fde68a',
+    borderRadius: 10,
+  },
+  meetupJoinPlaceholderText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#64748b',
   },
 });

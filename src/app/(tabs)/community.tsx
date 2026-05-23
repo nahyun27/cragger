@@ -22,7 +22,7 @@ import {
   type PostType,
 } from '@/hooks/use-community';
 
-type FilterKey = 'all' | Exclude<PostType, 'meetup'>;
+type FilterKey = 'all' | PostType;
 
 const FILTER_TABS: {
   key: FilterKey;
@@ -34,6 +34,7 @@ const FILTER_TABS: {
   { key: 'general', label: POST_TYPE_LABEL.general, icon: 'message-circle', accent: '#2563eb' },
   { key: 'question', label: POST_TYPE_LABEL.question, icon: 'help-circle', accent: '#7c3aed' },
   { key: 'review', label: POST_TYPE_LABEL.review, icon: 'star', accent: '#059669' },
+  { key: 'meetup', label: POST_TYPE_LABEL.meetup, icon: 'calendar', accent: '#d97706' },
 ];
 
 const BADGE_COLORS: Record<string, { bg: string; text: string; border: string }> = {
@@ -54,6 +55,62 @@ function formatRelativeTime(iso: string): string {
   const day = Math.floor(hr / 24);
   if (day < 7) return `${day}일 전`;
   return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`;
+}
+
+const KO_WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
+
+// 모임 일시·장소·정원 + 상태 라벨. 미입력 필드는 placeholder 텍스트.
+function describeMeetup(post: PostRow): {
+  when: string;
+  where: string | null;
+  capacity: string;
+  statusLabel: string | null;
+  statusColor: { backgroundColor: string };
+  statusTextColor: { color: string };
+} {
+  let when = '날짜 미정';
+  let statusLabel: string | null = null;
+  let statusBg = '#fef3c7';
+  let statusFg = '#b45309';
+  if (post.meetup_at) {
+    const d = new Date(post.meetup_at);
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    const w = KO_WEEKDAYS[d.getDay()];
+    const hh = String(d.getHours()).padStart(2, '0');
+    const mi = String(d.getMinutes()).padStart(2, '0');
+    when = `${mm}.${dd}(${w}) ${hh}:${mi}`;
+    const hoursLeft = (d.getTime() - Date.now()) / 3_600_000;
+    if (hoursLeft < 0) {
+      statusLabel = '종료';
+      statusBg = '#f1f5f9';
+      statusFg = '#64748b';
+    } else if (hoursLeft < 48) {
+      statusLabel = '곧 시작';
+      statusBg = '#fee2e2';
+      statusFg = '#dc2626';
+    }
+  }
+  const where = post.gym
+    ? `${post.gym.name}${post.gym.branch ? ` ${post.gym.branch}` : ''}`
+    : post.meetup_location;
+  const cap = post.meetup_capacity;
+  const capacity = cap != null
+    ? `${post.participant_count} / ${cap}명`
+    : `정원 무제한 (${post.participant_count}명)`;
+  if (statusLabel == null && cap != null && post.participant_count >= cap) {
+    statusLabel = '마감';
+    statusBg = '#f1f5f9';
+    statusFg = '#64748b';
+  }
+  return {
+    when,
+    where,
+    capacity,
+    statusLabel,
+    statusColor: { backgroundColor: statusBg },
+    statusTextColor: { color: statusFg },
+  };
 }
 
 function getAvatarBgColor(name: string) {
@@ -231,8 +288,9 @@ function PostCard({
   const avatarText = getAvatarTextColor(authorName);
   const avatarUrl = post.author?.avatar_url;
   const badge = BADGE_COLORS[post.post_type] || BADGE_COLORS.general;
-  const label = post.post_type === 'meetup' ? '모임' : POST_TYPE_LABEL[post.post_type as Exclude<PostType, 'meetup'>];
+  const label = POST_TYPE_LABEL[post.post_type];
   const firstImage = post.image_urls[0];
+  const meetup = post.post_type === 'meetup' ? describeMeetup(post) : null;
 
   return (
     <Pressable
@@ -280,6 +338,31 @@ function PostCard({
             {post.gym.name}
             {post.gym.branch ? ` ${post.gym.branch}` : ''}
           </Text>
+        </View>
+      )}
+
+      {/* Meetup info block */}
+      {meetup && (
+        <View style={s.meetupInfoBox}>
+          <View style={s.meetupInfoRow}>
+            <Feather name="calendar" size={12} color="#b45309" />
+            <Text style={s.meetupInfoText} numberOfLines={1}>{meetup.when}</Text>
+          </View>
+          {meetup.where && (
+            <View style={s.meetupInfoRow}>
+              <Feather name="map-pin" size={12} color="#b45309" />
+              <Text style={s.meetupInfoText} numberOfLines={1}>{meetup.where}</Text>
+            </View>
+          )}
+          <View style={s.meetupInfoRow}>
+            <Feather name="users" size={12} color="#b45309" />
+            <Text style={s.meetupInfoText} numberOfLines={1}>{meetup.capacity}</Text>
+            {meetup.statusLabel && (
+              <View style={[s.meetupStatusPill, meetup.statusColor]}>
+                <Text style={[s.meetupStatusText, meetup.statusTextColor]}>{meetup.statusLabel}</Text>
+              </View>
+            )}
+          </View>
         </View>
       )}
 
@@ -609,5 +692,37 @@ const s = StyleSheet.create({
   },
   metricCountTextLiked: {
     color: '#ef4444',
+  },
+
+  // Meetup info block (inside PostCard, post_type === 'meetup')
+  meetupInfoBox: {
+    backgroundColor: '#fffbeb',
+    borderWidth: 1,
+    borderColor: '#fde68a',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginBottom: 10,
+    gap: 6,
+  },
+  meetupInfoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  meetupInfoText: {
+    flex: 1,
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#92400e',
+  },
+  meetupStatusPill: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  meetupStatusText: {
+    fontSize: 10,
+    fontWeight: '800',
   },
 });
