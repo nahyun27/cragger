@@ -24,6 +24,7 @@ export const GYM_LOGOS: Record<string, ImageSourcePropType> = {
   '캐치스톤':     require('../../assets/gym-logos/캐치스톤.png'),
   '서울볼더스':   require('../../assets/gym-logos/서울볼더스.png'),
   '서울숲':       require('../../assets/gym-logos/서울숲-white.png'),
+  '손상원':       require('../../assets/gym-logos/손상원-white.png'),
   '슈퍼비':       require('../../assets/gym-logos/슈퍼비.png'),
   '스파이시':     require('../../assets/gym-logos/스파이시.png'),
   '온플릭':       require('../../assets/gym-logos/온플릭.png'),
@@ -51,6 +52,12 @@ export const GYM_BG_BY_BRANCH: Record<string, Record<string, string>> = {
     '영등포점': '#F97316',  // 주황
     '종로점':   '#0EA5E9',  // 하늘
     '잠실점':   '#EC4899',  // 분홍
+  },
+  // 손상원 3개 지점 — 인스타 프로필 배경색 기반
+  '손상원': {
+    '강남역점': '#3D3FAA',  // 파랑/indigo
+    '을지로점': '#6B7F40',  // 올리브 그린
+    '판교점':   '#E63D2E',  // 빨강
   },
   // 클라이밍파크 5개 지점 — linktree thumbnail 색 기반
   '클라이밍파크': {
