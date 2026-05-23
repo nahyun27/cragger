@@ -39,6 +39,7 @@ export const GYM_LOGOS: Record<string, ImageSourcePropType> = {
   // 더클라임은 지점별 배경색 — 흰 로고 사용
   '더클라임':     require('../../assets/gym-logos/더클라임-white.png'),
   '닷클라이밍':   require('../../assets/gym-logos/닷클라이밍짐.png'),
+  '닷 클라이밍': require('../../assets/gym-logos/닷클라이밍짐.png'),
   '드림캐처':     require('../../assets/gym-logos/드림캐쳐.png'),
   '노루':         require('../../assets/gym-logos/노루.png'),
   '락트리':       require('../../assets/gym-logos/락트리.png'),
