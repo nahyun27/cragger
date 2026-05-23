@@ -62,6 +62,7 @@ export const GYM_BG_DEFAULT: Record<string, string> = {
   '피커스':     '#F1F2EE',  // 로고 원본 베이지 — 누끼 X
   '클라임잇':   '#323384',  // 로고 원본 남보라
   '원더월':     '#1a1a1a',  // 검정 brand 배경 (흰 로고)
+  '클럽클라이밍': '#F2EEE5', // 로고 원본 베이지 — 누끼 X
 };
 
 export const GYM_BG_BY_BRANCH: Record<string, Record<string, string>> = {
