@@ -30,18 +30,29 @@ const SEND_RESULTS = new Set(['send', 'onsight', 'flash']);
 // 2 쿼리: sessions (+ joined gym) → attempts (+ problem.color).
 // attempts → problems → gyms 깊이 traversal 안 함 — session.gym_id가 이미
 // 모든 attempt의 gym 정보를 결정.
-export function useUserStats() {
+// Optional date-range filter. Both inclusive lower bound + exclusive upper bound
+// in YYYY-MM-DD form. If omitted, returns lifetime stats.
+export type UserStatsRange = {
+  from?: string; // inclusive
+  to?: string;   // exclusive
+};
+
+export function useUserStats(range: UserStatsRange = {}) {
   const { session: authSession } = useAuth();
   const userId = authSession?.user.id;
+  const { from, to } = range;
   return useQuery({
-    queryKey: ['user-stats', userId] as const,
+    queryKey: ['user-stats', userId, from ?? null, to ?? null] as const,
     enabled: !!userId,
     queryFn: async (): Promise<UserStats> => {
       // 1) Sessions
-      const { data: sessions, error: sErr } = await supabase
+      let q = supabase
         .from('sessions')
         .select('id, session_date, gym_id, gym:gyms(id, name, branch)')
         .eq('user_id', userId!);
+      if (from) q = q.gte('session_date', from);
+      if (to) q = q.lt('session_date', to);
+      const { data: sessions, error: sErr } = await q;
       if (sErr) throw new Error(sErr.message);
       const sessionsList = (sessions ?? []) as Array<{
         id: string;

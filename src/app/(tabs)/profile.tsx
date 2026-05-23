@@ -34,6 +34,7 @@ import {
   type MembershipRow,
 } from '@/hooks/use-memberships';
 import { useAuth } from '@/lib/auth-context';
+import { currentMonth, monthRange } from '@/lib/date-ranges';
 import { supabase } from '@/lib/supabase';
 
 const DEFAULT_EXPANDED_COUNT = 2;
@@ -42,7 +43,13 @@ export default function ProfileScreen() {
   const router = useRouter();
   const { session } = useAuth();
   const { data: profile } = useProfile();
-  const { data: stats, isLoading, error } = useUserStats();
+  // 마페이지 카드는 "이번 달" 스코프. 전체 통계는 /stats 라우트로 이동.
+  const monthAnchor = React.useMemo(() => currentMonth(), []);
+  const thisMonthRange = React.useMemo(
+    () => monthRange(monthAnchor.year, monthAnchor.month),
+    [monthAnchor],
+  );
+  const { data: stats, isLoading, error } = useUserStats(thisMonthRange);
   const [menuVisible, setMenuVisible] = useState(false);
 
   const email = session?.user.email ?? '';
@@ -132,9 +139,21 @@ export default function ProfileScreen() {
           onEdit={() => router.push('/profile/edit')}
         />
 
-        {/* Stats section */}
+        {/* Stats section — scoped to this month */}
         <View style={s.sectionContainer}>
-          <Text style={s.sectionTitle}>나의 운동 통계</Text>
+          <View style={s.sectionHeaderRow}>
+            <Text style={s.sectionTitle}>{monthAnchor.month}월 운동 통계</Text>
+            <Pressable
+              onPress={() => router.push('/stats')}
+              hitSlop={6}
+              style={({ pressed }) => ({ opacity: pressed ? 0.5 : 1 })}
+            >
+              <View style={s.allStatsLink}>
+                <Text style={s.allStatsLinkText}>전체 통계</Text>
+                <Feather name="chevron-right" size={14} color="#475569" />
+              </View>
+            </Pressable>
+          </View>
 
           {isLoading && (
             <View style={s.loaderWrap}>
@@ -665,26 +684,6 @@ function ShoeCard({ shoe }: { shoe: ClimbingShoe }) {
       style={({ pressed }) => ({ opacity: pressed ? 0.92 : 1 })}
     >
       <View style={s.shoeCard}>
-      <View style={s.shoeIcon}>
-        <Feather name="package" size={18} color="#475569" />
-      </View>
-      <View style={{ flex: 1, minWidth: 0 }}>
-        <Text style={s.shoeTitle} numberOfLines={1}>
-          {title}
-        </Text>
-        <View style={s.shoeMetaRow}>
-          {shoe.size ? (
-            <Text style={s.shoeMetaText}>{shoe.size}</Text>
-          ) : (
-            <Text style={s.shoeMetaText}>사이즈 미입력</Text>
-          )}
-          <View
-            style={[
-              s.shoeStatusBadge,
-              { backgroundColor: palette.bg, borderColor: palette.border },
-            ]}
-          >
-            <Text style={[s.shoeStatusText, { color: palette.text }]}>
         <View style={s.shoeIcon}>
           <Feather name="package" size={18} color="#475569" />
         </View>
@@ -1298,6 +1297,18 @@ const s = StyleSheet.create({
     color: '#ffffff',
     fontSize: 12,
     fontWeight: '800',
+  },
+
+  // Stats "전체 통계 →" link
+  allStatsLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+  },
+  allStatsLinkText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#475569',
   },
 
   // Shoes section
