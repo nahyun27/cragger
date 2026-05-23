@@ -7,6 +7,7 @@ import {
   Linking,
   Pressable,
   ScrollView,
+  StyleSheet,
   Text,
   View,
 } from 'react-native';
@@ -15,6 +16,12 @@ import { Feather } from '@expo/vector-icons';
 
 import { GymStatsCard } from '@/components/stats/gym-stats-card';
 import { useProfile } from '@/hooks/use-profile';
+import {
+  SHOE_STATUS_LABEL,
+  useShoes,
+  type ClimbingShoe,
+  type ShoeStatus,
+} from '@/hooks/use-shoes';
 import { useUserStats } from '@/hooks/use-user-stats';
 import {
   daysFromTodayTo,
@@ -40,23 +47,37 @@ export default function ProfileScreen() {
   const firstChar = username && username.length > 0 ? username.charAt(0).toUpperCase() : '?';
 
   return (
-    <SafeAreaView className="flex-1 bg-background-primary" edges={['top']}>
+    <SafeAreaView style={s.container} edges={['top']}>
       {/* Header bar */}
-      <View className="flex-row items-center justify-between px-6 py-3 border-b border-border-subtle">
-        <Text className="text-text-primary text-xl font-extrabold tracking-tight">마이페이지</Text>
-        <View className="flex-row items-center" style={{ gap: 2 }}>
+      <View style={s.header}>
+        <View>
+          <Text style={s.headerTitle}>마이페이지</Text>
+          <Text style={s.headerSubtitle}>나의 등반 프로필 & 회원권</Text>
+        </View>
+        <View style={s.headerActions}>
           <Pressable
             onPress={() => router.push('/profile/edit')}
-            className="items-center justify-center rounded-[10px] active:opacity-60"
-            style={{ width: 38, height: 38 }}
+            style={({ pressed }) => [s.headerBtn, pressed && { opacity: 0.6 }]}
             hitSlop={6}
           >
             <Feather name="edit-3" size={18} color="#64748b" />
           </Pressable>
           <Pressable
-            onPress={() => supabase.auth.signOut()}
-            className="items-center justify-center rounded-[10px] active:opacity-60"
-            style={{ width: 38, height: 38 }}
+            onPress={() => {
+              Alert.alert(
+                '로그아웃',
+                '정말 로그아웃 하시겠습니까?',
+                [
+                  { text: '취소', style: 'cancel' },
+                  {
+                    text: '로그아웃',
+                    style: 'destructive',
+                    onPress: () => supabase.auth.signOut(),
+                  },
+                ],
+              );
+            }}
+            style={({ pressed }) => [s.headerBtn, pressed && { opacity: 0.6 }]}
             hitSlop={6}
           >
             <Feather name="log-out" size={18} color="#ef4444" />
@@ -64,25 +85,27 @@ export default function ProfileScreen() {
         </View>
       </View>
 
-      <ScrollView contentContainerClassName="pb-10">
+      <ScrollView contentContainerStyle={s.scrollContent}>
         {/* Profile Card */}
-        <View className="px-6 py-5 flex-row items-center gap-4">
-          <View className="w-16 h-16 rounded-full bg-brand-primary/10 border-2 border-brand-primary items-center justify-center shadow-sm overflow-hidden">
+        <View style={s.profileCard}>
+          <View style={s.avatarContainer}>
             {profile?.avatar_url ? (
               <Image
                 source={{ uri: profile.avatar_url }}
-                className="w-full h-full"
+                style={s.avatarImage}
                 resizeMode="cover"
               />
             ) : (
-              <Text className="text-brand-primary text-2xl font-extrabold">{firstChar}</Text>
+              <View style={s.avatarFallback}>
+                <Text style={s.avatarFallbackText}>{firstChar}</Text>
+              </View>
             )}
           </View>
-          <View className="flex-1 gap-1">
-            <Text className="text-text-primary text-xl font-extrabold tracking-tight" numberOfLines={1}>
+          <View style={s.profileInfo}>
+            <Text style={s.profileName} numberOfLines={1}>
               {username}
             </Text>
-            <Text className="text-text-tertiary text-xs" numberOfLines={1}>
+            <Text style={s.profileEmail} numberOfLines={1}>
               {email}
             </Text>
             {profile?.instagram_handle ? (
@@ -94,22 +117,26 @@ export default function ProfileScreen() {
                     Alert.alert('열기 실패', 'Instagram 앱/브라우저를 찾을 수 없어요'),
                   )
                 }
-                className="flex-row items-center gap-1 mt-1 active:opacity-60 self-start"
+                style={({ pressed }) => [{ opacity: pressed ? 0.6 : 1 }]}
                 hitSlop={6}
               >
-                <Feather name="instagram" size={12} color="#475569" />
-                <Text className="text-brand-primary text-xs font-semibold">
-                  @{profile.instagram_handle}
-                </Text>
+                <View style={s.instaTag}>
+                  <Feather name="instagram" size={12} color="#0d9488" />
+                  <Text style={s.instaTagText}>
+                    @{profile.instagram_handle}
+                  </Text>
+                </View>
               </Pressable>
             ) : (
               <Pressable
                 onPress={() => router.push('/profile/edit')}
-                className="flex-row items-center gap-1 mt-1 active:opacity-60 self-start"
+                style={({ pressed }) => [{ opacity: pressed ? 0.6 : 1 }]}
                 hitSlop={6}
               >
-                <Feather name="plus" size={12} color="#94a3b8" />
-                <Text className="text-text-tertiary text-xs">Instagram 연결</Text>
+                <View style={s.instaConnectBtn}>
+                  <Feather name="plus" size={12} color="#94a3b8" />
+                  <Text style={s.instaConnectText}>Instagram 연결</Text>
+                </View>
               </Pressable>
             )}
           </View>
@@ -123,47 +150,59 @@ export default function ProfileScreen() {
         />
 
         {/* Stats section */}
-        <View className="px-6 mt-4">
-          <Text className="text-text-primary text-lg font-bold mb-3.5">나의 운동 통계</Text>
+        <View style={s.sectionContainer}>
+          <Text style={s.sectionTitle}>나의 운동 통계</Text>
 
           {isLoading && (
-            <View className="py-8 items-center">
-              <ActivityIndicator />
+            <View style={s.loaderWrap}>
+              <ActivityIndicator color="#0d9488" />
             </View>
           )}
 
           {error && (
-            <View className="border border-status-danger rounded-2xl p-4 bg-background-secondary">
-              <Text className="text-status-danger">{error.message}</Text>
+            <View style={s.errorCard}>
+              <Text style={s.errorText}>{error.message}</Text>
             </View>
           )}
 
           {stats && (
             <>
               {/* Summary card: 3 metrics */}
-              <View className="bg-background-secondary rounded-2xl p-5 mb-5 border border-border-subtle shadow-sm">
-                <View className="flex-row justify-between">
-                  <SummaryMetric label="총 세션" value={stats.totalSessions} icon="calendar" />
-                  <Divider />
-                  <SummaryMetric label="총 완등" value={stats.totalSends} icon="check-circle" />
-                  <Divider />
-                  <SummaryMetric label="활동 일수" value={stats.activityDays} icon="award" />
+              <View style={s.summaryCard}>
+                <View style={s.summaryMetricsRow}>
+                  <SummaryMetric
+                    label="총 세션"
+                    value={stats.totalSessions}
+                    icon="calendar"
+                    color="#4f46e5"
+                    bgColor="#f5f3ff"
+                  />
+                  <SummaryMetric
+                    label="총 완등"
+                    value={stats.totalSends}
+                    icon="check-circle"
+                    color="#0d9488"
+                    bgColor="#f0fdfa"
+                  />
+                  <SummaryMetric
+                    label="활동 일수"
+                    value={stats.activityDays}
+                    icon="award"
+                    color="#7c3aed"
+                    bgColor="#faf5ff"
+                  />
                 </View>
               </View>
 
               {/* Gym list */}
               {stats.gyms.length === 0 ? (
-                <View className="bg-background-secondary rounded-2xl p-6 border border-border-subtle items-center">
-                  <Feather name="activity" size={24} color="#94a3b8" className="mb-2" />
-                  <Text className="text-text-secondary text-sm">
-                    아직 운동 기록이 없어요
-                  </Text>
-                  <Text className="text-text-tertiary text-xs mt-1">
-                    기록 탭에서 첫 세션을 추가해보세요
-                  </Text>
+                <View style={s.emptyStatsCard}>
+                  <Feather name="activity" size={24} color="#94a3b8" />
+                  <Text style={s.emptyStatsTitle}>아직 운동 기록이 없어요</Text>
+                  <Text style={s.emptyStatsSubtitle}>기록 탭에서 첫 세션을 추가해보세요</Text>
                 </View>
               ) : (
-                <View className="gap-3">
+                <View style={s.gymListContainer}>
                   {stats.gyms.map((gym, i) => (
                     <GymStatsCard
                       key={gym.gymId}
@@ -178,23 +217,35 @@ export default function ProfileScreen() {
         </View>
 
         <MembershipsSection />
+
+        <ShoesSection />
       </ScrollView>
     </SafeAreaView>
   );
 }
 
-function SummaryMetric({ label, value, icon }: { label: string; value: number; icon: 'calendar' | 'check-circle' | 'award' }) {
+function SummaryMetric({
+  label,
+  value,
+  icon,
+  color,
+  bgColor,
+}: {
+  label: string;
+  value: number;
+  icon: 'calendar' | 'check-circle' | 'award';
+  color: string;
+  bgColor: string;
+}) {
   return (
-    <View className="flex-1 items-center gap-1">
-      <Feather name={icon} size={15} color="#475569" className="mb-0.5" />
-      <Text className="text-text-tertiary text-[10px] font-semibold">{label}</Text>
-      <Text className="text-text-primary text-lg font-black mt-0.5">{value}</Text>
+    <View style={s.metricCard}>
+      <View style={[s.metricIconBg, { backgroundColor: bgColor }]}>
+        <Feather name={icon} size={16} color={color} />
+      </View>
+      <Text style={s.metricLabel}>{label}</Text>
+      <Text style={[s.metricVal, { color }]}>{value}</Text>
     </View>
   );
-}
-
-function Divider() {
-  return <View className="w-px bg-border-subtle my-1" />;
 }
 
 function formatClimbingDuration(iso: string): string {
@@ -231,13 +282,13 @@ function BodyInfoStrip({
   const hasAny = heightCm != null || reachCm != null || climbingStartDate != null;
   if (!hasAny) {
     return (
-      <View className="px-6">
+      <View style={s.bodyStripWrap}>
         <Pressable
           onPress={onEdit}
-          className="flex-row items-center justify-center gap-2 px-3 py-2.5 rounded-xl border border-dashed border-border-default active:opacity-70"
+          style={({ pressed }) => [s.bodyStripEmptyBtn, pressed && { opacity: 0.7 }]}
         >
           <Feather name="plus" size={14} color="#94a3b8" />
-          <Text className="text-text-tertiary text-xs font-semibold">
+          <Text style={s.bodyStripEmptyText}>
             키 · 리치 · 클라이밍 시작일 추가
           </Text>
         </Pressable>
@@ -249,26 +300,33 @@ function BodyInfoStrip({
     heightCm != null && reachCm != null ? reachCm - heightCm : null;
 
   return (
-    <View className="px-6">
-      <View className="flex-row bg-background-secondary border border-border-subtle rounded-2xl px-3 py-3">
-        <BodyMetric label="키" value={heightCm != null ? `${heightCm}cm` : '-'} />
-        <BodyDivider />
-        <BodyMetric
-          label="리치"
-          value={reachCm != null ? `${reachCm}cm` : '-'}
-          sub={apeIndex != null ? `${apeIndex > 0 ? '+' : ''}${apeIndex}` : null}
-        />
-        <BodyDivider />
-        <BodyMetric
-          label="클라이밍"
-          value={
-            climbingStartDate
-              ? formatClimbingDuration(climbingStartDate)
-              : '-'
-          }
-          sub={climbingStartDate ? `${formatStartDate(climbingStartDate)} 시작` : null}
-        />
-      </View>
+    <View style={s.bodyStripWrap}>
+      <Pressable
+        onPress={onEdit}
+        style={({ pressed }) => [
+          { opacity: pressed ? 0.85 : 1, transform: [{ scale: pressed ? 0.99 : 1 }] }
+        ]}
+      >
+        <View style={s.bodyStripCard}>
+          <BodyMetric label="키" value={heightCm != null ? `${heightCm}cm` : '-'} />
+          <BodyDivider />
+          <BodyMetric
+            label="리치"
+            value={reachCm != null ? `${reachCm}cm` : '-'}
+            sub={apeIndex != null ? `${apeIndex > 0 ? '+' : ''}${apeIndex}` : null}
+          />
+          <BodyDivider />
+          <BodyMetric
+            label="클라이밍"
+            value={
+              climbingStartDate
+                ? formatClimbingDuration(climbingStartDate)
+                : '-'
+            }
+            sub={climbingStartDate ? `${formatStartDate(climbingStartDate)} 시작` : null}
+          />
+        </View>
+      </Pressable>
     </View>
   );
 }
@@ -283,16 +341,16 @@ function BodyMetric({
   sub?: string | null;
 }) {
   return (
-    <View className="flex-1 items-center gap-0.5">
-      <Text className="text-text-tertiary text-[10px] font-semibold">{label}</Text>
-      <Text className="text-text-primary text-sm font-extrabold">{value}</Text>
-      {sub ? <Text className="text-text-tertiary text-[10px]">{sub}</Text> : null}
+    <View style={s.bodyMetricCol}>
+      <Text style={s.bodyMetricLabel}>{label}</Text>
+      <Text style={s.bodyMetricVal}>{value}</Text>
+      {sub ? <Text style={s.bodyMetricSub}>{sub}</Text> : null}
     </View>
   );
 }
 
 function BodyDivider() {
-  return <View className="w-px bg-border-subtle my-1" />;
+  return <View style={s.bodyDivider} />;
 }
 
 function MembershipsSection() {
@@ -316,42 +374,44 @@ function MembershipsSection() {
   }, [data]);
 
   return (
-    <View className="px-6 mt-10">
-      <View className="flex-row items-center justify-between mb-4">
-        <Text className="text-text-primary text-xl font-bold">내 회원권</Text>
+    <View style={s.membershipSection}>
+      <View style={s.membershipHeader}>
+        <Text style={s.membershipTitle}>내 회원권</Text>
         <Pressable
           onPress={() => router.push('/membership/new')}
-          className="px-3 py-1.5 rounded-xl bg-brand-primary active:opacity-90 flex-row items-center gap-1 shadow-sm"
+          style={({ pressed }) => [{ opacity: pressed ? 0.9 : 1 }]}
         >
-          <Feather name="plus" size={14} color="white" />
-          <Text className="text-white text-xs font-bold">추가</Text>
+          <View style={s.addMembershipBtn}>
+            <Feather name="plus" size={14} color="white" />
+            <Text style={s.addMembershipText}>추가</Text>
+          </View>
         </Pressable>
       </View>
 
       {isLoading && (
-        <View className="py-4 items-center">
-          <ActivityIndicator />
+        <View style={s.loaderWrap}>
+          <ActivityIndicator color="#0d9488" />
         </View>
       )}
 
       {error && (
-        <View className="border border-status-danger rounded-2xl p-4 bg-background-secondary">
-          <Text className="text-status-danger">{error.message}</Text>
+        <View style={s.errorCard}>
+          <Text style={s.errorText}>{error.message}</Text>
         </View>
       )}
 
       {data && active.length === 0 && expired.length === 0 && (
-        <View className="bg-background-secondary rounded-2xl p-6 border border-border-subtle items-center">
-          <Feather name="credit-card" size={24} color="#94a3b8" className="mb-2" />
-          <Text className="text-text-secondary text-sm">등록된 회원권이 없어요</Text>
-          <Text className="text-text-tertiary text-xs mt-1">
+        <View style={s.emptyMembershipCard}>
+          <Feather name="credit-card" size={24} color="#94a3b8" />
+          <Text style={s.emptyMembershipTitle}>등록된 회원권이 없어요</Text>
+          <Text style={s.emptyMembershipSubtitle}>
             우측 상단 + 추가 버튼으로 등록하세요
           </Text>
         </View>
       )}
 
       {active.length > 0 && (
-        <View className="gap-2.5">
+        <View style={s.membershipList}>
           {active.map((m) => (
             <MembershipCard key={m.id} membership={m} />
           ))}
@@ -359,11 +419,13 @@ function MembershipsSection() {
       )}
 
       {expired.length > 0 && (
-        <View className="mt-6 gap-2.5">
-          <Text className="text-text-tertiary text-xs px-1 font-semibold">지난 회원권</Text>
-          {expired.map((m) => (
-            <MembershipCard key={m.id} membership={m} expired />
-          ))}
+        <View style={s.expiredSection}>
+          <Text style={s.expiredLabel}>지난 회원권</Text>
+          <View style={s.membershipList}>
+            {expired.map((m) => (
+              <MembershipCard key={m.id} membership={m} expired />
+            ))}
+          </View>
         </View>
       )}
     </View>
@@ -424,111 +486,777 @@ function MembershipCard({
 
   const isPasses = membership.membership_type === 'passes';
 
+  const cardStyle = [
+    s.mCard,
+    expired && s.mCardExpired,
+    expSoon && s.mCardUrgent,
+  ];
+
+  const badgeStyle = expired
+    ? s.mBadgeExpired
+    : expSoon
+    ? s.mBadgeUrgent
+    : s.mBadge;
+
+  const badgeTextStyle = expired
+    ? s.mBadgeTextExpired
+    : expSoon
+    ? s.mBadgeTextUrgent
+    : s.mBadgeText;
+
   return (
-    <View
-      className={`flex-row items-center border rounded-2xl overflow-hidden shadow-sm ${
-        expired
-          ? 'border-border-subtle bg-background-secondary/50 opacity-60'
-          : expSoon
-            ? 'border-status-danger bg-status-danger/5'
-            : 'border-border-subtle bg-background-secondary'
-      }`}
-    >
+    <View style={cardStyle}>
       <Pressable
         onPress={() =>
           router.push({ pathname: '/membership/[id]', params: { id: membership.id } })
         }
-        className="flex-1 p-4 active:opacity-80"
+        style={({ pressed }) => [{ flex: 1, opacity: pressed ? 0.8 : 1 }]}
       >
-        <View className="flex-row items-center gap-2 mb-1.5 flex-wrap">
-          <View
-            className={`px-2.5 py-0.5 rounded-full border ${
-              expired
-                ? 'border-border-subtle bg-background-tertiary'
-                : expSoon
-                  ? 'border-status-danger/30 bg-status-danger/10'
-                  : 'border-brand-primary/20 bg-brand-primary/10'
-            }`}
-          >
-            <Text
-              className={`text-[10px] font-bold ${
-                expired
-                  ? 'text-text-tertiary'
-                  : expSoon
-                    ? 'text-status-danger'
-                    : 'text-brand-primary'
-              }`}
-            >
-              {resolveTypeLabel(membership.membership_type)}
-            </Text>
-          </View>
-          {expSoon && (
-            <View className="px-2.5 py-0.5 rounded-full bg-status-danger/10 border border-status-danger/30">
-              <Text className="text-status-danger text-[10px] font-bold">만료 임박</Text>
+        <View style={s.mCardContent}>
+          <View style={s.mBadgeRow}>
+            <View style={badgeStyle}>
+              <Text style={badgeTextStyle}>
+                {resolveTypeLabel(membership.membership_type)}
+              </Text>
             </View>
-          )}
-        </View>
+            {expSoon && (
+              <View style={s.mBadgeUrgent}>
+                <Text style={s.mBadgeTextUrgent}>만료 임박</Text>
+              </View>
+            )}
+          </View>
 
-        <Text
-          className={`text-base font-extrabold ${
-            expired ? 'text-text-tertiary' : 'text-text-primary'
-          }`}
-          numberOfLines={1}
-        >
-          {gymLabel}
-        </Text>
-        <Text
-          className={`text-xs mt-1 ${
-            expSoon ? 'text-status-danger font-medium' : 'text-text-secondary'
-          }`}
-        >
-          {formatMembershipSubtitle(membership, expired)}
-        </Text>
+          <Text
+            style={expired ? s.mGymTextExpired : s.mGymText}
+            numberOfLines={1}
+          >
+            {gymLabel}
+          </Text>
+        </View>
       </Pressable>
 
-      {!expired && isPasses && (
+      <View style={s.mRightCol}>
+        <Text style={[s.mRightStatText, expSoon && s.mSubtitleTextUrgent]}>
+          {formatMembershipRightStat(membership, expired)}
+        </Text>
+
+        {!expired && isPasses && (
+          <Pressable
+            onPress={handleUsePass}
+            disabled={
+              usePass.isPending ||
+              (membership.total_passes != null &&
+                membership.used_passes >= membership.total_passes)
+            }
+            style={({ pressed }) => [{ opacity: pressed ? 0.8 : 1 }]}
+          >
+            <View style={[
+              s.usePassBtn,
+              (membership.total_passes != null &&
+                membership.used_passes >= membership.total_passes) && s.usePassBtnDisabled
+            ]}>
+              {usePass.isPending ? (
+                <ActivityIndicator size="small" color="white" />
+              ) : (
+                <>
+                  <Feather name="check" size={12} color="white" />
+                  <Text style={s.usePassBtnText}>사용</Text>
+                </>
+              )}
+            </View>
+          </Pressable>
+        )}
+      </View>
+    </View>
+  );
+}
+
+function formatMembershipRightStat(m: MembershipRow, expired?: boolean): string {
+  if (m.membership_type === 'passes') {
+    const total = m.total_passes ?? 0;
+    const remaining = Math.max(0, total - m.used_passes);
+    if (expired) return '소진됨';
+    return `${remaining}회 남음`;
+  }
+  if (!m.end_date) return '';
+  if (expired) return '만료됨';
+  const d = daysFromTodayTo(m.end_date);
+  return d === 0 ? 'D-Day' : `D-${d}`;
+}
+
+// ─── Shoes section ───────────────────────────────────────────
+function ShoesSection() {
+  const router = useRouter();
+  const { data, isLoading, error } = useShoes();
+
+  return (
+    <View style={s.sectionContainer}>
+      <View style={s.sectionHeaderRow}>
+        <Text style={s.sectionTitle}>내 암벽화</Text>
         <Pressable
-          onPress={handleUsePass}
-          disabled={
-            usePass.isPending ||
-            (membership.total_passes != null &&
-              membership.used_passes >= membership.total_passes)
-          }
-          className="mr-4 px-3.5 py-2 rounded-xl bg-brand-primary flex-row items-center gap-1 active:opacity-90 disabled:bg-background-tertiary"
+          onPress={() => router.push('/shoes/new')}
+          style={({ pressed }) => [s.addBtn, pressed && { opacity: 0.8 }]}
         >
-          {usePass.isPending ? (
-            <ActivityIndicator size="small" color="white" />
-          ) : (
-            <>
-              <Feather name="check" size={14} color="white" />
-              <Text className="text-white text-xs font-bold">사용</Text>
-            </>
-          )}
+          <Feather name="plus" size={14} color="#ffffff" />
+          <Text style={s.addBtnText}>추가</Text>
         </Pressable>
+      </View>
+
+      {isLoading && (
+        <View style={s.loaderWrap}>
+          <ActivityIndicator color="#0d9488" />
+        </View>
+      )}
+
+      {error && (
+        <View style={s.errorCard}>
+          <Text style={s.errorText}>{error.message}</Text>
+        </View>
+      )}
+
+      {data && data.length === 0 && (
+        <View style={s.emptyStatsCard}>
+          <Feather name="package" size={24} color="#94a3b8" />
+          <Text style={s.emptyStatsTitle}>등록된 암벽화가 없어요</Text>
+          <Text style={s.emptyStatsSubtitle}>
+            우측 상단 + 추가 버튼으로 등록하세요
+          </Text>
+        </View>
+      )}
+
+      {data && data.length > 0 && (
+        <View style={s.shoeList}>
+          {data.map((shoe) => (
+            <ShoeCard key={shoe.id} shoe={shoe} />
+          ))}
+        </View>
       )}
     </View>
   );
 }
 
-function formatMembershipSubtitle(m: MembershipRow, expired?: boolean): string {
-  switch (m.membership_type) {
-    case 'monthly':
-    case 'period': {
-      const label = m.membership_type === 'monthly' ? '월 회원권' : '기간권';
-      if (!m.end_date) return label;
-      if (expired) return `${label} · 종료됨 (${m.end_date})`;
-      const days = daysFromTodayTo(m.end_date);
-      return `${label} · D-${days} 남음`;
-    }
-    case 'passes': {
-      const total = m.total_passes ?? 0;
-      const remaining = Math.max(0, total - m.used_passes);
-      if (expired) return `${total}회권 · 소진됨`;
-      return `${total}회권 · ${remaining}회 남음`;
-    }
-    case 'single':
-      return expired ? `1일권 · 종료 (${m.start_date})` : `1일권 · ${m.start_date} 방문`;
-    default:
-      return '';
-  }
+function ShoeCard({ shoe }: { shoe: ClimbingShoe }) {
+  const router = useRouter();
+  const palette = STATUS_PALETTE[shoe.status];
+  const title = [shoe.brand, shoe.model].filter(Boolean).join(' ') || shoe.model;
+  return (
+    <Pressable
+      onPress={() =>
+        router.push({ pathname: '/shoes/[id]', params: { id: shoe.id } })
+      }
+      style={({ pressed }) => [s.shoeCard, pressed && { opacity: 0.92 }]}
+    >
+      <View style={s.shoeIcon}>
+        <Feather name="package" size={18} color="#475569" />
+      </View>
+      <View style={{ flex: 1, minWidth: 0 }}>
+        <Text style={s.shoeTitle} numberOfLines={1}>
+          {title}
+        </Text>
+        <View style={s.shoeMetaRow}>
+          {shoe.size ? (
+            <Text style={s.shoeMetaText}>{shoe.size}</Text>
+          ) : (
+            <Text style={s.shoeMetaText}>사이즈 미입력</Text>
+          )}
+          <View
+            style={[
+              s.shoeStatusBadge,
+              { backgroundColor: palette.bg, borderColor: palette.border },
+            ]}
+          >
+            <Text style={[s.shoeStatusText, { color: palette.text }]}>
+              {SHOE_STATUS_LABEL[shoe.status]}
+            </Text>
+          </View>
+        </View>
+      </View>
+      <Feather name="chevron-right" size={16} color="#cbd5e1" />
+    </Pressable>
+  );
 }
+
+const STATUS_PALETTE: Record<
+  ShoeStatus,
+  { bg: string; border: string; text: string }
+> = {
+  active: { bg: '#ecfeff', border: '#a5f3fc', text: '#0e7490' },
+  resole_pending: { bg: '#fff7ed', border: '#fed7aa', text: '#c2410c' },
+  retired: { bg: '#f1f5f9', border: '#e2e8f0', text: '#64748b' },
+};
+
+// ─── Styles ──────────────────────────────────────────────────
+const s = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#f8fafc',
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 24,
+    paddingTop: 16,
+    paddingBottom: 14,
+    backgroundColor: '#ffffff',
+    borderBottomWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  headerTitle: {
+    fontSize: 24,
+    fontWeight: '800',
+    color: '#0f172a',
+    letterSpacing: -0.5,
+  },
+  headerSubtitle: {
+    fontSize: 12,
+    color: '#64748b',
+    marginTop: 2,
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  headerBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#f1f5f9',
+  },
+  scrollContent: {
+    paddingBottom: 40,
+  },
+
+  // Profile Card
+  profileCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+    paddingVertical: 20,
+    gap: 16,
+  },
+  avatarContainer: {
+    width: 76,
+    height: 76,
+    borderRadius: 38,
+    borderWidth: 2,
+    borderColor: '#0d9488',
+    backgroundColor: '#ffffff',
+    padding: 3,
+    shadowColor: '#0d9488',
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 3,
+  },
+  avatarImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 33,
+  },
+  avatarFallback: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 33,
+    backgroundColor: '#f0fdfa',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarFallbackText: {
+    color: '#0d9488',
+    fontSize: 28,
+    fontWeight: '800',
+  },
+  profileInfo: {
+    flex: 1,
+    gap: 2,
+  },
+  profileName: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#0f172a',
+    letterSpacing: -0.4,
+  },
+  profileEmail: {
+    fontSize: 12,
+    color: '#94a3b8',
+  },
+  instaTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 4,
+    alignSelf: 'flex-start',
+    backgroundColor: '#f0fdfa',
+    borderWidth: 1,
+    borderColor: '#ccfbf1',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  instaTagText: {
+    color: '#0d9488',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  instaConnectBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 4,
+    alignSelf: 'flex-start',
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  instaConnectText: {
+    color: '#64748b',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+
+  // Body Strip
+  bodyStripWrap: {
+    paddingHorizontal: 20,
+  },
+  bodyStripEmptyBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 14,
+    borderRadius: 16,
+    borderWidth: 1.5,
+    borderStyle: 'dashed',
+    borderColor: '#ccfbf1',
+    backgroundColor: '#f0fdfa',
+  },
+  bodyStripEmptyText: {
+    color: '#0d9488',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  bodyStripCard: {
+    flexDirection: 'row',
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    borderRadius: 20,
+    paddingVertical: 14,
+    shadowColor: '#0f172a',
+    shadowOpacity: 0.02,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 1,
+  },
+  bodyMetricCol: {
+    flex: 1,
+    alignItems: 'center',
+    gap: 2,
+  },
+  bodyMetricLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#94a3b8',
+  },
+  bodyMetricVal: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#0f172a',
+  },
+  bodyMetricSub: {
+    fontSize: 10,
+    color: '#64748b',
+    fontWeight: '600',
+  },
+  bodyDivider: {
+    width: 1,
+    height: 32,
+    backgroundColor: '#f1f5f9',
+  },
+
+  // Stats Section
+  sectionContainer: {
+    paddingHorizontal: 20,
+    marginTop: 24,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#0f172a',
+    marginBottom: 12,
+    paddingHorizontal: 4,
+  },
+  loaderWrap: {
+    paddingVertical: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  errorCard: {
+    borderWidth: 1,
+    borderColor: '#fecaca',
+    borderRadius: 16,
+    padding: 16,
+    backgroundColor: '#fff5f5',
+  },
+  errorText: {
+    color: '#ef4444',
+    fontWeight: '600',
+  },
+  summaryCard: {
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    borderRadius: 24,
+    padding: 16,
+    marginBottom: 16,
+    shadowColor: '#0f172a',
+    shadowOpacity: 0.03,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 1,
+  },
+  summaryMetricsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 10,
+  },
+  metricCard: {
+    flex: 1,
+    backgroundColor: '#f8fafc',
+    borderRadius: 16,
+    paddingVertical: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#f1f5f9',
+  },
+  metricIconBg: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 6,
+  },
+  metricLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#64748b',
+    marginBottom: 2,
+  },
+  metricVal: {
+    fontSize: 20,
+    fontWeight: '900',
+    letterSpacing: -0.5,
+  },
+  emptyStatsCard: {
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    borderRadius: 20,
+    padding: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  emptyStatsTitle: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#0f172a',
+  },
+  emptyStatsSubtitle: {
+    fontSize: 11,
+    color: '#64748b',
+    fontWeight: '600',
+  },
+  gymListContainer: {
+    gap: 10,
+  },
+
+  // Membership Section
+  membershipSection: {
+    paddingHorizontal: 20,
+    marginTop: 28,
+  },
+  membershipHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  membershipTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#0f172a',
+    paddingHorizontal: 4,
+  },
+  addMembershipBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#0d9488',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 10,
+    shadowColor: '#0d9488',
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
+  },
+  addMembershipText: {
+    color: '#ffffff',
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  emptyMembershipCard: {
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    borderRadius: 20,
+    padding: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  emptyMembershipTitle: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#0f172a',
+  },
+  emptyMembershipSubtitle: {
+    fontSize: 11,
+    color: '#64748b',
+    fontWeight: '600',
+  },
+  membershipList: {
+    gap: 10,
+  },
+  expiredSection: {
+    marginTop: 20,
+    gap: 8,
+  },
+  expiredLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#94a3b8',
+    paddingHorizontal: 4,
+  },
+
+  // Membership Card Styles
+  mCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderLeftWidth: 6,
+    borderColor: '#e2e8f0',
+    borderLeftColor: '#0d9488',
+    borderRadius: 20,
+    shadowColor: '#0f172a',
+    shadowOpacity: 0.02,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 1,
+    overflow: 'hidden',
+  },
+  mCardExpired: {
+    borderLeftColor: '#94a3b8',
+    backgroundColor: '#f8fafc',
+    opacity: 0.7,
+  },
+  mCardUrgent: {
+    borderLeftColor: '#ef4444',
+    backgroundColor: '#fff5f5',
+    borderColor: '#fecaca',
+  },
+  mCardContent: {
+    padding: 16,
+  },
+  mBadgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 6,
+    flexWrap: 'wrap',
+  },
+  mBadge: {
+    backgroundColor: '#f0fdfa',
+    borderWidth: 1,
+    borderColor: '#ccfbf1',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 8,
+  },
+  mBadgeText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#0d9488',
+  },
+  mBadgeExpired: {
+    backgroundColor: '#f1f5f9',
+    borderWidth: 1,
+    borderColor: '#cbd5e1',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 8,
+  },
+  mBadgeTextExpired: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#64748b',
+  },
+  mBadgeUrgent: {
+    backgroundColor: '#ffe4e6',
+    borderWidth: 1,
+    borderColor: '#fecaca',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 8,
+  },
+  mBadgeTextUrgent: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#ef4444',
+  },
+  mGymText: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#0f172a',
+  },
+  mGymTextExpired: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#64748b',
+  },
+  mSubtitleText: {
+    fontSize: 12,
+    color: '#64748b',
+    marginTop: 4,
+    fontWeight: '600',
+  },
+  mSubtitleTextUrgent: {
+    color: '#ef4444',
+  },
+  mRightCol: {
+    paddingRight: 16,
+    paddingVertical: 16,
+    alignItems: 'flex-end',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  mRightStatText: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#0f172a',
+    letterSpacing: -0.3,
+  },
+  usePassBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    backgroundColor: '#0d9488',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+    shadowColor: '#0d9488',
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
+    minWidth: 60,
+  },
+  usePassBtnDisabled: {
+    backgroundColor: '#cbd5e1',
+    shadowOpacity: 0,
+    elevation: 0,
+  },
+  usePassBtnText: {
+    color: '#ffffff',
+    fontSize: 12,
+    fontWeight: '800',
+  },
+
+  // Shoes section
+  sectionHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  addBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 10,
+    backgroundColor: '#0d9488',
+    shadowColor: '#0d9488',
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
+  },
+  addBtnText: {
+    color: '#ffffff',
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  shoeList: { gap: 8 },
+  shoeCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    borderRadius: 16,
+    padding: 14,
+    backgroundColor: '#ffffff',
+  },
+  shoeIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: '#f1f5f9',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  shoeTitle: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#0f172a',
+    letterSpacing: -0.2,
+  },
+  shoeMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 4,
+  },
+  shoeMetaText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#94a3b8',
+  },
+  shoeStatusBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 999,
+    borderWidth: 1,
+  },
+  shoeStatusText: {
+    fontSize: 10,
+    fontWeight: '800',
+  },
+});
