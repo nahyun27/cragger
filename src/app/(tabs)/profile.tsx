@@ -450,11 +450,13 @@ function urgencyScore(m: MembershipRow): number {
 }
 
 function resolveTypeLabel(type: string): string {
+  // monthly·single 은 레거시 — UI상 '기간권'으로 통합 표시
   switch (type) {
-    case 'monthly': return '월 회원권';
-    case 'passes': return '횟수권';
-    case 'period': return '기간권';
-    case 'single': return '1일권';
+    case 'passes': return '다회권';
+    case 'period':
+    case 'monthly':
+    case 'single':
+      return '기간권';
     default: return '회원권';
   }
 }
@@ -494,9 +496,7 @@ function MembershipCard({
   }
 
   const isPasses = membership.membership_type === 'passes';
-  const isMonthly = membership.membership_type === 'monthly' || membership.membership_type === 'period';
-  
-  const iconName = isPasses ? 'layers' : (isMonthly ? 'calendar' : 'credit-card');
+  const iconName = isPasses ? 'layers' : 'calendar';
 
   const cardStyle = [
     s.mCard,

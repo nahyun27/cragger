@@ -47,7 +47,7 @@ export default function EditMembershipScreen() {
 
   const [gymId, setGymId] = useState<string | null>(null);
   const [showGymModal, setShowGymModal] = useState(false);
-  const [type, setType] = useState<MembershipType>('monthly');
+  const [type, setType] = useState<MembershipType>('period');
   const [durationMonths, setDurationMonths] = useState<number>(1);
   const [totalPasses, setTotalPasses] = useState<string>('10');
   const [usedPasses, setUsedPasses] = useState<string>('0');
@@ -63,7 +63,10 @@ export default function EditMembershipScreen() {
   useEffect(() => {
     if (prefilled || !data) return;
     setGymId(data.gym_id);
-    setType(data.membership_type);
+    // 월/1일권 레거시 값은 UI상 '기간권'으로 통합
+    setType(
+      data.membership_type === 'passes' ? 'passes' : 'period',
+    );
     setTotalPasses(data.total_passes != null ? String(data.total_passes) : '10');
     setUsedPasses(String(data.used_passes));
     setPrice(data.price_krw != null ? String(data.price_krw) : '');
@@ -103,11 +106,7 @@ export default function EditMembershipScreen() {
     try {
       const priceNum = price.trim() ? parseInt(price.replace(/[^\d]/g, ''), 10) : null;
       const endDate =
-        type === 'monthly' || type === 'period'
-          ? addMonthsISO(data.start_date, durationMonths)
-          : type === 'single'
-            ? data.start_date
-            : null;
+        type === 'period' ? addMonthsISO(data.start_date, durationMonths) : null;
       await updateMembership.mutateAsync({
         id,
         gymId,
@@ -240,157 +239,83 @@ export default function EditMembershipScreen() {
             </Text>
           </Section>
 
-          {/* Membership Type Section (2x2 Grid) */}
+          {/* Membership Type Section */}
           <Section title="종류" required>
             <View className="flex-row gap-3">
-              <View className="flex-1 gap-3">
-                {/* Monthly */}
-                <Pressable
-                  onPress={() => setType('monthly')}
-                  className={`p-4 rounded-2xl border gap-1.5 justify-center ${
-                    type === 'monthly'
-                      ? 'border-brand-primary bg-brand-primary/5'
-                      : 'border-border-subtle bg-background-primary'
-                  }`}
-                >
-                  <View className="flex-row items-center justify-between">
-                    <View className="flex-row items-center gap-2">
-                      <Feather
-                        name="calendar"
-                        size={18}
-                        color={type === 'monthly' ? '#06b6d4' : '#64748b'}
-                      />
-                      <Text
-                        className={`text-base font-bold ${
-                          type === 'monthly' ? 'text-brand-primary' : 'text-text-primary'
-                        }`}
-                      >
-                        월 회원권
-                      </Text>
-                    </View>
-                    {type === 'monthly' ? (
-                      <View className="w-4 h-4 rounded-full bg-brand-primary items-center justify-center">
-                        <Feather name="check" size={10} color="white" />
-                      </View>
-                    ) : (
-                      <View className="w-4 h-4 rounded-full border border-border-default bg-background-primary" />
-                    )}
+              {/* Period (기간권) */}
+              <Pressable
+                onPress={() => setType('period')}
+                className={`flex-1 p-4 rounded-2xl border gap-1.5 justify-center ${
+                  type === 'period'
+                    ? 'border-brand-primary bg-brand-primary/5'
+                    : 'border-border-subtle bg-background-primary'
+                }`}
+              >
+                <View className="flex-row items-center justify-between">
+                  <View className="flex-row items-center gap-2">
+                    <Feather
+                      name="calendar"
+                      size={18}
+                      color={type === 'period' ? '#06b6d4' : '#64748b'}
+                    />
+                    <Text
+                      className={`text-base font-bold ${
+                        type === 'period' ? 'text-brand-primary' : 'text-text-primary'
+                      }`}
+                    >
+                      기간권
+                    </Text>
                   </View>
-                  <Text className="text-text-tertiary text-xs">정기 결제식 이용권</Text>
-                </Pressable>
+                  {type === 'period' ? (
+                    <View className="w-4 h-4 rounded-full bg-brand-primary items-center justify-center">
+                      <Feather name="check" size={10} color="white" />
+                    </View>
+                  ) : (
+                    <View className="w-4 h-4 rounded-full border border-border-default bg-background-primary" />
+                  )}
+                </View>
+                <Text className="text-text-tertiary text-xs">기간 동안 무제한</Text>
+              </Pressable>
 
-                {/* Passes */}
-                <Pressable
-                  onPress={() => setType('passes')}
-                  className={`p-4 rounded-2xl border gap-1.5 justify-center ${
-                    type === 'passes'
-                      ? 'border-brand-primary bg-brand-primary/5'
-                      : 'border-border-subtle bg-background-primary'
-                  }`}
-                >
-                  <View className="flex-row items-center justify-between">
-                    <View className="flex-row items-center gap-2">
-                      <Feather
-                        name="layers"
-                        size={18}
-                        color={type === 'passes' ? '#06b6d4' : '#64748b'}
-                      />
-                      <Text
-                        className={`text-base font-bold ${
-                          type === 'passes' ? 'text-brand-primary' : 'text-text-primary'
-                        }`}
-                      >
-                        다회권
-                      </Text>
-                    </View>
-                    {type === 'passes' ? (
-                      <View className="w-4 h-4 rounded-full bg-brand-primary items-center justify-center">
-                        <Feather name="check" size={10} color="white" />
-                      </View>
-                    ) : (
-                      <View className="w-4 h-4 rounded-full border border-border-default bg-background-primary" />
-                    )}
+              {/* Passes (다회권) */}
+              <Pressable
+                onPress={() => setType('passes')}
+                className={`flex-1 p-4 rounded-2xl border gap-1.5 justify-center ${
+                  type === 'passes'
+                    ? 'border-brand-primary bg-brand-primary/5'
+                    : 'border-border-subtle bg-background-primary'
+                }`}
+              >
+                <View className="flex-row items-center justify-between">
+                  <View className="flex-row items-center gap-2">
+                    <Feather
+                      name="layers"
+                      size={18}
+                      color={type === 'passes' ? '#06b6d4' : '#64748b'}
+                    />
+                    <Text
+                      className={`text-base font-bold ${
+                        type === 'passes' ? 'text-brand-primary' : 'text-text-primary'
+                      }`}
+                    >
+                      다회권
+                    </Text>
                   </View>
-                  <Text className="text-text-tertiary text-xs">횟수 차감 이용권</Text>
-                </Pressable>
-              </View>
-
-              <View className="flex-1 gap-3">
-                {/* Period */}
-                <Pressable
-                  onPress={() => setType('period')}
-                  className={`p-4 rounded-2xl border gap-1.5 justify-center ${
-                    type === 'period'
-                      ? 'border-brand-primary bg-brand-primary/5'
-                      : 'border-border-subtle bg-background-primary'
-                  }`}
-                >
-                  <View className="flex-row items-center justify-between">
-                    <View className="flex-row items-center gap-2">
-                      <Feather
-                        name="clock"
-                        size={18}
-                        color={type === 'period' ? '#06b6d4' : '#64748b'}
-                      />
-                      <Text
-                        className={`text-base font-bold ${
-                          type === 'period' ? 'text-brand-primary' : 'text-text-primary'
-                        }`}
-                      >
-                        기간권
-                      </Text>
+                  {type === 'passes' ? (
+                    <View className="w-4 h-4 rounded-full bg-brand-primary items-center justify-center">
+                      <Feather name="check" size={10} color="white" />
                     </View>
-                    {type === 'period' ? (
-                      <View className="w-4 h-4 rounded-full bg-brand-primary items-center justify-center">
-                        <Feather name="check" size={10} color="white" />
-                      </View>
-                    ) : (
-                      <View className="w-4 h-4 rounded-full border border-border-default bg-background-primary" />
-                    )}
-                  </View>
-                  <Text className="text-text-tertiary text-xs">일정 기간 지정형</Text>
-                </Pressable>
-
-                {/* Single */}
-                <Pressable
-                  onPress={() => setType('single')}
-                  className={`p-4 rounded-2xl border gap-1.5 justify-center ${
-                    type === 'single'
-                      ? 'border-brand-primary bg-brand-primary/5'
-                      : 'border-border-subtle bg-background-primary'
-                  }`}
-                >
-                  <View className="flex-row items-center justify-between">
-                    <View className="flex-row items-center gap-2">
-                      <Feather
-                        name="tag"
-                        size={18}
-                        color={type === 'single' ? '#06b6d4' : '#64748b'}
-                      />
-                      <Text
-                        className={`text-base font-bold ${
-                          type === 'single' ? 'text-brand-primary' : 'text-text-primary'
-                        }`}
-                      >
-                        1일권
-                      </Text>
-                    </View>
-                    {type === 'single' ? (
-                      <View className="w-4 h-4 rounded-full bg-brand-primary items-center justify-center">
-                        <Feather name="check" size={10} color="white" />
-                      </View>
-                    ) : (
-                      <View className="w-4 h-4 rounded-full border border-border-default bg-background-primary" />
-                    )}
-                  </View>
-                  <Text className="text-text-tertiary text-xs">단일 방문용 이용권</Text>
-                </Pressable>
-              </View>
+                  ) : (
+                    <View className="w-4 h-4 rounded-full border border-border-default bg-background-primary" />
+                  )}
+                </View>
+                <Text className="text-text-tertiary text-xs">횟수 차감</Text>
+              </Pressable>
             </View>
           </Section>
 
           {/* Duration Section */}
-          {(type === 'monthly' || type === 'period') && (
+          {type === 'period' && (
             <Section title="기간" required>
               <View className="flex-row gap-2">
                 {DURATION_CHIPS.map(({ months, label }) => {
