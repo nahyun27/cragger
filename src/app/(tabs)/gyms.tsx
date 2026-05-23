@@ -4,6 +4,7 @@ import React, { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
+  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -88,6 +89,8 @@ export default function GymsScreen() {
   const [isFocused, setIsFocused] = useState(false);
   const [selectedRegion, setSelectedRegion] = useState('전체');
   const [selectedFacilities, setSelectedFacilities] = useState<string[]>([]);
+  const [favoritesOnly, setFavoritesOnly] = useState(false);
+  const [regionModalOpen, setRegionModalOpen] = useState(false);
 
   const regions = [
     '전체',
@@ -116,6 +119,11 @@ export default function GymsScreen() {
     // 1. Region filter
     if (selectedRegion !== '전체') {
       filteredList = filteredList.filter((g) => matchRegion(g.city, selectedRegion));
+    }
+
+    // 1b. Favorites-only filter
+    if (favoritesOnly) {
+      filteredList = filteredList.filter((g) => favoriteIds?.has(g.id) ?? false);
     }
 
     // 2. Facilities filter
@@ -148,7 +156,7 @@ export default function GymsScreen() {
       if (aFav !== bFav) return aFav ? -1 : 1;
       return a.name.localeCompare(b.name);
     });
-  }, [data, query, selectedRegion, selectedFacilities, favoriteIds]);
+  }, [data, query, selectedRegion, selectedFacilities, favoritesOnly, favoriteIds]);
 
   const toggleFacility = (fac: string) => {
     setSelectedFacilities((prev) =>
@@ -203,40 +211,46 @@ export default function GymsScreen() {
 
       {/* Filter wrapper block */}
       <View style={s.filterBlock}>
-        {/* Region filter chips */}
-        <View style={s.scrollFilterWrap}>
-          <ScrollView 
-            horizontal 
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={s.scrollFilterContent}
+        {/* Region select + favorites toggle (single row) */}
+        <View style={s.topFilterRow}>
+          <Pressable
+            onPress={() => setRegionModalOpen(true)}
+            style={({ pressed }) => [{ opacity: pressed ? 0.8 : 1 }]}
           >
-            {regions.map((region) => {
-              const isSelected = selectedRegion === region;
-              return (
-                <Pressable
-                  key={region}
-                  onPress={() => setSelectedRegion(region)}
-                  style={({ pressed }) => [{ opacity: pressed ? 0.8 : 1 }]}
-                >
-                  <View
-                    style={[
-                      s.regionChip,
-                      isSelected ? s.regionChipActive : s.regionChipInactive
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        s.regionChipText,
-                        isSelected ? s.regionChipTextActive : s.regionChipTextInactive
-                      ]}
-                    >
-                      {region}
-                    </Text>
-                  </View>
-                </Pressable>
-              );
-            })}
-          </ScrollView>
+            <View style={s.regionSelect}>
+              <Feather name="map" size={14} color="#475569" />
+              <Text style={s.regionSelectText}>
+                {selectedRegion === '전체' ? '전체 지역' : selectedRegion}
+              </Text>
+              <Feather name="chevron-down" size={14} color="#64748b" />
+            </View>
+          </Pressable>
+
+          <Pressable
+            onPress={() => setFavoritesOnly((v) => !v)}
+            style={({ pressed }) => [{ opacity: pressed ? 0.8 : 1 }]}
+          >
+            <View
+              style={[
+                s.favOnlyChip,
+                favoritesOnly ? s.favOnlyChipActive : s.favOnlyChipInactive,
+              ]}
+            >
+              <Feather
+                name="star"
+                size={12}
+                color={favoritesOnly ? '#06b6d4' : '#64748b'}
+              />
+              <Text
+                style={[
+                  s.favOnlyText,
+                  favoritesOnly ? s.favOnlyTextActive : s.favOnlyTextInactive,
+                ]}
+              >
+                즐겨찾기만
+              </Text>
+            </View>
+          </Pressable>
         </View>
 
         {/* Facility toggles */}
@@ -337,6 +351,51 @@ export default function GymsScreen() {
           }
         />
       )}
+
+      {/* Region select modal */}
+      <Modal
+        visible={regionModalOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setRegionModalOpen(false)}
+      >
+        <Pressable
+          style={s.modalBackdrop}
+          onPress={() => setRegionModalOpen(false)}
+        >
+          <Pressable style={s.modalSheet} onPress={(e) => e.stopPropagation()}>
+            <Text style={s.modalTitle}>지역 선택</Text>
+            <ScrollView style={{ maxHeight: 420 }}>
+              {regions.map((region) => {
+                const active = region === selectedRegion;
+                return (
+                  <Pressable
+                    key={region}
+                    onPress={() => {
+                      setSelectedRegion(region);
+                      setRegionModalOpen(false);
+                    }}
+                    style={({ pressed }) => [
+                      s.modalRow,
+                      pressed && { backgroundColor: '#f1f5f9' },
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        s.modalRowText,
+                        active && s.modalRowTextActive,
+                      ]}
+                    >
+                      {region === '전체' ? '전체 지역' : region}
+                    </Text>
+                    {active && <Feather name="check" size={16} color="#06b6d4" />}
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -529,6 +588,102 @@ const s = StyleSheet.create({
     paddingHorizontal: 20,
     gap: 8,
     flexDirection: 'row',
+  },
+
+  // New top row: region select + favorites-only toggle
+  topFilterRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 20,
+    paddingTop: 10,
+    paddingBottom: 4,
+  },
+  regionSelect: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingLeft: 12,
+    paddingRight: 10,
+    paddingVertical: 8,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    backgroundColor: '#ffffff',
+  },
+  regionSelectText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#0f172a',
+    minWidth: 60,
+  },
+  favOnlyChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 10,
+    borderWidth: 1,
+  },
+  favOnlyChipActive: {
+    backgroundColor: '#ecfeff',
+    borderColor: '#06b6d4',
+  },
+  favOnlyChipInactive: {
+    backgroundColor: '#ffffff',
+    borderColor: '#e2e8f0',
+  },
+  favOnlyText: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  favOnlyTextActive: { color: '#0e7490' },
+  favOnlyTextInactive: { color: '#64748b' },
+
+  // Region picker modal
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(15,23,42,0.4)',
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+  },
+  modalSheet: {
+    backgroundColor: '#ffffff',
+    borderRadius: 20,
+    padding: 16,
+    shadowColor: '#000',
+    shadowOpacity: 0.15,
+    shadowRadius: 20,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 8,
+  },
+  modalTitle: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#0f172a',
+    paddingHorizontal: 4,
+    paddingBottom: 8,
+    marginBottom: 4,
+    borderBottomWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  modalRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    borderRadius: 10,
+  },
+  modalRowText: {
+    fontSize: 14,
+    color: '#334155',
+    fontWeight: '600',
+  },
+  modalRowTextActive: {
+    color: '#06b6d4',
+    fontWeight: '800',
   },
 
   regionChip: {
