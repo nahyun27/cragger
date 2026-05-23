@@ -13,12 +13,14 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 
 import { EMPTY_SHOE_FORM, ShoeForm, type ShoeFormValue } from '@/components/shoes/shoe-form';
+import { ShoeSizeGuide } from '@/components/shoes/shoe-size-guide';
 import { useCreateShoe } from '@/hooks/use-shoes';
 
 export default function NewShoeScreen() {
   const router = useRouter();
   const createShoe = useCreateShoe();
   const [form, setForm] = useState<ShoeFormValue>(EMPTY_SHOE_FORM);
+  const [guideOpen, setGuideOpen] = useState(false);
 
   const canSubmit = form.model.trim().length > 0 && !createShoe.isPending;
 
@@ -54,6 +56,17 @@ export default function NewShoeScreen() {
         className="flex-1"
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
+        <Pressable
+          onPress={() => setGuideOpen(true)}
+          className="flex-row items-center justify-center gap-1.5 px-4 py-3 border-b border-border-subtle active:opacity-60"
+          hitSlop={6}
+        >
+          <Feather name="info" size={14} color="#0d9488" />
+          <Text className="text-brand-primary text-sm font-bold">
+            사이즈 가이드
+          </Text>
+        </Pressable>
+
         <ShoeForm value={form} onChange={setForm} />
 
         <View className="px-4 pt-2 pb-2 border-t border-border-subtle">
@@ -78,6 +91,8 @@ export default function NewShoeScreen() {
           </Pressable>
         </View>
       </KeyboardAvoidingView>
+
+      <ShoeSizeGuide visible={guideOpen} onClose={() => setGuideOpen(false)} />
     </SafeAreaView>
   );
 }

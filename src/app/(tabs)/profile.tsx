@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import React from 'react';
+import React, { useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -14,6 +14,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 
+import { ShoeSizeGuide } from '@/components/shoes/shoe-size-guide';
 import { GymStatsCard } from '@/components/stats/gym-stats-card';
 import { useProfile } from '@/hooks/use-profile';
 import {
@@ -588,11 +589,21 @@ function formatMembershipRightStat(m: MembershipRow, expired?: boolean): string 
 function ShoesSection() {
   const router = useRouter();
   const { data, isLoading, error } = useShoes();
+  const [guideOpen, setGuideOpen] = useState(false);
 
   return (
     <View style={s.sectionContainer}>
       <View style={s.sectionHeaderRow}>
-        <Text style={s.sectionTitle}>내 암벽화</Text>
+        <View style={s.shoesTitleRow}>
+          <Text style={s.sectionTitle}>내 암벽화</Text>
+          <Pressable
+            onPress={() => setGuideOpen(true)}
+            hitSlop={8}
+            style={({ pressed }) => [{ opacity: pressed ? 0.5 : 1 }]}
+          >
+            <Feather name="info" size={14} color="#64748b" />
+          </Pressable>
+        </View>
         <Pressable
           onPress={() => router.push('/shoes/new')}
           style={({ pressed }) => [s.addBtn, pressed && { opacity: 0.8 }]}
@@ -601,6 +612,8 @@ function ShoesSection() {
           <Text style={s.addBtnText}>추가</Text>
         </Pressable>
       </View>
+
+      <ShoeSizeGuide visible={guideOpen} onClose={() => setGuideOpen(false)} />
 
       {isLoading && (
         <View style={s.loaderWrap}>
@@ -1187,6 +1200,11 @@ const s = StyleSheet.create({
   },
 
   // Shoes section
+  shoesTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
   sectionHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
