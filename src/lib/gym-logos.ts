@@ -60,6 +60,7 @@ export const GYM_BG_DEFAULT: Record<string, string> = {
   '스파이시':   '#1a1a1a',
   '더플라스틱': '#000000',  // brand 의 검정 + 주황 톤
   '피커스':     '#F1F2EE',  // 로고 원본 베이지 — 누끼 X
+  '클라임잇':   '#323384',  // 로고 원본 남보라
 };
 
 export const GYM_BG_BY_BRANCH: Record<string, Record<string, string>> = {
