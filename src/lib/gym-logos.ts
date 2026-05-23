@@ -15,8 +15,21 @@ import type { ImageSourcePropType } from 'react-native';
 // 서울숲은 단색(흰색) 로고 + 지점별 배경색으로 통일감 부여 (네이버 검색
 // 결과의 brand 운영 방식 재현). 다른 brand 는 단일 로고만.
 export const GYM_LOGOS: Record<string, ImageSourcePropType> = {
+  'B Climbing':   require('../../assets/gym-logos/B-Climbing.png'),
+  '경기레포츠':   require('../../assets/gym-logos/경기레포츠.png'),
+  '고릴라':       require('../../assets/gym-logos/고릴라.png'),
   '그루트':       require('../../assets/gym-logos/그루트.png'),
+  '뀨':           require('../../assets/gym-logos/뀨.png'),
+  '디스커버리':   require('../../assets/gym-logos/디스커버리.png'),
+  '문클':         require('../../assets/gym-logos/문클.png'),
+  '볼더박스':     require('../../assets/gym-logos/볼더박스.png'),
+  '비블럭':       require('../../assets/gym-logos/비블럭.png'),
   '비숍':         require('../../assets/gym-logos/비숍.png'),
+  '알레':         require('../../assets/gym-logos/알레.png'),
+  '코알라':       require('../../assets/gym-logos/코알라.png'),
+  '클라임데이즈': require('../../assets/gym-logos/클라임데이즈.png'),
+  '트리클':       require('../../assets/gym-logos/트리클.png'),
+  '힐앤토':       require('../../assets/gym-logos/힐앤토.png'),
   '어웨이크':     require('../../assets/gym-logos/어웨이크.png'),
   '에이스':       require('../../assets/gym-logos/에이스.png'),
   '치즈':         require('../../assets/gym-logos/치즈.png'),
