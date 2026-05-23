@@ -18,15 +18,20 @@ import { Feather } from '@expo/vector-icons';
 
 import {
   POST_TYPE_LABEL,
+  useCancelMeetupJoin,
   useComments,
   useCreateComment,
   useDeleteComment,
   useDeletePost,
+  useJoinMeetup,
+  useMeetupParticipants,
   useMyLikes,
+  useMyMeetupStatus,
   usePost,
   useToggleLike,
   useUpdateComment,
   type CommentRow,
+  type MeetupParticipant,
   type PostRow,
 } from '@/hooks/use-community';
 import { useAuth } from '@/lib/auth-context';
@@ -258,8 +263,10 @@ export default function PostDetailScreen() {
           <View style={s.postCard}>
             <PostHeader post={post} />
 
-            {/* Meetup info card — date / location / capacity */}
-            {post.post_type === 'meetup' && <MeetupInfoCard post={post} />}
+            {/* Meetup info card — date / location / capacity + 참가 CTA */}
+            {post.post_type === 'meetup' && (
+              <MeetupInfoCard post={post} isMine={isMine} />
+            )}
 
             {/* Location pill above title — wrapped in a flex-row container
                 so the Pressable can hug its content width inside the column
@@ -498,13 +505,15 @@ function PostHeader({ post }: { post: PostRow }) {
   );
 }
 
-function MeetupInfoCard({ post }: { post: PostRow }) {
+function MeetupInfoCard({ post, isMine }: { post: PostRow; isMine: boolean }) {
   const cap = post.meetup_capacity;
   const remaining = cap != null ? Math.max(0, cap - post.participant_count) : null;
   const full = cap != null && post.participant_count >= cap;
   const location = post.gym
     ? `${post.gym.name}${post.gym.branch ? ` ${post.gym.branch}` : ''}`
     : post.meetup_location;
+
+  const isPast = post.meetup_at ? new Date(post.meetup_at).getTime() < Date.now() : false;
 
   let countdown: { label: string; tone: 'urgent' | 'past' | 'soon' | 'far' } | null = null;
   if (post.meetup_at) countdown = describeMeetupCountdown(post.meetup_at);
@@ -515,6 +524,40 @@ function MeetupInfoCard({ post }: { post: PostRow }) {
     far:    { bg: '#e0f2fe', fg: '#0369a1' },
     past:   { bg: '#f1f5f9', fg: '#64748b' },
   };
+
+  const participantsQ = useMeetupParticipants(post.id);
+  const myStatusQ = useMyMeetupStatus(post.id);
+  const joinMeetup = useJoinMeetup();
+  const cancelMeetupJoin = useCancelMeetupJoin();
+
+  const myStatus = myStatusQ.data ?? null;
+  const isJoined = myStatus === 'joined';
+  const busy = joinMeetup.isPending || cancelMeetupJoin.isPending;
+
+  function handleJoin() {
+    if (busy) return;
+    if (full || isPast) return;
+    joinMeetup.mutate(post.id, {
+      onError: (e) =>
+        Alert.alert('참가 신청 실패', e instanceof Error ? e.message : '알 수 없는 오류'),
+    });
+  }
+
+  function handleCancelJoin() {
+    if (busy) return;
+    Alert.alert('참가를 취소할까요?', '취소 후에는 다시 신청해야 해요.', [
+      { text: '되돌아가기', style: 'cancel' },
+      {
+        text: '취소',
+        style: 'destructive',
+        onPress: () =>
+          cancelMeetupJoin.mutate(post.id, {
+            onError: (e) =>
+              Alert.alert('취소 실패', e instanceof Error ? e.message : '알 수 없는 오류'),
+          }),
+      },
+    ]);
+  }
 
   return (
     <View style={s.meetupCard}>
@@ -559,11 +602,116 @@ function MeetupInfoCard({ post }: { post: PostRow }) {
         </Text>
       </View>
 
-      {/* 참가 신청은 2단계 */}
-      <View style={s.meetupJoinPlaceholder}>
-        <Feather name="info" size={12} color="#64748b" />
-        <Text style={s.meetupJoinPlaceholderText}>참가 신청 기능은 곧 추가될 예정입니다</Text>
+      {/* CTA — 주최자 / 참가 / 취소 / 마감 / 종료 */}
+      <View style={{ marginTop: 4 }}>
+        {isMine ? (
+          <View style={s.meetupHostPill}>
+            <Feather name="star" size={12} color="#b45309" />
+            <Text style={s.meetupHostPillText}>내가 주최한 모임</Text>
+          </View>
+        ) : isPast ? (
+          <View style={[s.meetupJoinBtn, s.meetupJoinBtnDisabled]}>
+            <Feather name="x" size={14} color="#94a3b8" />
+            <Text style={s.meetupJoinBtnDisabledText}>종료된 모임</Text>
+          </View>
+        ) : isJoined ? (
+          <Pressable
+            onPress={handleCancelJoin}
+            disabled={busy}
+            style={({ pressed }) => [
+              s.meetupJoinBtn,
+              s.meetupJoinBtnSecondary,
+              { opacity: pressed ? 0.85 : 1 },
+            ]}
+          >
+            {busy ? (
+              <ActivityIndicator size="small" color="#b45309" />
+            ) : (
+              <>
+                <Feather name="check-circle" size={14} color="#b45309" />
+                <Text style={s.meetupJoinBtnSecondaryText}>참가 중 · 취소하기</Text>
+              </>
+            )}
+          </Pressable>
+        ) : full ? (
+          <View style={[s.meetupJoinBtn, s.meetupJoinBtnDisabled]}>
+            <Feather name="users" size={14} color="#94a3b8" />
+            <Text style={s.meetupJoinBtnDisabledText}>정원 마감</Text>
+          </View>
+        ) : (
+          <Pressable
+            onPress={handleJoin}
+            disabled={busy}
+            style={({ pressed }) => [
+              s.meetupJoinBtn,
+              s.meetupJoinBtnPrimary,
+              { opacity: pressed ? 0.85 : 1 },
+            ]}
+          >
+            {busy ? (
+              <ActivityIndicator size="small" color="#ffffff" />
+            ) : (
+              <>
+                <Feather name="user-plus" size={14} color="#ffffff" />
+                <Text style={s.meetupJoinBtnPrimaryText}>참가 신청</Text>
+              </>
+            )}
+          </Pressable>
+        )}
       </View>
+
+      {/* 참가자 목록 */}
+      <View style={s.meetupParticipants}>
+        <Text style={s.meetupParticipantsTitle}>
+          참가자{' '}
+          <Text style={s.meetupParticipantsCount}>
+            {participantsQ.data?.length ?? post.participant_count}
+          </Text>
+        </Text>
+        {participantsQ.isLoading ? (
+          <ActivityIndicator size="small" color="#b45309" style={{ marginVertical: 4 }} />
+        ) : participantsQ.data && participantsQ.data.length > 0 ? (
+          <View style={s.meetupParticipantsList}>
+            {participantsQ.data.map((p) => (
+              <ParticipantChip key={p.user_id} participant={p} isHost={p.user_id === post.author_id} />
+            ))}
+          </View>
+        ) : (
+          <Text style={s.meetupParticipantsEmpty}>아직 참가자가 없어요</Text>
+        )}
+      </View>
+    </View>
+  );
+}
+
+function ParticipantChip({
+  participant,
+  isHost,
+}: {
+  participant: MeetupParticipant;
+  isHost: boolean;
+}) {
+  const name = participant.user?.display_name ?? participant.user?.username ?? '익명';
+  const avatarBg = getAvatarBgColor(name);
+  const avatarFg = getAvatarTextColor(name);
+  const avatarUrl = participant.user?.avatar_url;
+  return (
+    <View style={s.participantChip}>
+      <View style={[s.participantAvatar, { backgroundColor: avatarBg }]}>
+        {avatarUrl ? (
+          <Image source={{ uri: avatarUrl }} style={s.participantAvatarImage} resizeMode="cover" />
+        ) : (
+          <Text style={[s.participantAvatarText, { color: avatarFg }]}>
+            {(name[0] ?? '?').toUpperCase()}
+          </Text>
+        )}
+      </View>
+      <Text style={s.participantName} numberOfLines={1}>{name}</Text>
+      {isHost && (
+        <View style={s.participantHostDot}>
+          <Feather name="star" size={9} color="#b45309" />
+        </View>
+      )}
     </View>
   );
 }
@@ -1143,21 +1291,123 @@ const s = StyleSheet.create({
     color: '#64748b',
     fontWeight: '800',
   },
-  meetupJoinPlaceholder: {
-    marginTop: 4,
+  // CTA buttons
+  meetupJoinBtn: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: 6,
-    paddingVertical: 8,
-    paddingHorizontal: 10,
-    backgroundColor: '#fefce8',
+    height: 40,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+  },
+  meetupJoinBtnPrimary: {
+    backgroundColor: '#d97706',
+  },
+  meetupJoinBtnPrimaryText: {
+    color: '#ffffff',
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  meetupJoinBtnSecondary: {
+    backgroundColor: '#fef3c7',
     borderWidth: 1,
     borderColor: '#fde68a',
-    borderRadius: 10,
   },
-  meetupJoinPlaceholderText: {
+  meetupJoinBtnSecondaryText: {
+    color: '#b45309',
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  meetupJoinBtnDisabled: {
+    backgroundColor: '#f1f5f9',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  meetupJoinBtnDisabledText: {
+    color: '#94a3b8',
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  meetupHostPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    height: 40,
+    borderRadius: 10,
+    backgroundColor: '#fef3c7',
+    borderWidth: 1,
+    borderColor: '#fde68a',
+  },
+  meetupHostPillText: {
+    color: '#b45309',
+    fontSize: 13,
+    fontWeight: '800',
+  },
+
+  // 참가자 목록
+  meetupParticipants: {
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderColor: '#fde68a',
+    gap: 8,
+  },
+  meetupParticipantsTitle: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#b45309',
+  },
+  meetupParticipantsCount: {
+    color: '#92400e',
+  },
+  meetupParticipantsEmpty: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#94a3b8',
+    fontStyle: 'italic',
+  },
+  meetupParticipantsList: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
+  participantChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingLeft: 3,
+    paddingRight: 8,
+    paddingVertical: 3,
+    borderRadius: 999,
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#fde68a',
+  },
+  participantAvatar: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  participantAvatarImage: {
+    width: '100%',
+    height: '100%',
+  },
+  participantAvatarText: {
+    fontSize: 10,
+    fontWeight: '800',
+  },
+  participantName: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#64748b',
+    color: '#334155',
+    maxWidth: 80,
+  },
+  participantHostDot: {
+    marginLeft: -2,
   },
 });

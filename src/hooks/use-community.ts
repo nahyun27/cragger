@@ -397,3 +397,104 @@ export function useDeletePost() {
     },
   });
 }
+
+// ── Meetup participants ────────────────────────────────────────
+export type MeetupParticipantStatus = 'joined' | 'cancelled';
+
+export type MeetupParticipant = {
+  user_id: string;
+  status: MeetupParticipantStatus;
+  joined_at: string;
+  user: PostAuthor | null;
+};
+
+// 한 모임의 참가자 — joined 상태만 노출, 신청 순.
+export function useMeetupParticipants(postId: string | undefined) {
+  return useQuery({
+    queryKey: ['community', 'meetup-participants', postId] as const,
+    enabled: !!postId,
+    queryFn: async (): Promise<MeetupParticipant[]> => {
+      const { data, error } = await supabase
+        .from('meetup_participants')
+        .select(
+          'user_id, status, joined_at, user:profiles!meetup_participants_user_id_fkey(id, username, display_name, avatar_url)',
+        )
+        .eq('post_id', postId!)
+        .eq('status', 'joined')
+        .order('joined_at', { ascending: true });
+      if (error) throw new Error(error.message);
+      return (data ?? []) as unknown as MeetupParticipant[];
+    },
+  });
+}
+
+// 내 참가 상태 — null=신청 안 함, 'joined'=참가 중, 'cancelled'=취소함.
+export function useMyMeetupStatus(postId: string | undefined) {
+  const { session: authSession } = useAuth();
+  const userId = authSession?.user.id;
+  return useQuery({
+    queryKey: ['community', 'meetup-my-status', postId, userId] as const,
+    enabled: !!postId && !!userId,
+    queryFn: async (): Promise<MeetupParticipantStatus | null> => {
+      const { data, error } = await supabase
+        .from('meetup_participants')
+        .select('status')
+        .eq('post_id', postId!)
+        .eq('user_id', userId!)
+        .maybeSingle();
+      if (error) throw new Error(error.message);
+      return (data?.status as MeetupParticipantStatus | undefined) ?? null;
+    },
+  });
+}
+
+// 모임 참가 — 처음이면 INSERT, 이전에 취소했으면 status='joined' 로 UPSERT.
+// 정원 마감 / 종료 체크는 caller(UI) 에서 미리 막음. race 가 발생해도
+// 클라이언트는 트리거가 갱신한 participant_count 를 다음 fetch에서 받음.
+export function useJoinMeetup() {
+  const queryClient = useQueryClient();
+  const { session: authSession } = useAuth();
+  return useMutation({
+    mutationFn: async (postId: string) => {
+      const userId = authSession?.user.id;
+      if (!userId) throw new Error('Not authenticated');
+      const { error } = await supabase
+        .from('meetup_participants')
+        .upsert(
+          { post_id: postId, user_id: userId, status: 'joined' },
+          { onConflict: 'post_id,user_id' },
+        );
+      if (error) throw new Error(error.message);
+    },
+    onSuccess: (_data, postId) => {
+      queryClient.invalidateQueries({ queryKey: ['community', 'post', postId] });
+      queryClient.invalidateQueries({ queryKey: ['community', 'meetup-participants', postId] });
+      queryClient.invalidateQueries({ queryKey: ['community', 'meetup-my-status', postId] });
+      queryClient.invalidateQueries({ queryKey: ['community', 'feed'] });
+    },
+  });
+}
+
+// 참가 취소 — soft cancel (status='cancelled'). 트리거가 count 감소.
+export function useCancelMeetupJoin() {
+  const queryClient = useQueryClient();
+  const { session: authSession } = useAuth();
+  return useMutation({
+    mutationFn: async (postId: string) => {
+      const userId = authSession?.user.id;
+      if (!userId) throw new Error('Not authenticated');
+      const { error } = await supabase
+        .from('meetup_participants')
+        .update({ status: 'cancelled' })
+        .eq('post_id', postId)
+        .eq('user_id', userId);
+      if (error) throw new Error(error.message);
+    },
+    onSuccess: (_data, postId) => {
+      queryClient.invalidateQueries({ queryKey: ['community', 'post', postId] });
+      queryClient.invalidateQueries({ queryKey: ['community', 'meetup-participants', postId] });
+      queryClient.invalidateQueries({ queryKey: ['community', 'meetup-my-status', postId] });
+      queryClient.invalidateQueries({ queryKey: ['community', 'feed'] });
+    },
+  });
+}

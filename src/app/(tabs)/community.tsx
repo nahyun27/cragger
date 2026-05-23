@@ -164,25 +164,30 @@ export default function CommunityScreen() {
               <Pressable
                 key={t.key}
                 onPress={() => setFilter(t.key)}
-                style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]}
               >
-                <View
-                  style={[
-                    s.chip,
-                    active
-                      ? { backgroundColor: t.accent, borderColor: t.accent }
-                      : s.chipInactive,
-                  ]}
-                >
-                  <Feather
-                    name={t.icon}
-                    size={13}
-                    color={active ? '#ffffff' : t.accent}
-                  />
-                  <Text style={[s.chipText, active && s.chipTextActive]}>
-                    {t.label}
-                  </Text>
-                </View>
+                {({ pressed }) => (
+                  <View
+                    style={[
+                      s.chip,
+                      active ? s.chipActive : s.chipInactive,
+                      pressed && { opacity: 0.8 }
+                    ]}
+                  >
+                    <Feather
+                      name={t.icon}
+                      size={13}
+                      color={active ? '#06b6d4' : '#64748b'}
+                    />
+                    <Text
+                      style={[
+                        s.chipText,
+                        active ? s.chipTextActive : s.chipTextInactive,
+                      ]}
+                    >
+                      {t.label}
+                    </Text>
+                  </View>
+                )}
               </Pressable>
             );
           })}
@@ -470,6 +475,8 @@ const s = StyleSheet.create({
   },
   filterWrapper: {
     backgroundColor: '#ffffff',
+    borderBottomWidth: 1,
+    borderColor: '#f1f5f9',
   },
   filterScroll: {
     paddingHorizontal: 16,
@@ -483,22 +490,29 @@ const s = StyleSheet.create({
     gap: 6,
     paddingHorizontal: 14,
     paddingVertical: 8,
-    borderRadius: 999,
+    borderRadius: 10,
     borderWidth: 1,
   },
+  chipActive: {
+    backgroundColor: '#ecfeff',
+    borderColor: '#06b6d4',
+  },
   chipInactive: {
-    backgroundColor: '#ffffff',
+    backgroundColor: '#f8fafc',
     borderColor: '#e2e8f0',
   },
   chipText: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#475569',
     letterSpacing: -0.2,
   },
   chipTextActive: {
-    color: '#ffffff',
+    color: '#0e7490',
     fontWeight: '800',
+  },
+  chipTextInactive: {
+    color: '#475569',
+    fontWeight: '600',
   },
   loadingContainer: {
     flex: 1,
