@@ -21,11 +21,14 @@ export const GYM_LOGOS: Record<string, ImageSourcePropType> = {
   '닷클라이밍':   require('../../assets/gym-logos/닷클라이밍짐.png'),
   '드림캐처':     require('../../assets/gym-logos/드림캐쳐.png'),
   '브릭스':       require('../../assets/gym-logos/브릭스.png'),
+  '캐치스톤':     require('../../assets/gym-logos/캐치스톤.png'),
   '서울볼더스':   require('../../assets/gym-logos/서울볼더스.png'),
   '서울숲':       require('../../assets/gym-logos/서울숲-white.png'),
   '슈퍼비':       require('../../assets/gym-logos/슈퍼비.png'),
   '스파이시':     require('../../assets/gym-logos/스파이시.png'),
   '온플릭':       require('../../assets/gym-logos/온플릭.png'),
+  '클라이밍줌':   require('../../assets/gym-logos/클라이밍줌.png'),
+  '클라이밍파크': require('../../assets/gym-logos/클라이밍파크-white.png'),
   '클라임투게더': require('../../assets/gym-logos/클라임투게더.png'),
   '클라임투더문': require('../../assets/gym-logos/클라임투더문.png'),
   '킨디':         require('../../assets/gym-logos/킨디클라이밍.png'),
@@ -48,6 +51,14 @@ export const GYM_BG_BY_BRANCH: Record<string, Record<string, string>> = {
     '영등포점': '#F97316',  // 주황
     '종로점':   '#0EA5E9',  // 하늘
     '잠실점':   '#EC4899',  // 분홍
+  },
+  // 클라이밍파크 5개 지점 — linktree thumbnail 색 기반
+  '클라이밍파크': {
+    '강남점':   '#C44A3F',  // 빨강
+    '성수점':   '#3F8FCB',  // 파랑
+    '신논현점': '#2D5F3D',  // 짙은 녹색
+    '종로점':   '#F08AB4',  // 분홍
+    '한티점':   '#F2B23B',  // 머스타드
   },
   // 더클라임 12개 지점 — 인스타 프로필 테두리 색 기반
   '더클라임': {
