@@ -522,39 +522,38 @@ function MembershipCard({
         onPress={() =>
           router.push({ pathname: '/membership/[id]', params: { id: membership.id } })
         }
-        style={({ pressed }) => [
-          s.mCardContent,
-          { opacity: pressed ? 0.8 : 1 }
-        ]}
+        style={({ pressed }) => ({ flex: 1, opacity: pressed ? 0.8 : 1 })}
       >
-        <View style={[s.mIconBox, expired && s.mIconBoxMuted]}>
-          <Feather
-            name={iconName}
-            size={20}
-            color={expired ? '#94a3b8' : '#475569'}
-          />
-        </View>
-        
-        <View style={s.mCardBody}>
-          <View style={s.mBadgeRow}>
-            <View style={badgeStyle}>
-              <Text style={badgeTextStyle}>
-                {resolveTypeLabel(membership.membership_type)}
-              </Text>
-            </View>
-            {expSoon && (
-              <View style={s.mBadgeUrgent}>
-                <Text style={s.mBadgeTextUrgent}>만료 임박</Text>
-              </View>
-            )}
+        <View style={s.mCardContent}>
+          <View style={[s.mIconBox, expired && s.mIconBoxMuted]}>
+            <Feather
+              name={iconName}
+              size={20}
+              color={expired ? '#94a3b8' : '#475569'}
+            />
           </View>
 
-          <Text
-            style={expired ? s.mGymTextExpired : s.mGymText}
-            numberOfLines={1}
-          >
-            {gymLabel}
-          </Text>
+          <View style={s.mCardBody}>
+            <View style={s.mBadgeRow}>
+              <View style={badgeStyle}>
+                <Text style={badgeTextStyle}>
+                  {resolveTypeLabel(membership.membership_type)}
+                </Text>
+              </View>
+              {expSoon && (
+                <View style={s.mBadgeUrgent}>
+                  <Text style={s.mBadgeTextUrgent}>만료 임박</Text>
+                </View>
+              )}
+            </View>
+
+            <Text
+              style={expired ? s.mGymTextExpired : s.mGymText}
+              numberOfLines={1}
+            >
+              {gymLabel}
+            </Text>
+          </View>
         </View>
       </Pressable>
 
