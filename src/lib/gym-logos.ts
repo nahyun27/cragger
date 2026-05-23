@@ -23,6 +23,7 @@ export const GYM_LOGOS: Record<string, ImageSourcePropType> = {
   '브릭스':       require('../../assets/gym-logos/브릭스.png'),
   '서울볼더스':   require('../../assets/gym-logos/서울볼더스.png'),
   '서울숲':       require('../../assets/gym-logos/서울숲-white.png'),
+  '슈퍼비':       require('../../assets/gym-logos/슈퍼비.png'),
   '스파이시':     require('../../assets/gym-logos/스파이시.png'),
   '온플릭':       require('../../assets/gym-logos/온플릭.png'),
   '클라임투게더': require('../../assets/gym-logos/클라임투게더.png'),
@@ -30,6 +31,7 @@ export const GYM_LOGOS: Record<string, ImageSourcePropType> = {
   '킨디':         require('../../assets/gym-logos/킨디클라이밍.png'),
   '원더월':       require('../../assets/gym-logos/원더월.png'),
   '플래시볼더스': require('../../assets/gym-logos/플래시볼더스.png'),
+  '허브':         require('../../assets/gym-logos/허브.png'),
 };
 
 // (brand key) → (branch → background hex). 매핑 없으면 흰 카드 그대로.
