@@ -60,7 +60,7 @@ export function GymThumbnail({ name, branch, size = 56 }: Props) {
           borderColor: '#e2e8f0',
           alignItems: 'center',
           justifyContent: 'center',
-          padding: hasBg ? size * 0.14 : 0,
+          padding: size * 0.18,
         }}
       >
         <Image

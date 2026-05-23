@@ -33,6 +33,13 @@ export const GYM_LOGOS: Record<string, ImageSourcePropType> = {
 };
 
 // (brand key) → (branch → background hex). 매핑 없으면 흰 카드 그대로.
+// brand 자체에 단일 배경색 — 지점 무관. (지점별 매핑은 GYM_BG_BY_BRANCH 가
+// 우선이고, 거기 매칭 없으면 fallback 으로 여기를 봄.)
+export const GYM_BG_DEFAULT: Record<string, string> = {
+  '킨디':     '#251818',
+  '스파이시': '#1a1a1a',
+};
+
 export const GYM_BG_BY_BRANCH: Record<string, Record<string, string>> = {
   '서울숲': {
     '구로점':   '#9333EA',  // 보라
@@ -70,7 +77,8 @@ export function matchGymStyle(name: string, branch?: string | null): GymVisualSt
   for (const key of keys) {
     if (!trimmed.includes(key)) continue;
     const branchMap = GYM_BG_BY_BRANCH[key];
-    const bg = branchMap && branch && branchMap[branch] ? branchMap[branch] : null;
+    const branchBg = branchMap && branch && branchMap[branch] ? branchMap[branch] : null;
+    const bg = branchBg ?? GYM_BG_DEFAULT[key] ?? null;
     return { logo: GYM_LOGOS[key], bg };
   }
   return { logo: null, bg: null };
