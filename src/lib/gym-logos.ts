@@ -93,9 +93,8 @@ export const GYM_BG_DEFAULT: Record<string, string> = {
   '원더월':     '#1a1a1a',  // 검정 brand 배경 (흰 로고)
   '클럽클라이밍': '#F2EEE5', // 로고 원본 베이지 — 누끼 X
   '에이스':     '#1a1a1a',  // 사용자 지정 검정 배경
-  '서울볼더스 목동': '#D3DCDE',
+  // 서울볼더스 목동/fallback 은 흰 카드 그대로 (새 로고가 흰 배경)
   '서울볼더스 선유': '#D3DCDE',
-  '서울볼더스':     '#D3DCDE',
 };
 
 export const GYM_BG_BY_BRANCH: Record<string, Record<string, string>> = {
