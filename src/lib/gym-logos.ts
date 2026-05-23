@@ -96,6 +96,7 @@ export const GYM_BG_DEFAULT: Record<string, string> = {
   // 서울볼더스 목동/fallback 은 흰 카드 그대로 (새 로고가 흰 배경)
   '서울볼더스 선유': '#D3DCDE',
   '뀨':         '#F2A4A4',
+  '경기레포츠': '#172F3A',  // 로고 어두운 청록 그라데이션
 };
 
 export const GYM_BG_BY_BRANCH: Record<string, Record<string, string>> = {
