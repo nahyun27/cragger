@@ -21,6 +21,10 @@ export const GYM_LOGOS: Record<string, ImageSourcePropType> = {
   '더클라임':     require('../../assets/gym-logos/더클라임-white.png'),
   '닷클라이밍':   require('../../assets/gym-logos/닷클라이밍짐.png'),
   '드림캐처':     require('../../assets/gym-logos/드림캐쳐.png'),
+  '락랜드':       require('../../assets/gym-logos/락랜드.png'),
+  '레드원':       require('../../assets/gym-logos/레드원.png'),
+  '볼더가든':     require('../../assets/gym-logos/볼더가든.png'),
+  '볼더프렌즈':   require('../../assets/gym-logos/볼더프렌즈.png'),
   '브릭스':       require('../../assets/gym-logos/브릭스.png'),
   '캐치스톤':     require('../../assets/gym-logos/캐치스톤.png'),
   '서울볼더스':   require('../../assets/gym-logos/서울볼더스.png'),
@@ -28,15 +32,23 @@ export const GYM_LOGOS: Record<string, ImageSourcePropType> = {
   '손상원':       require('../../assets/gym-logos/손상원-white.png'),
   '슈퍼비':       require('../../assets/gym-logos/슈퍼비.png'),
   '스파이시':     require('../../assets/gym-logos/스파이시.png'),
+  '어거스트':     require('../../assets/gym-logos/어거스트.png'),
+  '오프더월':     require('../../assets/gym-logos/오프더월.png'),
   '온플릭':       require('../../assets/gym-logos/온플릭.png'),
   '클라이밍줌':   require('../../assets/gym-logos/클라이밍줌.png'),
   '클라이밍파크': require('../../assets/gym-logos/클라이밍파크-white.png'),
+  '클라임어스':   require('../../assets/gym-logos/클라임어스.png'),
+  '클라임잇':     require('../../assets/gym-logos/클라임잇.png'),
   '클라임투게더': require('../../assets/gym-logos/클라임투게더.png'),
   '클라임투더문': require('../../assets/gym-logos/클라임투더문.png'),
+  '클럽클라이밍': require('../../assets/gym-logos/클럽클라이밍.png'),
   '킨디':         require('../../assets/gym-logos/킨디클라이밍.png'),
   '원더월':       require('../../assets/gym-logos/원더월.png'),
+  '웨이브락':     require('../../assets/gym-logos/웨이브락-white.png'),
+  '피크닉':       require('../../assets/gym-logos/피크닉.png'),
   '플래시볼더스': require('../../assets/gym-logos/플래시볼더스.png'),
   '허브':         require('../../assets/gym-logos/허브.png'),
+  '훅클라이밍':   require('../../assets/gym-logos/훅클라이밍.png'),
 };
 
 // (brand key) → (branch → background hex). 매핑 없으면 흰 카드 그대로.
@@ -54,6 +66,12 @@ export const GYM_BG_BY_BRANCH: Record<string, Record<string, string>> = {
     '영등포점': '#F97316',  // 주황
     '종로점':   '#0EA5E9',  // 하늘
     '잠실점':   '#EC4899',  // 분홍
+  },
+  // 웨이브락 3개 지점 — 네이버 검색 결과 카드 배경색 기반
+  '웨이브락': {
+    '남천점':   '#1a1a1a',  // 검정
+    '부산대점': '#3D7DE5',  // 파랑
+    '서면점':   '#4F9E3F',  // 초록
   },
   // 손상원 3개 지점 — 인스타 프로필 배경색 기반
   '손상원': {
