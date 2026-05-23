@@ -516,15 +516,18 @@ function MembershipCard({
     ? s.mBadgeTextUrgent
     : s.mBadgeText;
 
+  // 카드 전체를 Pressable로 — Pressable의 함수형 style 배열이 내부 row
+  // layout을 자꾸 무너뜨려서 children-as-function 패턴으로 옮김.
   return (
-    <View style={cardStyle}>
-      <Pressable
-        onPress={() =>
-          router.push({ pathname: '/membership/[id]', params: { id: membership.id } })
-        }
-        style={({ pressed }) => ({ flex: 1, opacity: pressed ? 0.8 : 1 })}
-      >
-        <View style={s.mCardContent}>
+    <Pressable
+      onPress={() =>
+        router.push({ pathname: '/membership/[id]', params: { id: membership.id } })
+      }
+      style={cardStyle}
+    >
+      {({ pressed }) => (
+        <View style={[s.mCardRow, pressed && { opacity: 0.85 }]}>
+          {/* Left: icon */}
           <View style={[s.mIconBox, expired && s.mIconBoxMuted]}>
             <Feather
               name={iconName}
@@ -533,6 +536,7 @@ function MembershipCard({
             />
           </View>
 
+          {/* Middle: badge + gym name */}
           <View style={s.mCardBody}>
             <View style={s.mBadgeRow}>
               <View style={badgeStyle}>
@@ -554,42 +558,49 @@ function MembershipCard({
               {gymLabel}
             </Text>
           </View>
+
+          {/* Right: stat + use-pass button */}
+          <View style={s.mRightCol}>
+            <Text style={[s.mRightStatText, expSoon && s.mSubtitleTextUrgent]}>
+              {formatMembershipRightStat(membership, expired)}
+            </Text>
+
+            {!expired && isPasses && (
+              <Pressable
+                onPress={handleUsePass}
+                disabled={
+                  usePass.isPending ||
+                  (membership.total_passes != null &&
+                    membership.used_passes >= membership.total_passes)
+                }
+                hitSlop={4}
+              >
+                {({ pressed: btnPressed }) => (
+                  <View
+                    style={[
+                      s.usePassBtn,
+                      membership.total_passes != null &&
+                        membership.used_passes >= membership.total_passes &&
+                        s.usePassBtnDisabled,
+                      btnPressed && { opacity: 0.8 },
+                    ]}
+                  >
+                    {usePass.isPending ? (
+                      <ActivityIndicator size="small" color="white" />
+                    ) : (
+                      <>
+                        <Feather name="check" size={12} color="white" />
+                        <Text style={s.usePassBtnText}>사용</Text>
+                      </>
+                    )}
+                  </View>
+                )}
+              </Pressable>
+            )}
+          </View>
         </View>
-      </Pressable>
-
-      <View style={s.mRightCol}>
-        <Text style={[s.mRightStatText, expSoon && s.mSubtitleTextUrgent]}>
-          {formatMembershipRightStat(membership, expired)}
-        </Text>
-
-        {!expired && isPasses && (
-          <Pressable
-            onPress={handleUsePass}
-            disabled={
-              usePass.isPending ||
-              (membership.total_passes != null &&
-                membership.used_passes >= membership.total_passes)
-            }
-            style={({ pressed }) => [{ opacity: pressed ? 0.8 : 1 }]}
-          >
-            <View style={[
-              s.usePassBtn,
-              (membership.total_passes != null &&
-                membership.used_passes >= membership.total_passes) && s.usePassBtnDisabled
-            ]}>
-              {usePass.isPending ? (
-                <ActivityIndicator size="small" color="white" />
-              ) : (
-                <>
-                  <Feather name="check" size={12} color="white" />
-                  <Text style={s.usePassBtnText}>사용</Text>
-                </>
-              )}
-            </View>
-          </Pressable>
-        )}
-      </View>
-    </View>
+      )}
+    </Pressable>
   );
 }
 
@@ -1157,13 +1168,17 @@ const s = StyleSheet.create({
 
   // Membership Card Styles
   mCard: {
-    flexDirection: 'row',
-    alignItems: 'stretch',
     backgroundColor: '#ffffff',
     borderWidth: 1,
     borderColor: '#e2e8f0',
     borderRadius: 16,
     overflow: 'hidden',
+  },
+  mCardRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 14,
+    gap: 12,
   },
   mCardExpired: {
     backgroundColor: '#f8fafc',
@@ -1260,11 +1275,10 @@ const s = StyleSheet.create({
     color: '#ef4444',
   },
   mRightCol: {
-    paddingRight: 16,
-    paddingVertical: 16,
     alignItems: 'flex-end',
     justifyContent: 'center',
     gap: 8,
+    flexShrink: 0,
   },
   mRightStatText: {
     fontSize: 16,
