@@ -60,10 +60,7 @@ export default function ProfileScreen() {
     <SafeAreaView style={s.container} edges={['top']}>
       {/* Header bar */}
       <View style={s.header}>
-        <View>
-          <Text style={s.headerTitle}>마이페이지</Text>
-          <Text style={s.headerSubtitle}>나의 등반 프로필 & 회원권</Text>
-        </View>
+        <Text style={s.headerTitle}>마이페이지</Text>
         <View style={s.headerActions}>
           <Pressable
             onPress={() => setMenuVisible(true)}
@@ -173,25 +170,21 @@ export default function ProfileScreen() {
               <View style={s.summaryCard}>
                 <View style={s.summaryMetricsRow}>
                   <SummaryMetric
-                    label="총 세션"
+                    label="세션"
                     value={stats.totalSessions}
                     icon="calendar"
-                    color="#4f46e5"
-                    bgColor="#f5f3ff"
                   />
+                  <View style={s.metricDivider} />
                   <SummaryMetric
-                    label="총 완등"
+                    label="완등"
                     value={stats.totalSends}
                     icon="check-circle"
-                    color="#06b6d4"
-                    bgColor="#ecfeff"
                   />
+                  <View style={s.metricDivider} />
                   <SummaryMetric
                     label="활동 일수"
                     value={stats.activityDays}
                     icon="award"
-                    color="#7c3aed"
-                    bgColor="#faf5ff"
                   />
                 </View>
               </View>
@@ -250,22 +243,16 @@ function SummaryMetric({
   label,
   value,
   icon,
-  color,
-  bgColor,
 }: {
   label: string;
   value: number;
   icon: 'calendar' | 'check-circle' | 'award';
-  color: string;
-  bgColor: string;
 }) {
   return (
     <View style={s.metricCard}>
-      <View style={[s.metricIconBg, { backgroundColor: bgColor }]}>
-        <Feather name={icon} size={16} color={color} />
-      </View>
+      <Feather name={icon} size={14} color="#475569" />
+      <Text style={s.metricVal}>{value}</Text>
       <Text style={s.metricLabel}>{label}</Text>
-      <Text style={[s.metricVal, { color }]}>{value}</Text>
     </View>
   );
 }
@@ -507,6 +494,9 @@ function MembershipCard({
   }
 
   const isPasses = membership.membership_type === 'passes';
+  const isMonthly = membership.membership_type === 'monthly' || membership.membership_type === 'period';
+  
+  const iconName = isPasses ? 'layers' : (isMonthly ? 'calendar' : 'credit-card');
 
   const cardStyle = [
     s.mCard,
@@ -532,9 +522,20 @@ function MembershipCard({
         onPress={() =>
           router.push({ pathname: '/membership/[id]', params: { id: membership.id } })
         }
-        style={({ pressed }) => [{ flex: 1, opacity: pressed ? 0.8 : 1 }]}
+        style={({ pressed }) => [
+          s.mCardContent,
+          { opacity: pressed ? 0.8 : 1 }
+        ]}
       >
-        <View style={s.mCardContent}>
+        <View style={[s.mIconBox, expired && s.mIconBoxMuted]}>
+          <Feather
+            name={iconName}
+            size={20}
+            color={expired ? '#94a3b8' : '#475569'}
+          />
+        </View>
+        
+        <View style={s.mCardBody}>
           <View style={s.mBadgeRow}>
             <View style={badgeStyle}>
               <Text style={badgeTextStyle}>
@@ -997,7 +998,7 @@ const s = StyleSheet.create({
   // Stats Section
   sectionContainer: {
     paddingHorizontal: 20,
-    marginTop: 24,
+    marginTop: 28,
   },
   sectionTitle: {
     fontSize: 16,
@@ -1023,11 +1024,11 @@ const s = StyleSheet.create({
     fontWeight: '600',
   },
   summaryCard: {
-    backgroundColor: '#ffffff',
+    backgroundColor: '#f8fafc',
     borderWidth: 1,
     borderColor: '#e2e8f0',
-    borderRadius: 24,
-    padding: 16,
+    borderRadius: 22,
+    padding: 18,
     marginBottom: 16,
     shadowColor: '#0f172a',
     shadowOpacity: 0.03,
@@ -1039,35 +1040,26 @@ const s = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: 10,
   },
   metricCard: {
     flex: 1,
-    backgroundColor: '#f8fafc',
-    borderRadius: 16,
-    paddingVertical: 14,
     alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: '#f1f5f9',
+    gap: 4,
   },
-  metricIconBg: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 6,
+  metricDivider: {
+    width: 1,
+    alignSelf: 'stretch',
+    backgroundColor: '#e2e8f0',
   },
   metricLabel: {
     fontSize: 11,
-    fontWeight: '600',
-    color: '#64748b',
-    marginBottom: 2,
+    fontWeight: '700',
+    color: '#94a3b8',
   },
   metricVal: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: '900',
+    color: '#0f172a',
     letterSpacing: -0.5,
   },
   emptyStatsCard: {
@@ -1167,38 +1159,47 @@ const s = StyleSheet.create({
   // Membership Card Styles
   mCard: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'stretch',
     backgroundColor: '#ffffff',
     borderWidth: 1,
-    borderLeftWidth: 6,
     borderColor: '#e2e8f0',
-    borderLeftColor: '#06b6d4',
-    borderRadius: 20,
-    shadowColor: '#0f172a',
-    shadowOpacity: 0.02,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 1,
+    borderRadius: 16,
     overflow: 'hidden',
   },
   mCardExpired: {
-    borderLeftColor: '#94a3b8',
     backgroundColor: '#f8fafc',
     opacity: 0.7,
   },
   mCardUrgent: {
-    borderLeftColor: '#ef4444',
-    backgroundColor: '#fff5f5',
     borderColor: '#fecaca',
   },
   mCardContent: {
+    flex: 1,
     padding: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+  },
+  mIconBox: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: '#f1f5f9',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  mIconBoxMuted: {
+    backgroundColor: '#f1f5f9',
+  },
+  mCardBody: {
+    flex: 1,
+    minWidth: 0,
   },
   mBadgeRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    marginBottom: 6,
+    marginBottom: 4,
     flexWrap: 'wrap',
   },
   mBadge: {
