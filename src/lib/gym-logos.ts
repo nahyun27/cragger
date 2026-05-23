@@ -1,0 +1,82 @@
+import type { ImageSourcePropType } from 'react-native';
+
+// 브랜드 로고 매핑.
+// 키 = gym.name 에 substring 으로 들어있을 brand 식별자 (지점명 제외).
+// 값 = require()로 정적 import된 PNG. metro가 빌드 타임에 번들에 포함.
+//
+// 추가 방법:
+//   1) assets/gym-logos/<brand>.png 로 파일 넣기
+//   2) 아래 GYM_LOGOS 에 한 줄 추가
+//   3) 같은 브랜드의 모든 지점이 같은 로고 사용 (예: 더클라임 강남점·홍대점)
+//
+// 매칭 우선순위: 키 길이 긴 것부터 — '더클라임 B' 가 '더클라임' 보다 먼저
+// 평가되어야 의도대로 분기 가능.
+//
+// 서울숲은 단색(흰색) 로고 + 지점별 배경색으로 통일감 부여 (네이버 검색
+// 결과의 brand 운영 방식 재현). 다른 brand 는 단일 로고만.
+export const GYM_LOGOS: Record<string, ImageSourcePropType> = {
+  '그루트':       require('../../assets/gym-logos/그루트.png'),
+  // 더클라임은 지점별 배경색 — 흰 로고 사용
+  '더클라임':     require('../../assets/gym-logos/더클라임-white.png'),
+  '닷클라이밍':   require('../../assets/gym-logos/닷클라이밍짐.png'),
+  '드림캐처':     require('../../assets/gym-logos/드림캐쳐.png'),
+  '브릭스':       require('../../assets/gym-logos/브릭스.png'),
+  '서울볼더스':   require('../../assets/gym-logos/서울볼더스.png'),
+  '서울숲':       require('../../assets/gym-logos/서울숲-white.png'),
+  '스파이시':     require('../../assets/gym-logos/스파이시.png'),
+  '온플릭':       require('../../assets/gym-logos/온플릭.png'),
+  '클라임투게더': require('../../assets/gym-logos/클라임투게더.png'),
+  '클라임투더문': require('../../assets/gym-logos/클라임투더문.png'),
+  '킨디':         require('../../assets/gym-logos/킨디클라이밍.png'),
+  '원더월':       require('../../assets/gym-logos/원더월.png'),
+  '플래시볼더스': require('../../assets/gym-logos/플래시볼더스.png'),
+};
+
+// (brand key) → (branch → background hex). 매핑 없으면 흰 카드 그대로.
+export const GYM_BG_BY_BRANCH: Record<string, Record<string, string>> = {
+  '서울숲': {
+    '구로점':   '#9333EA',  // 보라
+    '영등포점': '#F97316',  // 주황
+    '종로점':   '#0EA5E9',  // 하늘
+    '잠실점':   '#EC4899',  // 분홍
+  },
+  // 더클라임 12개 지점 — 인스타 프로필 테두리 색 기반
+  '더클라임': {
+    '강남점':   '#DC2626',  // 빨강
+    '논현점':   '#84A52A',  // 올리브
+    '마곡점':   '#6D28D9',  // 보라
+    '문래점':   '#78350F',  // 갈색
+    '사당점':   '#14B8A6',  // teal
+    '성수점':   '#14532D',  // 짙은 녹색
+    '신림점':   '#2563EB',  // 파랑
+    '신사점':   '#9F1239',  // 와인
+    '양재점':   '#B45309',  // 금색
+    '연남점':   '#93C5FD',  // 옅은 파랑
+    '이수점':   '#B45309',  // 금색
+    '일산점':   '#111827',  // 검정
+  },
+};
+
+export type GymVisualStyle = {
+  logo: ImageSourcePropType | null;
+  bg: string | null;
+};
+
+export function matchGymStyle(name: string, branch?: string | null): GymVisualStyle {
+  const trimmed = name.trim();
+  if (!trimmed) return { logo: null, bg: null };
+  // 더 긴 키부터 — substring 모호성 방지
+  const keys = Object.keys(GYM_LOGOS).sort((a, b) => b.length - a.length);
+  for (const key of keys) {
+    if (!trimmed.includes(key)) continue;
+    const branchMap = GYM_BG_BY_BRANCH[key];
+    const bg = branchMap && branch && branchMap[branch] ? branchMap[branch] : null;
+    return { logo: GYM_LOGOS[key], bg };
+  }
+  return { logo: null, bg: null };
+}
+
+// 하위호환 — 이름만으로 로고 찾기 (배경 무시).
+export function matchGymLogo(gymName: string): ImageSourcePropType | null {
+  return matchGymStyle(gymName).logo;
+}

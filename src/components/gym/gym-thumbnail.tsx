@@ -1,11 +1,15 @@
 import React, { useMemo } from 'react';
-import { Text, View } from 'react-native';
+import { Image, Text, View } from 'react-native';
 
-// 사진 대체용 placeholder — 암장 이름 해시 기반 색 + 첫 글자.
-// 사진 도입은 v1.1 (gyms.photo_url + Supabase Storage 또는 IG OG image).
+import { matchGymStyle } from '@/lib/gym-logos';
+
+// 브랜드 로고가 있으면 그걸 보여주고, 없으면 이름 해시 기반 색 + 첫 글자 fallback.
+// 일부 brand (예: 서울숲) 는 흰색 단색 로고 + 지점별 배경색으로 통일감.
+// 사진(개별 지점 사진) 도입은 v1.1.
 
 type Props = {
   name: string;
+  branch?: string | null;
   size?: number;
 };
 
@@ -30,8 +34,9 @@ function hslToHex(h: number, s: number, l: number): string {
   return `#${toHex(f(0))}${toHex(f(8))}${toHex(f(4))}`;
 }
 
-export function GymThumbnail({ name, size = 56 }: Props) {
-  const { bg, initial } = useMemo(() => {
+export function GymThumbnail({ name, branch, size = 56 }: Props) {
+  const { logo, bg } = useMemo(() => matchGymStyle(name, branch), [name, branch]);
+  const fallback = useMemo(() => {
     const trimmed = name.trim();
     const hue = hashSeed(trimmed || '?');
     return {
@@ -40,19 +45,46 @@ export function GymThumbnail({ name, size = 56 }: Props) {
     };
   }, [name]);
 
+  if (logo) {
+    // 지점별 배경색이 있으면 컬러 카드 + 흰 로고, 없으면 흰 카드 + 컬러 로고.
+    const hasBg = bg != null;
+    return (
+      <View
+        style={{
+          width: size,
+          height: size,
+          borderRadius: 12,
+          overflow: 'hidden',
+          backgroundColor: bg ?? '#ffffff',
+          borderWidth: hasBg ? 0 : 1,
+          borderColor: '#e2e8f0',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: hasBg ? size * 0.14 : 0,
+        }}
+      >
+        <Image
+          source={logo}
+          style={{ width: '100%', height: '100%' }}
+          resizeMode="contain"
+        />
+      </View>
+    );
+  }
+
   return (
     <View
       style={{
         width: size,
         height: size,
-        backgroundColor: bg,
+        backgroundColor: fallback.bg,
         borderRadius: 12,
         alignItems: 'center',
         justifyContent: 'center',
       }}
     >
       <Text style={{ fontSize: size * 0.42, color: '#ffffff', fontWeight: 'bold' }}>
-        {initial}
+        {fallback.initial}
       </Text>
     </View>
   );

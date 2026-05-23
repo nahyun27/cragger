@@ -217,12 +217,30 @@ export default function GymsScreen() {
             onPress={() => setRegionModalOpen(true)}
             style={({ pressed }) => [{ opacity: pressed ? 0.8 : 1 }]}
           >
-            <View style={s.regionSelect}>
-              <Feather name="map" size={14} color="#475569" />
-              <Text style={s.regionSelectText}>
+            <View
+              style={[
+                s.regionSelect,
+                selectedRegion !== '전체' ? s.regionSelectActive : s.regionSelectInactive,
+              ]}
+            >
+              <Feather
+                name="map"
+                size={14}
+                color={selectedRegion !== '전체' ? '#06b6d4' : '#475569'}
+              />
+              <Text
+                style={[
+                  s.regionSelectText,
+                  selectedRegion !== '전체' ? s.regionSelectTextActive : s.regionSelectTextInactive,
+                ]}
+              >
                 {selectedRegion === '전체' ? '전체 지역' : selectedRegion}
               </Text>
-              <Feather name="chevron-down" size={14} color="#64748b" />
+              <Feather
+                name="chevron-down"
+                size={14}
+                color={selectedRegion !== '전체' ? '#06b6d4' : '#64748b'}
+              />
             </View>
           </Pressable>
 
@@ -364,8 +382,11 @@ export default function GymsScreen() {
           onPress={() => setRegionModalOpen(false)}
         >
           <Pressable style={s.modalSheet} onPress={(e) => e.stopPropagation()}>
-            <Text style={s.modalTitle}>지역 선택</Text>
-            <ScrollView style={{ maxHeight: 420 }}>
+            <View style={s.modalHeader}>
+              <Text style={s.modalTitle}>지역 선택</Text>
+              <Text style={s.modalSubtitle}>탐색할 지역을 선택해 주세요</Text>
+            </View>
+            <ScrollView style={{ maxHeight: 420 }} showsVerticalScrollIndicator={false}>
               {regions.map((region) => {
                 const active = region === selectedRegion;
                 return (
@@ -375,20 +396,26 @@ export default function GymsScreen() {
                       setSelectedRegion(region);
                       setRegionModalOpen(false);
                     }}
-                    style={({ pressed }) => [
-                      s.modalRow,
-                      pressed && { backgroundColor: '#f1f5f9' },
-                    ]}
                   >
-                    <Text
-                      style={[
-                        s.modalRowText,
-                        active && s.modalRowTextActive,
-                      ]}
-                    >
-                      {region === '전체' ? '전체 지역' : region}
-                    </Text>
-                    {active && <Feather name="check" size={16} color="#06b6d4" />}
+                    {({ pressed }) => (
+                      <View
+                        style={[
+                          s.modalRow,
+                          active && s.modalRowActive,
+                          pressed && { backgroundColor: '#f1f5f9' },
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            s.modalRowText,
+                            active && s.modalRowTextActive,
+                          ]}
+                        >
+                          {region === '전체' ? '전체 지역' : region}
+                        </Text>
+                        {active && <Feather name="check" size={18} color="#06b6d4" />}
+                      </View>
+                    )}
                   </Pressable>
                 );
               })}
@@ -414,7 +441,7 @@ function GymCard({ gym, isFavorite }: { gym: GymListItem; isFavorite: boolean })
     >
       <View style={s.gymCard}>
         {/* Photo placeholder — 사진 도입 전까지 해시 기반 색 + 이니셜 */}
-        <GymThumbnail name={`${gym.name}${gym.branch ?? ''}`} size={56} />
+        <GymThumbnail name={gym.name} branch={gym.branch} size={56} />
 
         <View style={s.gymCardInfo}>
           {/* Name and Branch */}
@@ -492,14 +519,17 @@ function GymCard({ gym, isFavorite }: { gym: GymListItem; isFavorite: boolean })
               toggleFavorite.mutate({ gymId: gym.id, currentlyFavorite: isFavorite })
             }
             hitSlop={10}
-            style={({ pressed }) => [{ opacity: pressed ? 0.6 : 1 }, s.favoriteBtn]}
           >
-            <Feather
-              name="star"
-              size={20}
-              color={isFavorite ? '#f59e0b' : '#cbd5e1'}
-              fill={isFavorite ? '#f59e0b' : 'transparent'}
-            />
+            {({ pressed }) => (
+              <View style={[{ opacity: pressed ? 0.6 : 1 }, s.favoriteBtn]}>
+                <Feather
+                  name="star"
+                  size={20}
+                  color={isFavorite ? '#f59e0b' : '#cbd5e1'}
+                  fill={isFavorite ? '#f59e0b' : 'transparent'}
+                />
+              </View>
+            )}
           </Pressable>
           <Feather name="chevron-right" size={18} color="#cbd5e1" />
         </View>
@@ -608,14 +638,25 @@ const s = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+  },
+  regionSelectActive: {
+    backgroundColor: '#ecfeff',
+    borderColor: '#06b6d4',
+  },
+  regionSelectInactive: {
     backgroundColor: '#ffffff',
+    borderColor: '#e2e8f0',
   },
   regionSelectText: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#0f172a',
     minWidth: 60,
+  },
+  regionSelectTextActive: {
+    color: '#0e7490',
+  },
+  regionSelectTextInactive: {
+    color: '#0f172a',
   },
   favOnlyChip: {
     flexDirection: 'row',
@@ -650,34 +691,45 @@ const s = StyleSheet.create({
   },
   modalSheet: {
     backgroundColor: '#ffffff',
-    borderRadius: 20,
-    padding: 16,
+    borderRadius: 24,
+    padding: 20,
     shadowColor: '#000',
     shadowOpacity: 0.15,
     shadowRadius: 20,
     shadowOffset: { width: 0, height: 8 },
     elevation: 8,
   },
-  modalTitle: {
-    fontSize: 15,
-    fontWeight: '800',
-    color: '#0f172a',
-    paddingHorizontal: 4,
-    paddingBottom: 8,
-    marginBottom: 4,
+  modalHeader: {
+    paddingBottom: 12,
+    marginBottom: 8,
     borderBottomWidth: 1,
     borderColor: '#e2e8f0',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#0f172a',
+  },
+  modalSubtitle: {
+    fontSize: 12,
+    color: '#64748b',
+    marginTop: 4,
+    fontWeight: '500',
   },
   modalRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    borderRadius: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderRadius: 12,
+    marginVertical: 1,
+  },
+  modalRowActive: {
+    backgroundColor: '#f8fafc',
   },
   modalRowText: {
-    fontSize: 14,
+    fontSize: 16,
     color: '#334155',
     fontWeight: '600',
   },
