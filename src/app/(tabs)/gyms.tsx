@@ -181,7 +181,7 @@ export default function GymsScreen() {
             isFocused && s.searchBarFocused
           ]}
         >
-          <Feather name="search" size={18} color={isFocused ? '#0d9488' : '#64748b'} />
+          <Feather name="search" size={18} color={isFocused ? '#06b6d4' : '#64748b'} />
           <TextInput
             placeholder="이름·지점·지역 검색"
             placeholderTextColor="#94a3b8"
@@ -263,7 +263,7 @@ export default function GymsScreen() {
                     <Feather
                       name={opt.icon}
                       size={12}
-                      color={isSelected ? '#0d9488' : '#64748b'}
+                      color={isSelected ? '#06b6d4' : '#64748b'}
                     />
                     <Text
                       style={[
@@ -283,7 +283,7 @@ export default function GymsScreen() {
 
       {isLoading && (
         <View style={s.loaderWrap}>
-          <ActivityIndicator size="large" color="#0d9488" />
+          <ActivityIndicator size="large" color="#06b6d4" />
         </View>
       )}
 
@@ -471,14 +471,14 @@ const s = StyleSheet.create({
     letterSpacing: -0.5,
   },
   countBadge: {
-    backgroundColor: '#f0fdfa',
+    backgroundColor: '#ecfeff',
     paddingHorizontal: 10,
     paddingVertical: 2,
     borderRadius: 12,
     marginLeft: 8,
   },
   countBadgeText: {
-    color: '#0d9488',
+    color: '#06b6d4',
     fontSize: 13,
     fontWeight: '700',
   },
@@ -505,7 +505,7 @@ const s = StyleSheet.create({
     paddingVertical: 6,
   },
   searchBarFocused: {
-    borderColor: '#0d9488',
+    borderColor: '#06b6d4',
     backgroundColor: '#ffffff',
   },
   searchInput: {
@@ -538,8 +538,8 @@ const s = StyleSheet.create({
     borderWidth: 1,
   },
   regionChipActive: {
-    backgroundColor: '#0d9488',
-    borderColor: '#0d9488',
+    backgroundColor: '#06b6d4',
+    borderColor: '#06b6d4',
   },
   regionChipInactive: {
     backgroundColor: '#ffffff',
@@ -567,8 +567,8 @@ const s = StyleSheet.create({
     borderWidth: 1,
   },
   facilityChipActive: {
-    backgroundColor: '#f0fdfa',
-    borderColor: '#0d9488',
+    backgroundColor: '#ecfeff',
+    borderColor: '#06b6d4',
   },
   facilityChipInactive: {
     backgroundColor: '#ffffff',
@@ -578,7 +578,7 @@ const s = StyleSheet.create({
     fontSize: 12,
   },
   facilityChipTextActive: {
-    color: '#0d9488',
+    color: '#06b6d4',
     fontWeight: '700',
   },
   facilityChipTextInactive: {

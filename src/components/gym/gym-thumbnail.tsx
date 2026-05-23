@@ -42,10 +42,16 @@ export function GymThumbnail({ name, size = 56 }: Props) {
 
   return (
     <View
-      style={{ width: size, height: size, backgroundColor: bg }}
-      className="rounded-xl items-center justify-center"
+      style={{
+        width: size,
+        height: size,
+        backgroundColor: bg,
+        borderRadius: 12,
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}
     >
-      <Text style={{ fontSize: size * 0.42 }} className="text-white font-bold">
+      <Text style={{ fontSize: size * 0.42, color: '#ffffff', fontWeight: 'bold' }}>
         {initial}
       </Text>
     </View>

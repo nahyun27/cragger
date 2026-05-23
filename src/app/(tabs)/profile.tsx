@@ -111,7 +111,7 @@ export default function ProfileScreen() {
                 hitSlop={6}
               >
                 <View style={s.instaTag}>
-                  <Feather name="instagram" size={12} color="#0d9488" />
+                  <Feather name="instagram" size={12} color="#06b6d4" />
                   <Text style={s.instaTagText}>
                     @{profile.instagram_handle}
                   </Text>
@@ -157,7 +157,7 @@ export default function ProfileScreen() {
 
           {isLoading && (
             <View style={s.loaderWrap}>
-              <ActivityIndicator color="#0d9488" />
+              <ActivityIndicator color="#06b6d4" />
             </View>
           )}
 
@@ -183,8 +183,8 @@ export default function ProfileScreen() {
                     label="총 완등"
                     value={stats.totalSends}
                     icon="check-circle"
-                    color="#0d9488"
-                    bgColor="#f0fdfa"
+                    color="#06b6d4"
+                    bgColor="#ecfeff"
                   />
                   <SummaryMetric
                     label="활동 일수"
@@ -412,7 +412,7 @@ function MembershipsSection() {
 
       {isLoading && (
         <View style={s.loaderWrap}>
-          <ActivityIndicator color="#0d9488" />
+          <ActivityIndicator color="#06b6d4" />
         </View>
       )}
 
@@ -641,7 +641,7 @@ function ShoesSection() {
 
       {isLoading && (
         <View style={s.loaderWrap}>
-          <ActivityIndicator color="#0d9488" />
+          <ActivityIndicator color="#06b6d4" />
         </View>
       )}
 
@@ -856,10 +856,10 @@ const s = StyleSheet.create({
     height: 76,
     borderRadius: 38,
     borderWidth: 2,
-    borderColor: '#0d9488',
+    borderColor: '#06b6d4',
     backgroundColor: '#ffffff',
     padding: 3,
-    shadowColor: '#0d9488',
+    shadowColor: '#06b6d4',
     shadowOpacity: 0.15,
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 4 },
@@ -874,12 +874,12 @@ const s = StyleSheet.create({
     width: '100%',
     height: '100%',
     borderRadius: 33,
-    backgroundColor: '#f0fdfa',
+    backgroundColor: '#ecfeff',
     alignItems: 'center',
     justifyContent: 'center',
   },
   avatarFallbackText: {
-    color: '#0d9488',
+    color: '#06b6d4',
     fontSize: 28,
     fontWeight: '800',
   },
@@ -903,15 +903,15 @@ const s = StyleSheet.create({
     gap: 4,
     marginTop: 4,
     alignSelf: 'flex-start',
-    backgroundColor: '#f0fdfa',
+    backgroundColor: '#ecfeff',
     borderWidth: 1,
-    borderColor: '#ccfbf1',
+    borderColor: '#cffafe',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 8,
   },
   instaTagText: {
-    color: '#0d9488',
+    color: '#06b6d4',
     fontSize: 12,
     fontWeight: '700',
   },
@@ -947,11 +947,11 @@ const s = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 1.5,
     borderStyle: 'dashed',
-    borderColor: '#ccfbf1',
-    backgroundColor: '#f0fdfa',
+    borderColor: '#cffafe',
+    backgroundColor: '#ecfeff',
   },
   bodyStripEmptyText: {
-    color: '#0d9488',
+    color: '#06b6d4',
     fontSize: 13,
     fontWeight: '700',
   },
@@ -1115,11 +1115,11 @@ const s = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: '#0d9488',
+    backgroundColor: '#06b6d4',
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 10,
-    shadowColor: '#0d9488',
+    shadowColor: '#06b6d4',
     shadowOpacity: 0.2,
     shadowRadius: 4,
     shadowOffset: { width: 0, height: 2 },
@@ -1172,7 +1172,7 @@ const s = StyleSheet.create({
     borderWidth: 1,
     borderLeftWidth: 6,
     borderColor: '#e2e8f0',
-    borderLeftColor: '#0d9488',
+    borderLeftColor: '#06b6d4',
     borderRadius: 20,
     shadowColor: '#0f172a',
     shadowOpacity: 0.02,
@@ -1202,9 +1202,9 @@ const s = StyleSheet.create({
     flexWrap: 'wrap',
   },
   mBadge: {
-    backgroundColor: '#f0fdfa',
+    backgroundColor: '#ecfeff',
     borderWidth: 1,
-    borderColor: '#ccfbf1',
+    borderColor: '#cffafe',
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 8,
@@ -1212,7 +1212,7 @@ const s = StyleSheet.create({
   mBadgeText: {
     fontSize: 10,
     fontWeight: '800',
-    color: '#0d9488',
+    color: '#06b6d4',
   },
   mBadgeExpired: {
     backgroundColor: '#f1f5f9',
@@ -1276,12 +1276,12 @@ const s = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 8,
-    backgroundColor: '#0d9488',
+    backgroundColor: '#06b6d4',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 4,
-    shadowColor: '#0d9488',
+    shadowColor: '#06b6d4',
     shadowOpacity: 0.15,
     shadowRadius: 4,
     shadowOffset: { width: 0, height: 2 },
@@ -1330,8 +1330,8 @@ const s = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 10,
-    backgroundColor: '#0d9488',
-    shadowColor: '#0d9488',
+    backgroundColor: '#06b6d4',
+    shadowColor: '#06b6d4',
     shadowOpacity: 0.2,
     shadowRadius: 4,
     shadowOffset: { width: 0, height: 2 },

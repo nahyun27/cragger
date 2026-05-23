@@ -105,7 +105,7 @@ export default function StatsScreen() {
       <ScrollView contentContainerStyle={s.scrollContent}>
         {isLoading && (
           <View style={s.loaderWrap}>
-            <ActivityIndicator color="#0d9488" />
+            <ActivityIndicator color="#06b6d4" />
           </View>
         )}
 

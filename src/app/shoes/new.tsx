@@ -61,7 +61,7 @@ export default function NewShoeScreen() {
           className="flex-row items-center justify-center gap-1.5 px-4 py-3 border-b border-border-subtle active:opacity-60"
           hitSlop={6}
         >
-          <Feather name="info" size={14} color="#0d9488" />
+          <Feather name="info" size={14} color="#06b6d4" />
           <Text className="text-brand-primary text-sm font-bold">
             사이즈 가이드
           </Text>

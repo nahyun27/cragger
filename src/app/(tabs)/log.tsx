@@ -21,7 +21,7 @@ type ViewMode = 'list' | 'calendar';
 export default function LogScreen() {
   const router = useRouter();
   const [viewMode, setViewMode] = useState<ViewMode>('list');
-  const { data: sessions, isLoading, error } = useRecentSessions(20);
+  const { data: sessions, isLoading, error, isRefetching, refetch } = useRecentSessions(20);
   const isEmpty = !isLoading && (sessions?.length ?? 0) === 0;
 
   const stats = useMemo(() => {
@@ -45,11 +45,13 @@ export default function LogScreen() {
         </View>
         <Pressable
           onPress={() => router.push('/session/new')}
-          style={({ pressed }) => [s.writeBtn, { opacity: pressed ? 0.85 : 1 }]}
+          style={({ pressed }) => [{ opacity: pressed ? 0.85 : 1 }]}
           hitSlop={6}
         >
-          <Feather name="plus" size={14} color="#ffffff" />
-          <Text style={s.writeBtnText}>기록 추가</Text>
+          <View style={s.writeBtn}>
+            <Feather name="plus" size={14} color="#ffffff" />
+            <Text style={s.writeBtnText}>기록 추가</Text>
+          </View>
         </Pressable>
       </View>
 
@@ -94,23 +96,27 @@ export default function LogScreen() {
               data={sessions}
               keyExtractor={(item) => item.id}
               contentContainerStyle={s.listContent}
+              refreshing={isRefetching}
+              onRefresh={refetch}
               ListHeaderComponent={
                 <>
                   {/* Dashboard summary card */}
                   <View style={s.statsCard}>
                     <View style={s.statsCardHeader}>
-                      <Feather name="trending-up" size={14} color="#475569" />
+                      <View style={s.statsCardIconWrap}>
+                        <Feather name="trending-up" size={12} color="#06b6d4" />
+                      </View>
                       <Text style={s.statsCardTitle}>최근 등반 통계</Text>
                     </View>
                     <View style={s.statsRow}>
                       <View style={s.statCol}>
                         <Text style={s.statLabel}>총 세션</Text>
-                        <Text style={s.statVal}>{stats.totalSessions}</Text>
+                        <Text style={[s.statVal, { color: '#0f172a' }]}>{stats.totalSessions}</Text>
                       </View>
                       <View style={s.statDivider} />
                       <View style={s.statCol}>
                         <Text style={s.statLabel}>총 완등</Text>
-                        <Text style={s.statVal}>{stats.totalSends}</Text>
+                        <Text style={[s.statVal, { color: '#06b6d4' }]}>{stats.totalSends}</Text>
                       </View>
                       <View style={s.statDivider} />
                       <View style={s.statCol}>
@@ -135,9 +141,11 @@ export default function LogScreen() {
                       </Text>
                       <Pressable
                         onPress={() => router.push('/session/new')}
-                        style={({ pressed }) => [s.emptyBtn, { opacity: pressed ? 0.9 : 1 }]}
+                        style={({ pressed }) => [{ opacity: pressed ? 0.9 : 1 }]}
                       >
-                        <Text style={s.emptyBtnText}>등반 기록 추가하기</Text>
+                        <View style={s.emptyBtn}>
+                          <Text style={s.emptyBtnText}>등반 기록 추가하기</Text>
+                        </View>
                       </Pressable>
                     </View>
                   )}
@@ -215,10 +223,11 @@ const s = StyleSheet.create({
     borderRadius: 12,
     backgroundColor: '#06b6d4',
     shadowColor: '#06b6d4',
-    shadowOpacity: 0.25,
+    shadowOpacity: 0.2,
     shadowRadius: 6,
     shadowOffset: { width: 0, height: 2 },
     elevation: 2,
+    justifyContent: 'center',
   },
   writeBtnText: {
     color: '#ffffff',
@@ -302,10 +311,10 @@ const s = StyleSheet.create({
 
   // Stats Card (hero tier)
   statsCard: {
-    backgroundColor: '#f8fafc',
+    backgroundColor: '#ffffff',
     borderWidth: 1,
     borderColor: '#e2e8f0',
-    borderRadius: 22,
+    borderRadius: 24,
     padding: 18,
     marginBottom: 20,
     shadowColor: '#0f172a',
@@ -319,6 +328,14 @@ const s = StyleSheet.create({
     alignItems: 'center',
     gap: 6,
     marginBottom: 14,
+  },
+  statsCardIconWrap: {
+    width: 24,
+    height: 24,
+    borderRadius: 6,
+    backgroundColor: '#ecfeff',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   statsCardTitle: {
     fontSize: 12,
@@ -348,13 +365,12 @@ const s = StyleSheet.create({
   },
   statVal: {
     fontSize: 22,
-    fontWeight: '800',
-    color: '#0f172a',
+    fontWeight: '900',
   },
   statValLatest: {
     fontSize: 14,
-    fontWeight: '700',
-    color: '#334155',
+    fontWeight: '800',
+    color: '#0e7490',
     marginTop: 4,
   },
 
@@ -393,8 +409,10 @@ const s = StyleSheet.create({
   emptyBtn: {
     paddingHorizontal: 16,
     paddingVertical: 10,
-    borderRadius: 10,
+    borderRadius: 12,
     backgroundColor: '#06b6d4',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   emptyBtnText: {
     color: '#ffffff',
