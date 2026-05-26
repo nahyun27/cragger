@@ -79,9 +79,13 @@ export function LeadEntry({ value, onChange }: Props) {
     onChange(value.filter((r) => r.id !== id));
   }
 
+  // 메인 등급 그리드 (5열) — 큰 카드형
   return (
-    <View style={{ gap: 12 }}>
-      {/* 메인 등급 */}
+    <View style={{ gap: 14 }}>
+      {/* 라벨 */}
+      <Text style={{ fontSize: 11, fontWeight: '700', color: '#94a3b8' }}>
+        등급
+      </Text>
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
         {MAIN_GRADES.map((g) => {
           const active = mainGrade === g;
@@ -92,25 +96,39 @@ export function LeadEntry({ value, onChange }: Props) {
                 setMainGrade(g);
                 if (!gradeNeedsSub(g)) setSubGrade(null);
               }}
-              style={({ pressed }) => ({
-                paddingHorizontal: 10,
-                paddingVertical: 8,
-                borderRadius: 10,
-                borderWidth: 1,
-                borderColor: active ? '#06b6d4' : '#e2e8f0',
-                backgroundColor: active ? '#ecfeff' : '#ffffff',
-                opacity: pressed ? 0.7 : 1,
-              })}
+              style={{ width: '18.4%' }}
             >
-              <Text
-                style={{
-                  fontSize: 13,
-                  fontWeight: '700',
-                  color: active ? '#0e7490' : '#475569',
-                }}
-              >
-                {g}
-              </Text>
+              {({ pressed }) => (
+                <View
+                  style={{
+                    paddingVertical: 12,
+                    borderRadius: 12,
+                    borderWidth: 1.5,
+                    borderColor: active ? '#06b6d4' : '#e2e8f0',
+                    backgroundColor: active ? '#06b6d4' : '#ffffff',
+                    alignItems: 'center',
+                    opacity: pressed ? 0.8 : 1,
+                    ...(active && {
+                      shadowColor: '#06b6d4',
+                      shadowOpacity: 0.2,
+                      shadowRadius: 6,
+                      shadowOffset: { width: 0, height: 2 },
+                      elevation: 2,
+                    }),
+                  }}
+                >
+                  <Text
+                    style={{
+                      fontSize: 13,
+                      fontWeight: '800',
+                      color: active ? '#ffffff' : '#475569',
+                      letterSpacing: -0.3,
+                    }}
+                  >
+                    {g}
+                  </Text>
+                </View>
+              )}
             </Pressable>
           );
         })}
@@ -118,68 +136,88 @@ export function LeadEntry({ value, onChange }: Props) {
 
       {/* 하위 등급 (a/b/c/d) — 5.10 이상일 때만 */}
       {needsSub && (
-        <View style={{ flexDirection: 'row', gap: 6 }}>
+        <View style={{ flexDirection: 'row', gap: 8 }}>
           {SUB_GRADES.map((sub) => {
             const active = subGrade === sub;
             return (
               <Pressable
                 key={sub}
                 onPress={() => setSubGrade(sub)}
-                style={({ pressed }) => ({
-                  flex: 1,
-                  paddingVertical: 10,
-                  borderRadius: 10,
-                  borderWidth: 1,
-                  borderColor: active ? '#06b6d4' : '#e2e8f0',
-                  backgroundColor: active ? '#ecfeff' : '#ffffff',
-                  alignItems: 'center',
-                  opacity: pressed ? 0.7 : 1,
-                })}
+                style={{ flex: 1 }}
               >
-                <Text
-                  style={{
-                    fontSize: 14,
-                    fontWeight: '800',
-                    color: active ? '#0e7490' : '#475569',
-                  }}
-                >
-                  {sub}
-                </Text>
+                {({ pressed }) => (
+                  <View
+                    style={{
+                      paddingVertical: 14,
+                      borderRadius: 12,
+                      borderWidth: 1.5,
+                      borderColor: active ? '#06b6d4' : '#e2e8f0',
+                      backgroundColor: active ? '#06b6d4' : '#ffffff',
+                      alignItems: 'center',
+                      opacity: pressed ? 0.8 : 1,
+                      ...(active && {
+                        shadowColor: '#06b6d4',
+                        shadowOpacity: 0.2,
+                        shadowRadius: 6,
+                        shadowOffset: { width: 0, height: 2 },
+                        elevation: 2,
+                      }),
+                    }}
+                  >
+                    <Text
+                      style={{
+                        fontSize: 16,
+                        fontWeight: '900',
+                        color: active ? '#ffffff' : '#475569',
+                      }}
+                    >
+                      {sub}
+                    </Text>
+                  </View>
+                )}
               </Pressable>
             );
           })}
         </View>
       )}
 
-      {/* 결과 4개 */}
-      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+      {/* 결과 4개 — 카드형 강조 */}
+      <Text style={{ fontSize: 11, fontWeight: '700', color: '#94a3b8', marginTop: 2 }}>
+        완등 방식
+      </Text>
+      <View style={{ flexDirection: 'row', gap: 6 }}>
         {RESULT_OPTIONS.map((opt) => {
           const active = result === opt.value;
           return (
             <Pressable
               key={opt.value}
               onPress={() => setResult(opt.value)}
-              style={({ pressed }) => ({
-                flexGrow: 1,
-                minWidth: '22%',
-                paddingVertical: 10,
-                borderRadius: 10,
-                borderWidth: 1,
-                borderColor: active ? opt.border : '#e2e8f0',
-                backgroundColor: active ? opt.bg : '#ffffff',
-                alignItems: 'center',
-                opacity: pressed ? 0.7 : 1,
-              })}
+              style={{ flex: 1 }}
             >
-              <Text
-                style={{
-                  fontSize: 12,
-                  fontWeight: '800',
-                  color: active ? opt.fg : '#64748b',
-                }}
-              >
-                {opt.label}
-              </Text>
+              {({ pressed }) => (
+                <View
+                  style={{
+                    paddingVertical: 12,
+                    borderRadius: 12,
+                    borderWidth: 1.5,
+                    borderColor: active ? opt.border : '#e2e8f0',
+                    backgroundColor: active ? opt.bg : '#ffffff',
+                    alignItems: 'center',
+                    opacity: pressed ? 0.8 : 1,
+                  }}
+                >
+                  <Text
+                    style={{
+                      fontSize: 11,
+                      fontWeight: '800',
+                      color: active ? opt.fg : '#64748b',
+                      letterSpacing: -0.2,
+                    }}
+                  >
+                    {opt.label}
+                  </Text>
+                </View>
+              )}
             </Pressable>
           );
         })}

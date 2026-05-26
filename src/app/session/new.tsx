@@ -74,34 +74,46 @@ function DisciplineBtn({
   onPress: () => void;
 }) {
   return (
-    <Pressable
-      onPress={onPress}
-      style={({ pressed }) => ({
-        flex: 1,
-        paddingVertical: 10,
-        borderRadius: 12,
-        alignItems: 'center',
-        gap: 4,
-        borderWidth: 1,
-        borderColor: active ? '#06b6d4' : '#e2e8f0',
-        backgroundColor: active ? '#ecfeff' : '#ffffff',
-        opacity: disabled ? 0.5 : pressed ? 0.75 : 1,
-      })}
-    >
-      <Feather
-        name={icon}
-        size={16}
-        color={active ? '#06b6d4' : '#64748b'}
-      />
-      <Text
-        style={{
-          fontSize: 11,
-          fontWeight: '800',
-          color: active ? '#0e7490' : '#64748b',
-        }}
-      >
-        {label}
-      </Text>
+    <Pressable onPress={onPress} style={{ flex: 1 }}>
+      {({ pressed }) => (
+        <View
+          style={{
+            paddingVertical: 14,
+            borderRadius: 14,
+            alignItems: 'center',
+            gap: 6,
+            borderWidth: 1.5,
+            borderColor: active ? '#06b6d4' : '#e2e8f0',
+            backgroundColor: active ? '#06b6d4' : '#ffffff',
+            opacity: disabled ? 0.45 : pressed ? 0.85 : 1,
+            ...(active
+              ? {
+                  shadowColor: '#06b6d4',
+                  shadowOpacity: 0.25,
+                  shadowRadius: 8,
+                  shadowOffset: { width: 0, height: 3 },
+                  elevation: 3,
+                }
+              : {}),
+          }}
+        >
+          <Feather
+            name={icon}
+            size={20}
+            color={active ? '#ffffff' : '#64748b'}
+          />
+          <Text
+            style={{
+              fontSize: 12,
+              fontWeight: '800',
+              color: active ? '#ffffff' : '#64748b',
+              letterSpacing: -0.2,
+            }}
+          >
+            {label}
+          </Text>
+        </View>
+      )}
     </Pressable>
   );
 }
@@ -203,6 +215,37 @@ export default function NewSessionScreen() {
       </View>
 
       <ScrollView className="flex-1" contentContainerClassName="p-4 gap-6">
+        <Section title="종목" required>
+          <View className="flex-row gap-2">
+            <DisciplineBtn
+              label="볼더링"
+              icon="square"
+              active={discipline === 'boulder'}
+              onPress={() => setDiscipline('boulder')}
+            />
+            <DisciplineBtn
+              label="리드"
+              icon="trending-up"
+              active={discipline === 'lead'}
+              onPress={() => setDiscipline('lead')}
+            />
+            <DisciplineBtn
+              label="보드"
+              icon="grid"
+              active={false}
+              disabled
+              onPress={() => Alert.alert('준비 중', '보드 기록은 v1.1에서 추가됩니다.')}
+            />
+            <DisciplineBtn
+              label="지구력"
+              icon="activity"
+              active={false}
+              disabled
+              onPress={() => Alert.alert('준비 중', '지구력 기록은 v1.1에서 추가됩니다.')}
+            />
+          </View>
+        </Section>
+
         <Section title="날짜" required>
           <View className="flex-row gap-2">
             {DATE_CHIPS.map(({ value, label }) => (
@@ -293,37 +336,6 @@ export default function NewSessionScreen() {
                 </Pressable>
               );
             })}
-          </View>
-        </Section>
-
-        <Section title="종목" required>
-          <View className="flex-row gap-2">
-            <DisciplineBtn
-              label="볼더링"
-              icon="square"
-              active={discipline === 'boulder'}
-              onPress={() => setDiscipline('boulder')}
-            />
-            <DisciplineBtn
-              label="리드"
-              icon="trending-up"
-              active={discipline === 'lead'}
-              onPress={() => setDiscipline('lead')}
-            />
-            <DisciplineBtn
-              label="보드"
-              icon="grid"
-              active={false}
-              disabled
-              onPress={() => Alert.alert('준비 중', '보드 기록은 v1.1에서 추가됩니다.')}
-            />
-            <DisciplineBtn
-              label="지구력"
-              icon="activity"
-              active={false}
-              disabled
-              onPress={() => Alert.alert('준비 중', '지구력 기록은 v1.1에서 추가됩니다.')}
-            />
           </View>
         </Section>
 
