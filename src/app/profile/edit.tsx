@@ -289,41 +289,37 @@ export default function ProfileEditScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         className="flex-1"
       >
-        <ScrollView contentContainerClassName="p-4 gap-5" keyboardShouldPersistTaps="handled">
-          <Section title="프로필 사진">
-            <View className="flex-row items-center gap-4">
-              <AvatarPreview
-                uri={avatarPreviewUri}
-                fallbackChar={(profile.username[0] ?? '?').toUpperCase()}
-                uploading={uploadingAvatar}
-              />
-              <View className="flex-1 gap-2">
+        <ScrollView contentContainerClassName="p-5 gap-6 pb-8" keyboardShouldPersistTaps="handled">
+          {/* Avatar — 중앙 정렬, 마이페이지와 동일한 인스타 스타일 */}
+          <View className="items-center gap-3 pt-1">
+            <AvatarPreview
+              uri={avatarPreviewUri}
+              fallbackChar={(profile.username[0] ?? '?').toUpperCase()}
+              uploading={uploadingAvatar}
+            />
+            <View className="flex-row gap-2">
+              <Pressable
+                onPress={handlePickAvatar}
+                disabled={uploadingAvatar}
+                className="flex-row items-center gap-1.5 px-4 py-2 rounded-full bg-background-secondary border border-border-subtle active:opacity-70"
+              >
+                <Feather name="image" size={13} color="#06b6d4" />
+                <Text className="text-text-primary text-xs font-semibold">
+                  {avatarPreviewUri ? '사진 변경' : '사진 선택'}
+                </Text>
+              </Pressable>
+              {avatarPreviewUri && (
                 <Pressable
-                  onPress={handlePickAvatar}
+                  onPress={handleRemoveAvatar}
                   disabled={uploadingAvatar}
-                  className="flex-row items-center justify-center gap-1.5 px-3 py-2 rounded-md border border-border-default active:opacity-70"
+                  className="flex-row items-center gap-1.5 px-4 py-2 rounded-full bg-background-secondary border border-border-subtle active:opacity-70"
                 >
-                  <Feather name="image" size={14} color="#06b6d4" />
-                  <Text className="text-text-primary text-sm font-semibold">
-                    {avatarPreviewUri ? '변경' : '사진 선택'}
-                  </Text>
+                  <Feather name="trash-2" size={13} color="#ef4444" />
+                  <Text className="text-status-danger text-xs font-semibold">삭제</Text>
                 </Pressable>
-                {avatarPreviewUri && (
-                  <Pressable
-                    onPress={handleRemoveAvatar}
-                    disabled={uploadingAvatar}
-                    className="flex-row items-center justify-center gap-1.5 px-3 py-2 rounded-md border border-border-default active:opacity-70"
-                  >
-                    <Feather name="trash-2" size={14} color="#ef4444" />
-                    <Text className="text-status-danger text-sm font-semibold">삭제</Text>
-                  </Pressable>
-                )}
-              </View>
+              )}
             </View>
-            <Text className="text-text-tertiary text-xs">
-              비워두면 닉네임 첫 글자로 표시돼요.
-            </Text>
-          </Section>
+          </View>
 
           <Section title="닉네임" required>
             <Controller
@@ -331,7 +327,7 @@ export default function ProfileEditScreen() {
               name="username"
               render={({ field: { onChange, value } }) => (
                 <View>
-                  <View className="flex-row items-center border border-border-default rounded-md px-3">
+                  <View className="flex-row items-center bg-background-secondary border border-border-subtle rounded-xl px-3.5">
                     <TextInput
                       placeholder="2~30자, 영문·숫자·_·.·한글"
                       placeholderTextColor="#9CA3AF"
@@ -340,7 +336,7 @@ export default function ProfileEditScreen() {
                       autoCapitalize="none"
                       autoCorrect={false}
                       maxLength={30}
-                      className="flex-1 py-2.5 text-text-primary text-base"
+                      className="flex-1 py-3 text-text-primary text-base"
                     />
                     <UsernameStatusIcon status={usernameStatus} />
                   </View>
@@ -362,7 +358,7 @@ export default function ProfileEditScreen() {
               name="heightCm"
               render={({ field: { onChange, value } }) => (
                 <View>
-                  <View className="flex-row items-center border border-border-default rounded-md px-3">
+                  <View className="flex-row items-center bg-background-secondary border border-border-subtle rounded-xl px-3.5">
                     <TextInput
                       placeholder="예: 170"
                       placeholderTextColor="#9CA3AF"
@@ -370,7 +366,7 @@ export default function ProfileEditScreen() {
                       onChangeText={onChange}
                       keyboardType="number-pad"
                       maxLength={3}
-                      className="flex-1 py-2.5 text-text-primary text-base"
+                      className="flex-1 py-3 text-text-primary text-base"
                     />
                     <Text className="text-text-tertiary text-sm">cm</Text>
                   </View>
@@ -390,7 +386,7 @@ export default function ProfileEditScreen() {
               name="reachCm"
               render={({ field: { onChange, value } }) => (
                 <View>
-                  <View className="flex-row items-center border border-border-default rounded-md px-3">
+                  <View className="flex-row items-center bg-background-secondary border border-border-subtle rounded-xl px-3.5">
                     <TextInput
                       placeholder="양팔 벌렸을 때 손끝~손끝"
                       placeholderTextColor="#9CA3AF"
@@ -398,7 +394,7 @@ export default function ProfileEditScreen() {
                       onChangeText={onChange}
                       keyboardType="number-pad"
                       maxLength={3}
-                      className="flex-1 py-2.5 text-text-primary text-base"
+                      className="flex-1 py-3 text-text-primary text-base"
                     />
                     <Text className="text-text-tertiary text-sm">cm</Text>
                   </View>
@@ -418,7 +414,7 @@ export default function ProfileEditScreen() {
               name="weightKg"
               render={({ field: { onChange, value } }) => (
                 <View>
-                  <View className="flex-row items-center border border-border-default rounded-md px-3">
+                  <View className="flex-row items-center bg-background-secondary border border-border-subtle rounded-xl px-3.5">
                     <TextInput
                       placeholder="예: 60"
                       placeholderTextColor="#9CA3AF"
@@ -426,7 +422,7 @@ export default function ProfileEditScreen() {
                       onChangeText={onChange}
                       keyboardType="number-pad"
                       maxLength={3}
-                      className="flex-1 py-2.5 text-text-primary text-base"
+                      className="flex-1 py-3 text-text-primary text-base"
                     />
                     <Text className="text-text-tertiary text-sm">kg</Text>
                   </View>
@@ -521,7 +517,7 @@ export default function ProfileEditScreen() {
               name="instagramHandle"
               render={({ field: { onChange, value } }) => (
                 <View>
-                  <View className="flex-row items-center border border-border-default rounded-md px-3">
+                  <View className="flex-row items-center bg-background-secondary border border-border-subtle rounded-xl px-3.5">
                     <Text className="text-text-tertiary text-base">@</Text>
                     <TextInput
                       placeholder="your_handle"
@@ -531,7 +527,7 @@ export default function ProfileEditScreen() {
                       autoCapitalize="none"
                       autoCorrect={false}
                       maxLength={30}
-                      className="flex-1 py-2.5 text-text-primary text-base"
+                      className="flex-1 py-3 text-text-primary text-base"
                     />
                   </View>
                   {errors.instagramHandle && (
@@ -545,19 +541,26 @@ export default function ProfileEditScreen() {
           </Section>
         </ScrollView>
 
-        <View className="px-4 pt-2 pb-2 border-t border-border-subtle">
+        <View className="px-5 pt-3 pb-5 border-t border-border-subtle bg-background-primary">
           <Pressable
             onPress={handleSubmit(onSubmit)}
             disabled={!canSubmit}
-            className={`rounded-md p-4 items-center ${
+            className={`rounded-xl py-4 items-center ${
               !canSubmit ? 'bg-background-tertiary' : 'bg-brand-primary'
             }`}
+            style={canSubmit ? {
+              shadowColor: '#06b6d4',
+              shadowOpacity: 0.25,
+              shadowRadius: 10,
+              shadowOffset: { width: 0, height: 4 },
+              elevation: 3,
+            } : undefined}
           >
             {updateProfile.isPending ? (
               <ActivityIndicator color="white" />
             ) : (
               <Text
-                className={`font-semibold ${
+                className={`font-bold text-base ${
                   !canSubmit ? 'text-text-muted' : 'text-background-primary'
                 }`}
               >
@@ -581,11 +584,20 @@ function AvatarPreview({
   uploading: boolean;
 }) {
   return (
-    <View className="w-20 h-20 rounded-full bg-brand-primary/10 border-2 border-brand-primary items-center justify-center overflow-hidden">
+    <View
+      className="w-28 h-28 rounded-full bg-brand-primary/5 border-[2.5px] border-brand-primary items-center justify-center overflow-hidden"
+      style={{
+        shadowColor: '#06b6d4',
+        shadowOpacity: 0.18,
+        shadowRadius: 12,
+        shadowOffset: { width: 0, height: 6 },
+        elevation: 4,
+      }}
+    >
       {uri ? (
         <Image source={{ uri }} className="w-full h-full" resizeMode="cover" />
       ) : (
-        <Text className="text-brand-primary text-3xl font-extrabold">{fallbackChar}</Text>
+        <Text className="text-brand-primary text-4xl font-extrabold">{fallbackChar}</Text>
       )}
       {uploading && (
         <View className="absolute inset-0 items-center justify-center bg-black/30">
