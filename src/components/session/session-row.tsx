@@ -16,6 +16,8 @@ export type SessionSummary = {
   duration_min: number | null;
   gym: { id: string; name: string; branch: string | null } | null;
   send_count: number;
+  discipline?: 'boulder' | 'lead' | 'mixed' | 'empty';
+  max_lead_grade?: string | null;
 };
 
 export function SessionRow({ session }: { session: SessionSummary }) {
@@ -51,11 +53,20 @@ export function SessionRow({ session }: { session: SessionSummary }) {
             </Text>
           </View>
         </View>
-        <View style={[s.sessionBadge, hasSends ? s.sessionBadgeActive : s.sessionBadgeMuted]}>
-          <Text style={[s.sessionBadgeText, hasSends ? s.sessionBadgeTextActive : s.sessionBadgeTextMuted]}>
-            완등 {session.send_count}
-          </Text>
-        </View>
+        {/* 리드/mixed 면 최고 등급 + 완등, 볼더면 기존 완등 표시 */}
+        {session.discipline === 'lead' && session.max_lead_grade ? (
+          <View style={[s.sessionBadge, s.sessionBadgeLead]}>
+            <Text style={[s.sessionBadgeText, s.sessionBadgeTextLead]}>
+              {session.max_lead_grade} · {session.send_count}
+            </Text>
+          </View>
+        ) : (
+          <View style={[s.sessionBadge, hasSends ? s.sessionBadgeActive : s.sessionBadgeMuted]}>
+            <Text style={[s.sessionBadgeText, hasSends ? s.sessionBadgeTextActive : s.sessionBadgeTextMuted]}>
+              완등 {session.send_count}
+            </Text>
+          </View>
+        )}
         <Feather name="chevron-right" size={16} color="#cbd5e1" style={s.chevronRight} />
       </View>
     </Pressable>
@@ -142,6 +153,13 @@ const s = StyleSheet.create({
   },
   sessionBadgeTextMuted: {
     color: '#94a3b8',
+  },
+  sessionBadgeLead: {
+    backgroundColor: '#fff7ed',
+    borderColor: '#fed7aa',
+  },
+  sessionBadgeTextLead: {
+    color: '#c2410c',
   },
   chevronRight: {
     marginLeft: 2,

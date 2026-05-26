@@ -9,7 +9,23 @@ export type RecentSession = {
   duration_min: number | null;
   gym: { id: string; name: string; branch: string | null } | null;
   send_count: number;
+  discipline: 'boulder' | 'lead' | 'mixed' | 'empty';
+  max_lead_grade: string | null;
 };
+
+function compareLeadGrade(a: string, b: string): number {
+  const parse = (g: string): [number, number] => {
+    const m = /^5\.(\d+)([a-d])?$/.exec(g.trim());
+    if (!m) return [0, 0];
+    const main = parseInt(m[1], 10);
+    const sub = m[2] ? ('abcd'.indexOf(m[2]) + 1) / 5 : 0;
+    return [main, sub];
+  };
+  const [am, as] = parse(a);
+  const [bm, bs] = parse(b);
+  if (am !== bm) return am - bm;
+  return as - bs;
+}
 
 // 기록 탭의 최근 세션 리스트. 사후 기록 한 번에 INSERT 흐름이라
 // completed_at 여부는 따지지 않고 그냥 최근 N개 가져옴.
@@ -40,25 +56,58 @@ export function useRecentSessions(limit = 10) {
       if (sessionRows.length === 0) return [];
 
       const sessionIds = sessionRows.map((s) => s.id);
-      const { data: sendRows, error: attemptsErr } = await supabase
+      const { data: attempts, error: attemptsErr } = await supabase
         .from('attempts')
-        .select('session_id')
-        .in('session_id', sessionIds)
-        .eq('result', 'send');
+        .select('session_id, result, climbing_type, problem:problems(route_grade)')
+        .in('session_id', sessionIds);
       if (attemptsErr) throw new Error(attemptsErr.message);
 
       const sendCounts = new Map<string, number>();
-      for (const r of (sendRows ?? []) as Array<{ session_id: string }>) {
-        sendCounts.set(r.session_id, (sendCounts.get(r.session_id) ?? 0) + 1);
+      const boulderCounts = new Map<string, number>();
+      const leadCounts = new Map<string, number>();
+      const maxLeadGrade = new Map<string, string>();
+      const SEND = new Set(['send', 'onsight', 'flash', 'redpoint']);
+
+      for (const r of (attempts ?? []) as Array<{
+        session_id: string;
+        result: string;
+        climbing_type: 'boulder' | 'lead' | 'board';
+        problem: { route_grade: string | null } | null;
+      }>) {
+        if (SEND.has(r.result)) {
+          sendCounts.set(r.session_id, (sendCounts.get(r.session_id) ?? 0) + 1);
+        }
+        if (r.climbing_type === 'lead') {
+          leadCounts.set(r.session_id, (leadCounts.get(r.session_id) ?? 0) + 1);
+          const g = r.problem?.route_grade;
+          if (g) {
+            const cur = maxLeadGrade.get(r.session_id);
+            if (!cur || compareLeadGrade(g, cur) > 0) {
+              maxLeadGrade.set(r.session_id, g);
+            }
+          }
+        } else if (r.climbing_type === 'boulder') {
+          boulderCounts.set(r.session_id, (boulderCounts.get(r.session_id) ?? 0) + 1);
+        }
       }
 
-      return sessionRows.map((s) => ({
-        id: s.id,
-        session_date: s.session_date,
-        duration_min: s.duration_min,
-        gym: s.gym,
-        send_count: sendCounts.get(s.id) ?? 0,
-      }));
+      return sessionRows.map((s) => {
+        const b = boulderCounts.get(s.id) ?? 0;
+        const l = leadCounts.get(s.id) ?? 0;
+        const discipline: RecentSession['discipline'] =
+          b > 0 && l > 0 ? 'mixed' :
+          l > 0 ? 'lead' :
+          b > 0 ? 'boulder' : 'empty';
+        return {
+          id: s.id,
+          session_date: s.session_date,
+          duration_min: s.duration_min,
+          gym: s.gym,
+          send_count: sendCounts.get(s.id) ?? 0,
+          discipline,
+          max_lead_grade: maxLeadGrade.get(s.id) ?? null,
+        };
+      });
     },
   });
 }

@@ -16,6 +16,7 @@ import {
   useDeleteSession,
   useSessionDetail,
   type ColorSummary,
+  type LeadSummary,
 } from '@/hooks/use-session';
 
 const KO_WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
@@ -107,6 +108,9 @@ export default function SessionDetailScreen() {
 
   const cond = data.condition ? CONDITION_LABEL[data.condition] : null;
   const visibleColors = data.color_summary.filter((c) => c.tries > 0);
+  // 리드 세션은 현재 edit 화면이 boulder 전용 — 진입 시 색깔이 비어 보이게 됨.
+  // 일단 lead/mixed 면 edit 숨김 (v1.1 에서 lead edit 지원).
+  const canEdit = data.discipline === 'boulder' || data.discipline === 'empty';
 
   return (
     <SafeAreaView className="flex-1 bg-background-primary" edges={['top', 'bottom']}>
@@ -128,15 +132,17 @@ export default function SessionDetailScreen() {
           >
             <Feather name="share" size={20} color="#64748b" />
           </Pressable>
-          <Pressable
-            onPress={() =>
-              router.push({ pathname: '/session/[id]/edit', params: { id: id! } })
-            }
-            className="p-2 active:opacity-60"
-            hitSlop={8}
-          >
-            <Feather name="edit-3" size={20} color="#64748b" />
-          </Pressable>
+          {canEdit && (
+            <Pressable
+              onPress={() =>
+                router.push({ pathname: '/session/[id]/edit', params: { id: id! } })
+              }
+              className="p-2 active:opacity-60"
+              hitSlop={8}
+            >
+              <Feather name="edit-3" size={20} color="#64748b" />
+            </Pressable>
+          )}
           <Pressable
             onPress={handleDelete}
             disabled={deleteSession.isPending}
@@ -191,14 +197,10 @@ export default function SessionDetailScreen() {
           )}
         </View>
 
-        <View className="gap-4">
-          <Text className="text-text-primary text-lg font-bold">색깔별 기록</Text>
-          {visibleColors.length === 0 ? (
-            <View className="p-8 items-center justify-center bg-background-secondary rounded-2xl border border-border-subtle">
-              <Feather name="activity" size={24} color="#94a3b8" className="mb-2" />
-              <Text className="text-text-secondary text-sm">기록된 등반이 없어요</Text>
-            </View>
-          ) : (
+        {/* 볼더링 색깔 섹션 */}
+        {(data.discipline === 'boulder' || data.discipline === 'mixed') && visibleColors.length > 0 && (
+          <View className="gap-4">
+            <Text className="text-text-primary text-lg font-bold">색깔별 기록</Text>
             <View className="bg-background-secondary p-4 rounded-2xl border border-border-subtle gap-3">
               <View className="flex-row items-center gap-3 px-1 border-b border-border-subtle pb-2">
                 <View style={{ width: 64 }} />
@@ -213,8 +215,28 @@ export default function SessionDetailScreen() {
                 <ColorSummaryRow key={c.color} summary={c} />
               ))}
             </View>
-          )}
-        </View>
+          </View>
+        )}
+
+        {/* 리드 등급 섹션 */}
+        {(data.discipline === 'lead' || data.discipline === 'mixed') && data.lead_summary.length > 0 && (
+          <View className="gap-4">
+            <Text className="text-text-primary text-lg font-bold">루트별 기록</Text>
+            <View className="bg-background-secondary p-4 rounded-2xl border border-border-subtle gap-3">
+              {data.lead_summary.map((r) => (
+                <LeadSummaryRow key={r.grade} summary={r} />
+              ))}
+            </View>
+          </View>
+        )}
+
+        {/* 둘 다 없을 때 */}
+        {data.discipline === 'empty' && (
+          <View className="p-8 items-center justify-center bg-background-secondary rounded-2xl border border-border-subtle">
+            <Feather name="activity" size={24} color="#94a3b8" className="mb-2" />
+            <Text className="text-text-secondary text-sm">기록된 등반이 없어요</Text>
+          </View>
+        )}
 
         {data.notes && (
           <View className="bg-brand-primary/5 border border-brand-primary/10 rounded-2xl p-4">
@@ -248,6 +270,52 @@ function ColorSummaryRow({ summary }: { summary: ColorSummary }) {
       </Text>
       <Text className="flex-1 text-center text-text-primary text-base font-medium">
         {summary.tries}
+      </Text>
+    </View>
+  );
+}
+
+const LEAD_RESULT_LABEL: Record<keyof LeadSummary['breakdown'], { label: string; color: string }> = {
+  onsight:  { label: '온사이트',   color: '#0e7490' },
+  flash:    { label: '플래시',     color: '#15803d' },
+  redpoint: { label: '레드포인트', color: '#c2410c' },
+  fall:     { label: '폴',         color: '#b91c1c' },
+};
+
+function LeadSummaryRow({ summary }: { summary: LeadSummary }) {
+  const chips: { key: keyof LeadSummary['breakdown']; count: number }[] = [
+    { key: 'onsight',  count: summary.breakdown.onsight },
+    { key: 'flash',    count: summary.breakdown.flash },
+    { key: 'redpoint', count: summary.breakdown.redpoint },
+    { key: 'fall',     count: summary.breakdown.fall },
+  ];
+  return (
+    <View className="flex-row items-center gap-3 py-1">
+      <Text className="text-text-primary text-base font-extrabold" style={{ width: 60 }}>
+        {summary.grade}
+      </Text>
+      <View className="flex-1 flex-row flex-wrap gap-1.5">
+        {chips.filter((c) => c.count > 0).map((c) => {
+          const meta = LEAD_RESULT_LABEL[c.key];
+          return (
+            <View
+              key={c.key}
+              className="flex-row items-center gap-1 px-2 py-0.5 rounded-full bg-white border border-border-subtle"
+            >
+              <Text style={{ fontSize: 11, fontWeight: '700', color: meta.color }}>
+                {meta.label}
+              </Text>
+              {c.count > 1 && (
+                <Text style={{ fontSize: 11, fontWeight: '700', color: '#94a3b8' }}>
+                  ×{c.count}
+                </Text>
+              )}
+            </View>
+          );
+        })}
+      </View>
+      <Text className="text-text-tertiary text-xs font-semibold">
+        {summary.sends}/{summary.tries}
       </Text>
     </View>
   );

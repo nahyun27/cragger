@@ -35,7 +35,7 @@ export function useSession(sessionId: string | undefined) {
   });
 }
 
-// ── Detail (session + 색깔별 집계) ───────────────────────────
+// ── Detail (session + 색깔/등급별 집계) ───────────────────────
 
 export type ColorSummary = {
   color: string;
@@ -43,8 +43,26 @@ export type ColorSummary = {
   tries: number;
 };
 
+export type LeadResultBreakdown = {
+  onsight: number;
+  flash: number;
+  redpoint: number;
+  fall: number;
+};
+
+export type LeadSummary = {
+  grade: string;
+  sends: number;  // onsight + flash + redpoint
+  tries: number;  // sends + fall
+  breakdown: LeadResultBreakdown;
+};
+
+export type SessionDiscipline = 'boulder' | 'lead' | 'mixed' | 'empty';
+
 export type SessionDetail = SessionRow & {
+  discipline: SessionDiscipline;
   color_summary: ColorSummary[];
+  lead_summary: LeadSummary[];   // 등급 오름차순
 };
 
 export function useSessionDetail(sessionId: string | undefined) {
@@ -62,7 +80,7 @@ export function useSessionDetail(sessionId: string | undefined) {
           .single(),
         supabase
           .from('attempts')
-          .select('result, problem:problems(color)')
+          .select('result, climbing_type, problem:problems(color, route_grade)')
           .eq('session_id', sessionId!),
       ]);
       if (sessionRes.error) throw new Error(sessionRes.error.message);
@@ -70,25 +88,79 @@ export function useSessionDetail(sessionId: string | undefined) {
 
       const session = sessionRes.data as unknown as SessionRow;
       const attempts = (attemptsRes.data ?? []) as Array<{
-        result: 'onsight' | 'flash' | 'send' | 'project' | 'fall';
-        problem: { color: string } | null;
+        result: 'onsight' | 'flash' | 'send' | 'project' | 'fall' | 'redpoint';
+        climbing_type: 'boulder' | 'lead' | 'board';
+        problem: { color: string | null; route_grade: string | null } | null;
       }>;
 
-      const map = new Map<string, ColorSummary>();
+      const colorMap = new Map<string, ColorSummary>();
+      const leadMap = new Map<string, LeadSummary>();
+      let boulderCount = 0;
+      let leadCount = 0;
+
       for (const a of attempts) {
-        const color = a.problem?.color;
-        if (!color) continue;
-        const cur = map.get(color) ?? { color, sends: 0, tries: 0 };
-        cur.tries += 1;
-        if (a.result === 'send' || a.result === 'onsight' || a.result === 'flash') {
-          cur.sends += 1;
+        const isSend =
+          a.result === 'send' || a.result === 'onsight' ||
+          a.result === 'flash' || a.result === 'redpoint';
+
+        if (a.climbing_type === 'lead' && a.problem?.route_grade) {
+          leadCount += 1;
+          const grade = a.problem.route_grade;
+          const cur = leadMap.get(grade) ?? {
+            grade,
+            sends: 0,
+            tries: 0,
+            breakdown: { onsight: 0, flash: 0, redpoint: 0, fall: 0 },
+          };
+          cur.tries += 1;
+          if (isSend) cur.sends += 1;
+          if (a.result === 'onsight') cur.breakdown.onsight += 1;
+          else if (a.result === 'flash') cur.breakdown.flash += 1;
+          else if (a.result === 'redpoint') cur.breakdown.redpoint += 1;
+          else if (a.result === 'fall') cur.breakdown.fall += 1;
+          leadMap.set(grade, cur);
+        } else if (a.problem?.color) {
+          boulderCount += 1;
+          const color = a.problem.color;
+          const cur = colorMap.get(color) ?? { color, sends: 0, tries: 0 };
+          cur.tries += 1;
+          if (isSend) cur.sends += 1;
+          colorMap.set(color, cur);
         }
-        map.set(color, cur);
       }
 
-      return { ...session, color_summary: Array.from(map.values()) };
+      const discipline: SessionDiscipline =
+        boulderCount > 0 && leadCount > 0 ? 'mixed' :
+        leadCount > 0 ? 'lead' :
+        boulderCount > 0 ? 'boulder' : 'empty';
+
+      const lead_summary = Array.from(leadMap.values()).sort((a, b) =>
+        compareGrade(a.grade, b.grade),
+      );
+
+      return {
+        ...session,
+        discipline,
+        color_summary: Array.from(colorMap.values()),
+        lead_summary,
+      };
     },
   });
+}
+
+// 5.6 < 5.9 < 5.10a < 5.10d < 5.11a 순. main.sub 로 비교.
+function compareGrade(a: string, b: string): number {
+  const parse = (g: string): [number, number] => {
+    const m = /^5\.(\d+)([a-d])?$/.exec(g.trim());
+    if (!m) return [0, 0];
+    const main = parseInt(m[1], 10);
+    const sub = m[2] ? ('abcd'.indexOf(m[2]) + 1) / 5 : 0;
+    return [main, sub];
+  };
+  const [am, as] = parse(a);
+  const [bm, bs] = parse(b);
+  if (am !== bm) return am - bm;
+  return as - bs;
 }
 
 // ── Update (delete-and-recreate) ─────────────────────────────
