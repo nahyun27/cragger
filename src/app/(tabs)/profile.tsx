@@ -16,7 +16,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 
 import { ShoeSizeGuide } from '@/components/shoes/shoe-size-guide';
-import { GymStatsCard } from '@/components/stats/gym-stats-card';
 import { useMyCrews, type CrewSummary } from '@/hooks/use-crews';
 import { useProfile } from '@/hooks/use-profile';
 import {
@@ -37,7 +36,6 @@ import {
 import { currentMonth, monthRange } from '@/lib/date-ranges';
 import { supabase } from '@/lib/supabase';
 
-const DEFAULT_EXPANDED_COUNT = 2;
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -185,22 +183,13 @@ export default function ProfileScreen() {
                 </View>
               </View>
 
-              {/* Gym list */}
-              {stats.gyms.length === 0 ? (
+              {/* 암장별 통계는 전체 통계 화면(/stats)에서만. 마이페이지는
+                  요약 카드까지만 — 본인 빠른 확인용. 빈 상태만 안내. */}
+              {stats.gyms.length === 0 && (
                 <View style={s.emptyStatsCard}>
                   <Feather name="activity" size={24} color="#94a3b8" />
                   <Text style={s.emptyStatsTitle}>아직 운동 기록이 없어요</Text>
                   <Text style={s.emptyStatsSubtitle}>기록 탭에서 첫 세션을 추가해보세요</Text>
-                </View>
-              ) : (
-                <View style={s.gymListContainer}>
-                  {stats.gyms.map((gym, i) => (
-                    <GymStatsCard
-                      key={gym.gymId}
-                      gym={gym}
-                      defaultExpanded={i < DEFAULT_EXPANDED_COUNT}
-                    />
-                  ))}
                 </View>
               )}
             </>
