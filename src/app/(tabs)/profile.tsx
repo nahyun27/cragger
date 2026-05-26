@@ -17,7 +17,14 @@ import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 
 import { ShoeSizeGuide } from '@/components/shoes/shoe-size-guide';
 import { useMyCrews, type CrewSummary } from '@/hooks/use-crews';
-import { useProfile } from '@/hooks/use-profile';
+import {
+  useProfile,
+  type ArchType,
+  type FootShape,
+  type FootWidth,
+  type InstepHeight,
+  type Profile,
+} from '@/hooks/use-profile';
 import {
   SHOE_STATUS_LABEL,
   useShoes,
@@ -132,6 +139,11 @@ export default function ProfileScreen() {
           onEdit={() => router.push('/profile/edit')}
         />
 
+        <FootProfileCard
+          profile={profile}
+          onEdit={() => router.push('/profile/foot' as never)}
+        />
+
         {/* Stats section — scoped to this month */}
         <View style={s.sectionContainer}>
           <View style={s.sectionHeaderRow}>
@@ -225,6 +237,80 @@ export default function ProfileScreen() {
         onEditProfile={() => router.push('/profile/edit')}
       />
     </SafeAreaView>
+  );
+}
+
+const FOOT_SHAPE_LABEL: Record<FootShape, string> = {
+  egyptian: '이집트형',
+  greek: '그리스형',
+  roman: '로마형',
+  square: '정사각형',
+};
+const FOOT_WIDTH_LABEL: Record<FootWidth, string> = {
+  narrow: '좁음',
+  normal: '보통',
+  wide: '넓음',
+  very_wide: '매우 넓음',
+};
+const INSTEP_LABEL: Record<InstepHeight, string> = {
+  low: '낮은 발등',
+  normal: '보통 발등',
+  high: '높은 발등',
+};
+const ARCH_LABEL: Record<ArchType, string> = {
+  flat: '평발',
+  normal: '보통 아치',
+  high: '높은 아치',
+};
+
+function FootProfileCard({
+  profile,
+  onEdit,
+}: {
+  profile: Profile | undefined;
+  onEdit: () => void;
+}) {
+  const empty =
+    !profile ||
+    (profile.foot_length_mm == null &&
+      profile.shoe_size_mm == null &&
+      profile.foot_shape == null &&
+      profile.foot_width == null &&
+      profile.instep_height == null &&
+      profile.arch_type == null);
+
+  return (
+    <Pressable onPress={onEdit}>
+      {({ pressed }) => (
+        <View style={[s.footCard, pressed && { opacity: 0.85 }]}>
+          <View style={s.footCardHeader}>
+            <View style={s.footCardTitleRow}>
+              <Feather name="award" size={13} color="#0f172a" />
+              <Text style={s.footCardTitle}>내 발 프로필</Text>
+            </View>
+            <Text style={s.footCardEdit}>{empty ? '등록' : '수정'}</Text>
+          </View>
+          {empty ? (
+            <Text style={s.footCardEmpty}>
+              암벽화 추천을 위해 발 정보를 등록해보세요
+            </Text>
+          ) : (
+            <Text style={s.footCardSummary} numberOfLines={2}>
+              {[
+                profile.foot_length_mm != null ? `${profile.foot_length_mm}mm` : null,
+                profile.shoe_size_mm != null ? `운동화 ${profile.shoe_size_mm}mm` : null,
+                profile.foot_shape ? FOOT_SHAPE_LABEL[profile.foot_shape] : null,
+                profile.foot_width ? `${FOOT_WIDTH_LABEL[profile.foot_width]} 폭` : null,
+                profile.instep_height ? INSTEP_LABEL[profile.instep_height] : null,
+                profile.arch_type ? ARCH_LABEL[profile.arch_type] : null,
+              ]
+                .filter(Boolean)
+                .join(' · ')}
+            </Text>
+          )}
+        </View>
+      )}
+    </Pressable>
   );
 }
 
@@ -717,6 +803,9 @@ function MembershipCard({
             </Text>
           </View>
 
+          {/* Dashed divider */}
+          <View style={s.ticketDivider} />
+
           {/* Right: stat + use-pass button */}
           <View style={s.mRightCol}>
             <Text style={[s.mRightStatText, expSoon && s.mSubtitleTextUrgent]}>
@@ -756,6 +845,10 @@ function MembershipCard({
               </Pressable>
             )}
           </View>
+
+          {/* Ticket Cutouts */}
+          <View style={s.ticketCutoutLeft} />
+          <View style={s.ticketCutoutRight} />
         </View>
       )}
     </Pressable>
@@ -1029,6 +1122,27 @@ const s = StyleSheet.create({
   scrollContent: {
     paddingBottom: 40,
   },
+
+  footCard: {
+    marginHorizontal: 16,
+    marginTop: 12,
+    padding: 14,
+    backgroundColor: '#ffffff',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  footCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 6,
+  },
+  footCardTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  footCardTitle: { fontSize: 13, fontWeight: '800', color: '#0f172a' },
+  footCardEdit: { fontSize: 12, fontWeight: '700', color: '#06b6d4' },
+  footCardEmpty: { fontSize: 12, color: '#94a3b8' },
+  footCardSummary: { fontSize: 13, color: '#475569', lineHeight: 18 },
 
   // Profile Card — 인스타 스타일 (중앙 정렬, 큰 아바타)
   profileCard: {
@@ -1378,6 +1492,40 @@ const s = StyleSheet.create({
     borderColor: '#fecaca',
     borderLeftWidth: 4,
     borderLeftColor: '#ef4444',
+  },
+  ticketDivider: {
+    width: 0,
+    height: 44,
+    borderWidth: 0.8,
+    borderColor: '#e2e8f0',
+    borderStyle: 'dashed',
+    marginHorizontal: 4,
+  },
+  ticketCutoutLeft: {
+    position: 'absolute',
+    left: -10,
+    top: '50%',
+    marginTop: -10,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: '#f8fafc',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    zIndex: 10,
+  },
+  ticketCutoutRight: {
+    position: 'absolute',
+    right: -10,
+    top: '50%',
+    marginTop: -10,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: '#f8fafc',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    zIndex: 10,
   },
   mCardContent: {
     flex: 1,

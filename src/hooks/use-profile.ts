@@ -3,6 +3,11 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/lib/auth-context';
 import { supabase } from '@/lib/supabase';
 
+export type FootShape = 'egyptian' | 'greek' | 'roman' | 'square';
+export type FootWidth = 'narrow' | 'normal' | 'wide' | 'very_wide';
+export type InstepHeight = 'low' | 'normal' | 'high';
+export type ArchType = 'flat' | 'normal' | 'high';
+
 export type Profile = {
   id: string;
   username: string;
@@ -15,10 +20,16 @@ export type Profile = {
   weight_kg: number | null;
   weight_visible: boolean;
   climbing_start_date: string | null;
+  foot_length_mm: number | null;
+  shoe_size_mm: number | null;
+  foot_shape: FootShape | null;
+  foot_width: FootWidth | null;
+  instep_height: InstepHeight | null;
+  arch_type: ArchType | null;
 };
 
 const PROFILE_COLUMNS =
-  'id, username, display_name, avatar_url, bio, instagram_handle, height_cm, reach_cm, weight_kg, weight_visible, climbing_start_date';
+  'id, username, display_name, avatar_url, bio, instagram_handle, height_cm, reach_cm, weight_kg, weight_visible, climbing_start_date, foot_length_mm, shoe_size_mm, foot_shape, foot_width, instep_height, arch_type';
 
 export function useProfile() {
   const { session: authSession } = useAuth();
@@ -49,6 +60,12 @@ export type UpdateProfileArgs = {
   weightVisible?: boolean;
   climbingStartDate?: string | null;
   avatarUrl?: string | null;
+  footLengthMm?: number | null;
+  shoeSizeMm?: number | null;
+  footShape?: FootShape | null;
+  footWidth?: FootWidth | null;
+  instepHeight?: InstepHeight | null;
+  archType?: ArchType | null;
 };
 
 export function useUpdateProfile() {
@@ -69,6 +86,12 @@ export function useUpdateProfile() {
       if (args.weightVisible !== undefined) patch.weight_visible = args.weightVisible;
       if (args.climbingStartDate !== undefined) patch.climbing_start_date = args.climbingStartDate;
       if (args.avatarUrl !== undefined) patch.avatar_url = args.avatarUrl;
+      if (args.footLengthMm !== undefined) patch.foot_length_mm = args.footLengthMm;
+      if (args.shoeSizeMm !== undefined) patch.shoe_size_mm = args.shoeSizeMm;
+      if (args.footShape !== undefined) patch.foot_shape = args.footShape;
+      if (args.footWidth !== undefined) patch.foot_width = args.footWidth;
+      if (args.instepHeight !== undefined) patch.instep_height = args.instepHeight;
+      if (args.archType !== undefined) patch.arch_type = args.archType;
       const { error } = await supabase.from('profiles').update(patch).eq('id', userId);
       if (error) {
         // Postgres unique violation on username
