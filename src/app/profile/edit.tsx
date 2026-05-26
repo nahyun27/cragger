@@ -185,8 +185,10 @@ export default function ProfileEditScreen() {
     return 'idle';
   }, [profile, usernameDebounced, usernameCheck.isLoading, usernameCheck.data]);
 
+  const weightVisibleDirty =
+    profile != null && weightVisible !== profile.weight_visible;
   const canSubmit =
-    (isDirty || startDateDirty || avatarDirty) &&
+    (isDirty || startDateDirty || avatarDirty || weightVisibleDirty) &&
     !updateProfile.isPending &&
     !uploadingAvatar &&
     (usernameStatus === 'unchanged' || usernameStatus === 'available');
