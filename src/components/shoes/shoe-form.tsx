@@ -584,52 +584,24 @@ function BrandPicker({
   value: string;
   onChange: (next: string) => void;
 }) {
+  const [open, setOpen] = useState(false);
   const isPreset = (BRAND_PRESETS as readonly string[]).includes(value);
-  const [customMode, setCustomMode] = useState(value !== '' && !isPreset);
-
-  const allMode = value === '' && !customMode;
-  const customActive = customMode;
+  const isCustom = value !== '' && !isPreset;
 
   return (
-    <View>
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={s.brandPillRow}
-      >
-        <BrandPill
-          label="전체"
-          active={allMode}
-          onPress={() => {
-            setCustomMode(false);
-            onChange('');
-          }}
-        />
-        {BRAND_PRESETS.map((b) => {
-          const active = !customMode && value === b;
-          return (
-            <BrandPill
-              key={b}
-              label={b}
-              active={active}
-              onPress={() => {
-                setCustomMode(false);
-                onChange(b);
-              }}
-            />
-          );
-        })}
-        <BrandPill
-          label="직접입력"
-          active={customActive}
-          onPress={() => {
-            setCustomMode(true);
-            if (isPreset) onChange('');
-          }}
-        />
-      </ScrollView>
+    <>
+      <Pressable onPress={() => setOpen(true)}>
+        {({ pressed }) => (
+          <View style={[s.datePickerBox, pressed && s.btnPressed]}>
+            <Text style={value ? s.dateTextActive : s.dateTextPlaceholder}>
+              {value || '브랜드 선택'}
+            </Text>
+            <Feather name="chevron-down" size={15} color="#64748b" />
+          </View>
+        )}
+      </Pressable>
 
-      {customMode && (
+      {isCustom && (
         <TextInput
           placeholder="브랜드명 직접 입력"
           placeholderTextColor="#94a3b8"
@@ -638,40 +610,69 @@ function BrandPicker({
           style={[s.textInput, { marginTop: 10 }]}
         />
       )}
-    </View>
-  );
-}
 
-function BrandPill({
-  label,
-  active,
-  onPress,
-}: {
-  label: string;
-  active: boolean;
-  onPress: () => void;
-}) {
-  return (
-    <Pressable onPress={onPress}>
-      {({ pressed }) => (
-        <View
-          style={[
-            s.brandPill,
-            active ? s.brandPillActive : s.brandPillInactive,
-            pressed && s.btnPressed,
-          ]}
-        >
-          <Text
-            style={[
-              s.brandPillText,
-              active ? s.brandPillTextActive : s.brandPillTextInactive,
-            ]}
-          >
-            {label}
-          </Text>
-        </View>
-      )}
-    </Pressable>
+      <Modal
+        visible={open}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setOpen(false)}
+      >
+        <SafeAreaView style={s.sheetContainer} edges={['top', 'bottom']}>
+          <View style={s.sheetHeader}>
+            <Text style={s.sheetTitle}>브랜드 선택</Text>
+            <Pressable onPress={() => setOpen(false)} hitSlop={8}>
+              {({ pressed }) => (
+                <View style={[s.sheetCloseBtn, pressed && s.btnPressed]}>
+                  <Feather name="x" size={20} color="#0f172a" />
+                </View>
+              )}
+            </Pressable>
+          </View>
+          <ScrollView contentContainerStyle={s.sheetList}>
+            {BRAND_PRESETS.map((b) => {
+              const active = !isCustom && value === b;
+              return (
+                <Pressable
+                  key={b}
+                  onPress={() => {
+                    onChange(b);
+                    setOpen(false);
+                  }}
+                >
+                  {({ pressed }) => (
+                    <View style={[s.sheetRow, pressed && s.btnPressed]}>
+                      <View style={s.sheetCheckSlot}>
+                        {active && <Feather name="check" size={16} color="#0f172a" />}
+                      </View>
+                      <Text style={[s.sheetRowText, active && s.sheetRowTextActive]}>
+                        {b}
+                      </Text>
+                    </View>
+                  )}
+                </Pressable>
+              );
+            })}
+            <Pressable
+              onPress={() => {
+                if (isPreset) onChange('');
+                setOpen(false);
+              }}
+            >
+              {({ pressed }) => (
+                <View style={[s.sheetRow, pressed && s.btnPressed]}>
+                  <View style={s.sheetCheckSlot}>
+                    {isCustom && <Feather name="check" size={16} color="#0f172a" />}
+                  </View>
+                  <Text style={[s.sheetRowText, isCustom && s.sheetRowTextActive]}>
+                    직접입력
+                  </Text>
+                </View>
+              )}
+            </Pressable>
+          </ScrollView>
+        </SafeAreaView>
+      </Modal>
+    </>
   );
 }
 
@@ -1021,20 +1022,6 @@ const s = StyleSheet.create({
     fontSize: 11,
     fontWeight: '700',
   },
-
-  // Brand picker
-  brandPillRow: { flexDirection: 'row', gap: 8, paddingVertical: 2 },
-  brandPill: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 999,
-    borderWidth: 1,
-  },
-  brandPillActive: { backgroundColor: '#0f172a', borderColor: '#0f172a' },
-  brandPillInactive: { backgroundColor: '#ffffff', borderColor: '#e2e8f0' },
-  brandPillText: { fontSize: 12, fontWeight: '700' },
-  brandPillTextActive: { color: '#ffffff' },
-  brandPillTextInactive: { color: '#475569' },
 
   // Multi-select + ownership chip
   chipWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
