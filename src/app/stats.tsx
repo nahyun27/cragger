@@ -14,6 +14,7 @@ import { Feather } from '@expo/vector-icons';
 import { BarChart, LineChart } from 'react-native-gifted-charts';
 
 import { GymStatsCard } from '@/components/stats/gym-stats-card';
+import { useMonthlySessions } from '@/hooks/use-monthly-sessions';
 import { useMonthlyStats } from '@/hooks/use-monthly-stats';
 import { useUserStats } from '@/hooks/use-user-stats';
 import {
@@ -42,7 +43,39 @@ export default function StatsScreen() {
   }, [scope, monthAnchor, yearAnchor]);
 
   const { data: stats, isLoading, error } = useUserStats(range);
-  const { data: deep } = useMonthlyStats(6);
+
+  // 추이 — scope 별:
+  // - month: 그 달의 일별 (useMonthlySessions)
+  // - year: 그 해 12개월
+  // - all: 최근 12개월
+  const monthlyOpts = useMemo(() => {
+    if (scope === 'year') return { months: 12, endYearMonth: `${yearAnchor}-12` };
+    return { months: 12 };
+  }, [scope, yearAnchor]);
+  const { data: deep } = useMonthlyStats(monthlyOpts);
+  const monthlySessions = useMonthlySessions(monthAnchor.year, monthAnchor.month);
+
+  const dailyTrend = useMemo(() => {
+    if (scope !== 'month' || !monthlySessions.data) return null;
+    const daysInMonth = new Date(monthAnchor.year, monthAnchor.month, 0).getDate();
+    const pad = (n: number) => (n < 10 ? `0${n}` : String(n));
+    return Array.from({ length: daysInMonth }, (_, i) => {
+      const day = i + 1;
+      const ymd = `${monthAnchor.year}-${pad(monthAnchor.month)}-${pad(day)}`;
+      return {
+        monthLabel: day % 5 === 0 || day === 1 ? String(day) : '',
+        sessionCount: monthlySessions.data!.byDate[ymd]?.length ?? 0,
+        sendCount: monthlySessions.data!.sendCountsByDate[ymd] ?? 0,
+      };
+    });
+  }, [scope, monthlySessions.data, monthAnchor]);
+
+  const trendTitle =
+    scope === 'year'
+      ? `${yearAnchor}년 월별 추이`
+      : scope === 'month'
+      ? `${monthAnchor.month}월 일별 추이`
+      : '최근 12개월 추이';
 
   function shiftMonth(delta: number) {
     setMonthAnchor((cur) => {
@@ -119,12 +152,17 @@ export default function StatsScreen() {
           </View>
         )}
 
-        {deep && deep.monthly.some((m) => m.sessionCount > 0 || m.sendCount > 0) && (
-          <MonthlyTrendCard deep={deep} />
+        {scope !== 'month' && deep && deep.monthly.some((m) => m.sessionCount > 0 || m.sendCount > 0) && (
+          <MonthlyTrendCard deep={{ monthly: deep.monthly }} title={trendTitle} />
+        )}
+        {scope === 'month' && dailyTrend && dailyTrend.some((d) => d.sessionCount > 0 || d.sendCount > 0) && (
+          <MonthlyTrendCard deep={{ monthly: dailyTrend }} title={trendTitle} />
         )}
 
-        {deep && deep.gradeDistribution.length > 0 && (
-          <GradeDistributionCard deep={deep} />
+        {stats && stats.gradeDistribution.length > 0 && (
+          <GradeDistributionCard
+            deep={{ gradeDistribution: stats.gradeDistribution, maxVGrade: stats.maxVGrade }}
+          />
         )}
 
         {stats && (
@@ -173,7 +211,7 @@ const COLOR_SESSION = '#38BDF8';  // sky-400 — 산뜻 파랑
 const COLOR_SEND = '#34D399';     // emerald-400 — 산뜻 초록
 const COLOR_GRADE = '#22D3EE';    // cyan-400
 
-function MonthlyTrendCard({ deep }: { deep: { monthly: { monthLabel: string; sessionCount: number; sendCount: number }[] } }) {
+function MonthlyTrendCard({ deep, title = '최근 6개월 추이' }: { deep: { monthly: { monthLabel: string; sessionCount: number; sendCount: number }[] }; title?: string }) {
   const sessionMax = Math.max(...deep.monthly.map((m) => m.sessionCount), 1);
   const sendMax = Math.max(...deep.monthly.map((m) => m.sendCount), 1);
   const maxVal = Math.max(sessionMax, sendMax);

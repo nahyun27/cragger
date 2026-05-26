@@ -46,13 +46,20 @@ function monthLabelOf(ym: string): string {
   return `${m}월`;
 }
 
-// 지난 N개월의 yearMonth 시퀀스 (오래된 → 최근)
-function lastNMonths(n: number): string[] {
+// 지정 endYM(포함) 까지 거슬러 N개월. endYM 없으면 현재 달.
+function monthSequence(n: number, endYM?: string): string[] {
   const out: string[] = [];
-  const d = new Date();
-  d.setDate(1);
+  let endY: number, endM: number;
+  if (endYM) {
+    endY = parseInt(endYM.slice(0, 4), 10);
+    endM = parseInt(endYM.slice(5, 7), 10) - 1;  // 0-indexed
+  } else {
+    const d = new Date();
+    endY = d.getFullYear();
+    endM = d.getMonth();
+  }
   for (let i = n - 1; i >= 0; i--) {
-    const dt = new Date(d.getFullYear(), d.getMonth() - i, 1);
+    const dt = new Date(endY, endM - i, 1);
     const y = dt.getFullYear();
     const m = String(dt.getMonth() + 1).padStart(2, '0');
     out.push(`${y}-${m}`);
@@ -60,12 +67,19 @@ function lastNMonths(n: number): string[] {
   return out;
 }
 
-export function useMonthlyStats(months: number = 6) {
+export type MonthlyStatsOpts = {
+  months?: number;
+  endYearMonth?: string;  // 'YYYY-MM' — 이 달 (포함) 까지 N개월
+};
+
+export function useMonthlyStats(opts: MonthlyStatsOpts = {}) {
+  const months = opts.months ?? 6;
+  const endYM = opts.endYearMonth;
   const { session: authSession } = useAuth();
   const userId = authSession?.user.id;
 
   return useQuery({
-    queryKey: ['monthly-stats', userId, months] as const,
+    queryKey: ['monthly-stats', userId, months, endYM ?? null] as const,
     enabled: !!userId,
     queryFn: async (): Promise<DeepStats> => {
       // 1) 최근 N개월 + lifetime grade 분포에 쓰기 위해 lifetime sessions 가져옴.
@@ -102,7 +116,7 @@ export function useMonthlyStats(months: number = 6) {
 
       // 월별 버킷 초기화 (지난 N개월)
       const buckets = new Map<string, { sessions: Set<string>; sends: number }>();
-      for (const ym of lastNMonths(months)) {
+      for (const ym of monthSequence(months, endYM)) {
         buckets.set(ym, { sessions: new Set(), sends: 0 });
       }
 
@@ -131,7 +145,7 @@ export function useMonthlyStats(months: number = 6) {
         }
       }
 
-      const monthly: MonthlyBucket[] = lastNMonths(months).map((ym) => ({
+      const monthly: MonthlyBucket[] = monthSequence(months, endYM).map((ym) => ({
         yearMonth: ym,
         monthLabel: monthLabelOf(ym),
         sessionCount: buckets.get(ym)?.sessions.size ?? 0,

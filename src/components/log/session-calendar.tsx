@@ -4,6 +4,7 @@ import { Calendar, LocaleConfig, type DateData } from 'react-native-calendars';
 import { Feather } from '@expo/vector-icons';
 
 import { useMonthlySessions, type MonthlySession } from '@/hooks/use-monthly-sessions';
+import { GymThumbnail } from '@/components/gym/gym-thumbnail';
 import { SessionRow } from '@/components/session/session-row';
 
 LocaleConfig.locales['ko'] = {
@@ -139,15 +140,12 @@ export function SessionCalendar() {
             {date.day}
           </Text>
           {primaryGym ? (
-            <View
-              style={[
-                s.gymBlock,
-                { backgroundColor: gymHashHex(primaryGym.id) },
-              ]}
-            >
-              <Text style={s.gymBlockText} numberOfLines={1}>
-                {shortName(primaryGym.name)}
-              </Text>
+            <View style={s.gymBlockWrap}>
+              <GymThumbnail
+                name={primaryGym.name}
+                branch={primaryGym.branch}
+                size={38}
+              />
               {extraCount > 0 && (
                 <View style={s.extraBadge}>
                   <Text style={s.extraBadgeText}>+{extraCount}</Text>
@@ -303,19 +301,8 @@ const s = StyleSheet.create({
   dayNumToday: {
     fontWeight: '900',
   },
-  gymBlock: {
-    width: 38,
-    height: 38,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
+  gymBlockWrap: {
     position: 'relative',
-  },
-  gymBlockText: {
-    color: '#ffffff',
-    fontSize: 11,
-    fontWeight: '800',
-    letterSpacing: -0.3,
   },
   gymBlockEmpty: {
     width: 38,

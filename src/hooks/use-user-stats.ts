@@ -17,14 +17,32 @@ export type GymStats = {
   colors: ColorStat[];
 };
 
+export type GradeBucket = {
+  vGrade: string;
+  sendCount: number;
+  vNum: number;
+};
+
 export type UserStats = {
   totalSessions: number;
   totalSends: number;
   activityDays: number;
   gyms: GymStats[];
+  gradeDistribution: GradeBucket[];
+  maxVGrade: string | null;
 };
 
 const SEND_RESULTS = new Set(['send', 'onsight', 'flash']);
+
+function vGradeToNum(g: string): number | null {
+  const m = /^V(\d+)([+-])?$/.exec(g.trim());
+  if (!m) return null;
+  const n = parseInt(m[1], 10);
+  const suffix = m[2];
+  if (suffix === '+') return n + 0.5;
+  if (suffix === '-') return n - 0.5;
+  return n;
+}
 
 // Client-side 집계. 마이그레이션 회피.
 // 2 쿼리: sessions (+ joined gym) → attempts (+ problem.color).
@@ -62,7 +80,14 @@ export function useUserStats(range: UserStatsRange = {}) {
       }>;
 
       if (sessionsList.length === 0) {
-        return { totalSessions: 0, totalSends: 0, activityDays: 0, gyms: [] };
+        return {
+          totalSessions: 0,
+          totalSends: 0,
+          activityDays: 0,
+          gyms: [],
+          gradeDistribution: [],
+          maxVGrade: null,
+        };
       }
 
       // session_id → gym lookup
@@ -78,12 +103,13 @@ export function useUserStats(range: UserStatsRange = {}) {
       const sessionIds = sessionsList.map((s) => s.id);
       const { data: attempts, error: aErr } = await supabase
         .from('attempts')
-        .select('session_id, result, problem:problems(color)')
+        .select('session_id, result, felt_grade, problem:problems(color)')
         .in('session_id', sessionIds);
       if (aErr) throw new Error(aErr.message);
       const attemptsList = (attempts ?? []) as Array<{
         session_id: string;
         result: string;
+        felt_grade: string | null;
         problem: { color: string } | null;
       }>;
 
@@ -116,9 +142,17 @@ export function useUserStats(range: UserStatsRange = {}) {
       }
 
       let totalSends = 0;
+      const gradeCounts = new Map<string, number>();
+      let maxV: { grade: string; n: number } | null = null;
       for (const a of attemptsList) {
         if (!SEND_RESULTS.has(a.result)) continue;
         totalSends += 1;
+        if (a.felt_grade) {
+          const g = a.felt_grade.trim();
+          gradeCounts.set(g, (gradeCounts.get(g) ?? 0) + 1);
+          const n = vGradeToNum(g);
+          if (n != null && (maxV == null || n > maxV.n)) maxV = { grade: g, n };
+        }
         if (!a.problem) continue;
         const sessionGym = sessionToGym.get(a.session_id);
         if (!sessionGym) continue;
@@ -127,6 +161,13 @@ export function useUserStats(range: UserStatsRange = {}) {
         const prev = bucket.colorSends.get(a.problem.color) ?? 0;
         bucket.colorSends.set(a.problem.color, prev + 1);
       }
+      const gradeDistribution: GradeBucket[] = Array.from(gradeCounts.entries())
+        .map(([grade, count]) => {
+          const n = vGradeToNum(grade);
+          return n != null ? { vGrade: grade, sendCount: count, vNum: n } : null;
+        })
+        .filter((x): x is GradeBucket => x !== null)
+        .sort((a, b) => a.vNum - b.vNum);
 
       const uniqueDates = new Set(sessionsList.map((s) => s.session_date));
 
@@ -152,6 +193,8 @@ export function useUserStats(range: UserStatsRange = {}) {
         totalSends,
         activityDays: uniqueDates.size,
         gyms,
+        gradeDistribution,
+        maxVGrade: maxV?.grade ?? null,
       };
     },
   });
