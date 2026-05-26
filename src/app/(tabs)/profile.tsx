@@ -24,6 +24,7 @@ import {
   type ClimbingShoe,
   type ShoeStatus,
 } from '@/hooks/use-shoes';
+import { useUnreadCount } from '@/hooks/use-notifications';
 import { useUserStats } from '@/hooks/use-user-stats';
 import {
   daysFromTodayTo,
@@ -58,6 +59,7 @@ export default function ProfileScreen() {
       <View style={s.header}>
         <Text style={s.headerTitle}>마이페이지</Text>
         <View style={s.headerActions}>
+          <NotificationBell />
           <Pressable
             onPress={() => setMenuVisible(true)}
             style={({ pressed }) => [s.headerBtn, pressed && { opacity: 0.6 }]}
@@ -223,6 +225,25 @@ export default function ProfileScreen() {
         onEditProfile={() => router.push('/profile/edit')}
       />
     </SafeAreaView>
+  );
+}
+
+function NotificationBell() {
+  const router = useRouter();
+  const { data: count = 0 } = useUnreadCount();
+  return (
+    <Pressable
+      onPress={() => router.push('/notifications' as never)}
+      style={({ pressed }) => [s.headerBtn, pressed && { opacity: 0.6 }]}
+      hitSlop={6}
+    >
+      <Feather name="bell" size={20} color="#0f172a" />
+      {count > 0 && (
+        <View style={s.bellBadge}>
+          <Text style={s.bellBadgeText}>{count > 99 ? '99+' : count}</Text>
+        </View>
+      )}
+    </Pressable>
   );
 }
 
@@ -424,7 +445,7 @@ function CrewsSection() {
       )}
 
       {data && data.length > 0 && (
-        <View style={s.shoeList}>
+        <View style={s.crewList}>
           {data.map((c) => (
             <CrewCard key={c.id} crew={c} />
           ))}
@@ -434,34 +455,67 @@ function CrewsSection() {
   );
 }
 
+function getCrewAvatarColors(name: string) {
+  const bgColors = ['#faf5ff', '#eff6ff', '#ecfeff', '#fffbeb', '#fef2f2', '#f0fdf4'];
+  const textColors = ['#7c3aed', '#2563eb', '#0891b2', '#d97706', '#dc2626', '#16a34a'];
+  const borderColors = ['#e9d5ff', '#bfdbfe', '#cffafe', '#fde68a', '#fee2e2', '#bbf7d0'];
+  let sum = 0;
+  for (let i = 0; i < name.length; i++) sum += name.charCodeAt(i);
+  const idx = sum % bgColors.length;
+  return {
+    bg: bgColors[idx],
+    text: textColors[idx],
+    border: borderColors[idx],
+  };
+}
+
 function CrewCard({ crew }: { crew: CrewSummary }) {
   const router = useRouter();
+  const name = crew.name ?? '크루';
+  const firstChar = name.length > 0 ? name.charAt(0).toUpperCase() : '?';
+  const colors = getCrewAvatarColors(name);
+
   return (
     <Pressable
       onPress={() =>
         router.push({ pathname: '/crew/[id]', params: { id: crew.id } } as never)
       }
-      style={({ pressed }) => ({ opacity: pressed ? 0.92 : 1 })}
     >
-      <View style={s.shoeCard}>
-        <View style={s.shoeIcon}>
-          <Feather name="users" size={18} color="#06b6d4" />
-        </View>
-        <View style={{ flex: 1, minWidth: 0 }}>
-          <Text style={s.shoeTitle} numberOfLines={1}>
-            {crew.name}
-          </Text>
-          <View style={s.shoeMetaRow}>
-            <Text style={s.shoeMetaText}>멤버 {crew.member_count}명</Text>
-            {crew.home_gym && (
-              <Text style={s.shoeMetaText} numberOfLines={1}>
-                · {crew.home_gym.name}
-              </Text>
-            )}
+      {({ pressed }) => (
+        <View
+          style={[
+            s.crewCard,
+            pressed && { transform: [{ scale: 0.985 }], opacity: 0.95 }
+          ]}
+        >
+          <View style={[s.crewEmblem, { backgroundColor: colors.bg, borderColor: colors.border }]}>
+            <Text style={[s.crewEmblemText, { color: colors.text }]}>{firstChar}</Text>
           </View>
+          
+          <View style={s.crewContent}>
+            <Text style={s.crewTitle} numberOfLines={1}>
+              {name}
+            </Text>
+            
+            <View style={s.crewMetaRow}>
+              <View style={s.crewMemberBadge}>
+                <Feather name="users" size={10} color="#7c3aed" />
+                <Text style={s.crewMemberText}>멤버 {crew.member_count}명</Text>
+              </View>
+              {crew.home_gym && (
+                <View style={s.crewGymBadge}>
+                  <Feather name="map-pin" size={10} color="#475569" />
+                  <Text style={s.crewGymText} numberOfLines={1}>
+                    {crew.home_gym.name}
+                  </Text>
+                </View>
+              )}
+            </View>
+          </View>
+          
+          <Feather name="chevron-right" size={18} color="#cbd5e1" />
         </View>
-        <Feather name="chevron-right" size={16} color="#cbd5e1" />
-      </View>
+      )}
     </Pressable>
   );
 }
@@ -731,7 +785,7 @@ function ShoesSection() {
     <View style={s.sectionContainer}>
       <View style={s.sectionHeaderRow}>
         <View style={s.shoesTitleRow}>
-          <Text style={s.sectionTitle}>내 암벽화</Text>
+          <Text style={s.sectionTitle}>내 신발장</Text>
           <Pressable
             onPress={() => setGuideOpen(true)}
             hitSlop={8}
@@ -769,7 +823,7 @@ function ShoesSection() {
       {data && data.length === 0 && (
         <View style={s.emptyStatsCard}>
           <Feather name="package" size={24} color="#94a3b8" />
-          <Text style={s.emptyStatsTitle}>등록된 암벽화가 없어요</Text>
+          <Text style={s.emptyStatsTitle}>신발장에 등록된 암벽화가 없어요</Text>
           <Text style={s.emptyStatsSubtitle}>
             우측 상단 + 추가 버튼으로 등록하세요
           </Text>
@@ -953,6 +1007,24 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#f1f5f9',
+  },
+  bellBadge: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    minWidth: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: '#ef4444',
+    paddingHorizontal: 4,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  bellBadgeText: {
+    color: 'white',
+    fontSize: 10,
+    fontWeight: '700',
+    lineHeight: 12,
   },
   scrollContent: {
     paddingBottom: 40,
@@ -1590,5 +1662,85 @@ const s = StyleSheet.create({
     height: 1,
     backgroundColor: '#e2e8f0',
     marginVertical: 8,
+  },
+  
+  // Crew Section Styles
+  crewList: {
+    gap: 12,
+  },
+  crewCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    borderRadius: 20,
+    padding: 16,
+    shadowColor: '#0f172a',
+    shadowOpacity: 0.02,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 1,
+  },
+  crewEmblem: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    borderWidth: 1.5,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  crewEmblemText: {
+    fontSize: 18,
+    fontWeight: '900',
+  },
+  crewContent: {
+    flex: 1,
+    minWidth: 0,
+    gap: 6,
+  },
+  crewTitle: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#0f172a',
+    letterSpacing: -0.3,
+  },
+  crewMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  crewMemberBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#faf5ff',
+    borderWidth: 1,
+    borderColor: '#e9d5ff',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 8,
+  },
+  crewMemberText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#7c3aed',
+  },
+  crewGymBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#f1f5f9',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 8,
+  },
+  crewGymText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#475569',
   },
 });
