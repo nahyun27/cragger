@@ -17,6 +17,7 @@ import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 
 import { ShoeSizeGuide } from '@/components/shoes/shoe-size-guide';
 import { GymStatsCard } from '@/components/stats/gym-stats-card';
+import { useMyCrews, type CrewSummary } from '@/hooks/use-crews';
 import { useProfile } from '@/hooks/use-profile';
 import {
   SHOE_STATUS_LABEL,
@@ -206,6 +207,8 @@ export default function ProfileScreen() {
           )}
         </View>
 
+        <CrewsSection />
+
         <MembershipsSection />
 
         <ShoesSection />
@@ -374,6 +377,103 @@ function BodyMetricPill({
       </View>
       {sub ? <Text style={s.bodyPillSub}>{sub}</Text> : null}
     </View>
+  );
+}
+
+function CrewsSection() {
+  const router = useRouter();
+  const { data, isLoading, error } = useMyCrews();
+
+  return (
+    <View style={s.sectionContainer}>
+      <View style={s.sectionHeaderRow}>
+        <Text style={s.sectionTitle}>내 크루</Text>
+        <View style={{ flexDirection: 'row', gap: 6 }}>
+          <Pressable
+            onPress={() => router.push('/crew/join' as never)}
+            style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]}
+            hitSlop={6}
+          >
+            <View style={s.crewOutlineBtn}>
+              <Feather name="key" size={12} color="#06b6d4" />
+              <Text style={s.crewOutlineBtnText}>코드 가입</Text>
+            </View>
+          </Pressable>
+          <Pressable
+            onPress={() => router.push('/crew/new' as never)}
+            style={({ pressed }) => [{ opacity: pressed ? 0.85 : 1 }]}
+            hitSlop={6}
+          >
+            <View style={s.addBtn}>
+              <Feather name="plus" size={14} color="#ffffff" />
+              <Text style={s.addBtnText}>만들기</Text>
+            </View>
+          </Pressable>
+        </View>
+      </View>
+
+      {isLoading && (
+        <View style={s.loaderWrap}>
+          <ActivityIndicator color="#06b6d4" />
+        </View>
+      )}
+
+      {error && (
+        <View style={s.errorCard}>
+          <Text style={s.errorText}>{error.message}</Text>
+        </View>
+      )}
+
+      {data && data.length === 0 && (
+        <View style={s.emptyStatsCard}>
+          <Feather name="users" size={24} color="#94a3b8" />
+          <Text style={s.emptyStatsTitle}>아직 크루가 없어요</Text>
+          <Text style={s.emptyStatsSubtitle}>
+            크루를 만들거나 친구의 초대코드로 가입해보세요
+          </Text>
+        </View>
+      )}
+
+      {data && data.length > 0 && (
+        <View style={s.shoeList}>
+          {data.map((c) => (
+            <CrewCard key={c.id} crew={c} />
+          ))}
+        </View>
+      )}
+    </View>
+  );
+}
+
+function CrewCard({ crew }: { crew: CrewSummary }) {
+  const router = useRouter();
+  return (
+    <Pressable
+      onPress={() =>
+        router.push({ pathname: '/crew/[id]', params: { id: crew.id } } as never)
+      }
+      style={({ pressed }) => ({ opacity: pressed ? 0.92 : 1 })}
+    >
+      <View style={s.shoeCard}>
+        <View style={s.shoeIcon}>
+          <Feather name="users" size={18} color="#06b6d4" />
+        </View>
+        <View style={{ flex: 1, minWidth: 0 }}>
+          <Text style={s.shoeTitle} numberOfLines={1}>
+            {crew.name}
+          </Text>
+          <View style={s.shoeMetaRow}>
+            <Text style={s.shoeMetaText}>멤버 {crew.member_count}명</Text>
+            {crew.home_gym && (
+              <Text style={s.shoeMetaText} numberOfLines={1}>
+                · {crew.home_gym.name}
+              </Text>
+            )}
+          </View>
+        </View>
+        <Feather name="chevron-right" size={16} color="#cbd5e1" />
+      </View>
+    </Pressable>
   );
 }
 
@@ -1384,6 +1484,22 @@ const s = StyleSheet.create({
   },
   addBtnText: {
     color: '#ffffff',
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  crewOutlineBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#cffafe',
+    backgroundColor: '#ecfeff',
+  },
+  crewOutlineBtnText: {
+    color: '#06b6d4',
     fontSize: 12,
     fontWeight: '800',
   },

@@ -1,0 +1,279 @@
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+
+import { useAuth } from '@/lib/auth-context';
+import { supabase } from '@/lib/supabase';
+
+export type CrewRole = 'owner' | 'member';
+
+export type CrewGym = {
+  id: string;
+  name: string;
+  branch: string | null;
+};
+
+export type CrewUserMini = {
+  id: string;
+  username: string;
+  display_name: string | null;
+  avatar_url: string | null;
+};
+
+export type CrewSummary = {
+  id: string;
+  name: string;
+  description: string | null;
+  invite_code: string;
+  owner_id: string;
+  home_gym_id: string | null;
+  home_gym: CrewGym | null;
+  image_url: string | null;
+  member_count: number;
+  created_at: string;
+};
+
+export type CrewMember = {
+  user_id: string;
+  role: CrewRole;
+  joined_at: string;
+  user: CrewUserMini | null;
+};
+
+export type CrewDetail = CrewSummary & {
+  members: CrewMember[];
+  my_role: CrewRole | null;
+};
+
+const CREW_COLS =
+  'id, name, description, invite_code, owner_id, home_gym_id, image_url, member_count, created_at, home_gym:gyms(id, name, branch)';
+
+// ── 내 크루 목록 ──────────────────────────────────────────────
+export function useMyCrews() {
+  const { session: authSession } = useAuth();
+  const userId = authSession?.user.id;
+  return useQuery({
+    queryKey: ['crews', 'mine', userId] as const,
+    enabled: !!userId,
+    queryFn: async (): Promise<CrewSummary[]> => {
+      // crew_members → crews join
+      const { data, error } = await supabase
+        .from('crew_members')
+        .select(`crew:crews(${CREW_COLS})`)
+        .eq('user_id', userId!)
+        .order('joined_at', { ascending: false });
+      if (error) throw new Error(error.message);
+      const rows = (data ?? []) as Array<{ crew: CrewSummary | null }>;
+      return rows.map((r) => r.crew).filter((c): c is CrewSummary => c !== null);
+    },
+  });
+}
+
+// ── 크루 상세 + 멤버 ─────────────────────────────────────────
+export function useCrewDetail(crewId: string | undefined) {
+  const { session: authSession } = useAuth();
+  const userId = authSession?.user.id;
+  return useQuery({
+    queryKey: ['crews', 'detail', crewId, userId] as const,
+    enabled: !!crewId,
+    queryFn: async (): Promise<CrewDetail> => {
+      const [crewRes, membersRes] = await Promise.all([
+        supabase.from('crews').select(CREW_COLS).eq('id', crewId!).single(),
+        supabase
+          .from('crew_members')
+          .select('user_id, role, joined_at, user:profiles!crew_members_user_id_fkey(id, username, display_name, avatar_url)')
+          .eq('crew_id', crewId!)
+          .order('joined_at', { ascending: true }),
+      ]);
+      if (crewRes.error) throw new Error(crewRes.error.message);
+      if (membersRes.error) throw new Error(membersRes.error.message);
+      const crew = crewRes.data as unknown as CrewSummary;
+      const members = (membersRes.data ?? []) as unknown as CrewMember[];
+      const me = userId ? members.find((m) => m.user_id === userId) ?? null : null;
+      return { ...crew, members, my_role: me?.role ?? null };
+    },
+  });
+}
+
+// ── 초대코드로 크루 미리보기 (가입 페이지) ───────────────────
+export function useLookupCrewByCode(code: string) {
+  const trimmed = code.trim().toUpperCase();
+  return useQuery({
+    queryKey: ['crews', 'by-code', trimmed] as const,
+    enabled: trimmed.length === 6,
+    queryFn: async (): Promise<CrewSummary | null> => {
+      const { data, error } = await supabase
+        .from('crews')
+        .select(CREW_COLS)
+        .eq('invite_code', trimmed)
+        .maybeSingle();
+      if (error) throw new Error(error.message);
+      return (data ?? null) as CrewSummary | null;
+    },
+  });
+}
+
+// ── Mutations ────────────────────────────────────────────────
+export type CreateCrewArgs = {
+  name: string;
+  description: string | null;
+  homeGymId: string | null;
+};
+
+export function useCreateCrew() {
+  const queryClient = useQueryClient();
+  const { session: authSession } = useAuth();
+  return useMutation({
+    mutationFn: async (args: CreateCrewArgs): Promise<{ id: string }> => {
+      const userId = authSession?.user.id;
+      if (!userId) throw new Error('Not authenticated');
+
+      // invite_code 는 column default (gen_invite_code()) 가 채움.
+      // unique 충돌 (32^6 ~10억) 거의 없지만 한 번 retry.
+      let attempt = 0;
+      while (attempt < 2) {
+        const { data: crewRow, error } = await supabase
+          .from('crews')
+          .insert({
+            name: args.name.trim(),
+            description: args.description?.trim() || null,
+            owner_id: userId,
+            home_gym_id: args.homeGymId,
+          })
+          .select('id')
+          .single();
+        if (!error && crewRow) {
+          const crewId = (crewRow as { id: string }).id;
+          // owner 를 멤버로 추가 (트리거가 member_count 증가, default 1 이라
+          // owner INSERT 후 2가 됨 → default 0 으로 시작했어야 하지만 이미 default 1.
+          // 그래서 INSERT 전에 default 1 인 채로 두고 INSERT 후 1 + 1 = 2 가 됨.
+          // 해결: INSERT 직후 member_count 를 1로 reset.
+          const { error: mErr } = await supabase
+            .from('crew_members')
+            .insert({ crew_id: crewId, user_id: userId, role: 'owner' });
+          if (mErr) throw new Error(mErr.message);
+          await supabase.from('crews').update({ member_count: 1 }).eq('id', crewId);
+          return { id: crewId };
+        }
+        // unique 충돌 (invite_code 또는 다른) 면 한 번 retry
+        if (error?.code === '23505' && attempt === 0) {
+          attempt += 1;
+          continue;
+        }
+        throw new Error(error?.message ?? '크루 생성 실패');
+      }
+      throw new Error('크루 생성 실패');
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['crews'] });
+    },
+  });
+}
+
+export function useJoinCrewByCode() {
+  const queryClient = useQueryClient();
+  const { session: authSession } = useAuth();
+  return useMutation({
+    mutationFn: async (code: string): Promise<{ crewId: string }> => {
+      const userId = authSession?.user.id;
+      if (!userId) throw new Error('Not authenticated');
+      const trimmed = code.trim().toUpperCase();
+      if (trimmed.length !== 6) throw new Error('초대코드는 6자리');
+
+      const { data: crew, error: lookupErr } = await supabase
+        .from('crews')
+        .select('id')
+        .eq('invite_code', trimmed)
+        .maybeSingle();
+      if (lookupErr) throw new Error(lookupErr.message);
+      if (!crew) throw new Error('코드를 확인해주세요');
+
+      const crewId = (crew as { id: string }).id;
+      const { error: insertErr } = await supabase
+        .from('crew_members')
+        .insert({ crew_id: crewId, user_id: userId, role: 'member' });
+      if (insertErr) {
+        if (insertErr.code === '23505') throw new Error('이미 가입한 크루입니다');
+        throw new Error(insertErr.message);
+      }
+      return { crewId };
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['crews'] });
+    },
+  });
+}
+
+export function useLeaveCrew() {
+  const queryClient = useQueryClient();
+  const { session: authSession } = useAuth();
+  return useMutation({
+    mutationFn: async (crewId: string) => {
+      const userId = authSession?.user.id;
+      if (!userId) throw new Error('Not authenticated');
+      const { error } = await supabase
+        .from('crew_members')
+        .delete()
+        .eq('crew_id', crewId)
+        .eq('user_id', userId);
+      if (error) throw new Error(error.message);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['crews'] });
+    },
+  });
+}
+
+export function useKickMember() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ crewId, userId }: { crewId: string; userId: string }) => {
+      const { error } = await supabase
+        .from('crew_members')
+        .delete()
+        .eq('crew_id', crewId)
+        .eq('user_id', userId);
+      if (error) throw new Error(error.message);
+    },
+    onSuccess: (_d, vars) => {
+      queryClient.invalidateQueries({ queryKey: ['crews', 'detail', vars.crewId] });
+      queryClient.invalidateQueries({ queryKey: ['crews', 'mine'] });
+    },
+  });
+}
+
+export type UpdateCrewArgs = {
+  crewId: string;
+  name?: string;
+  description?: string | null;
+  homeGymId?: string | null;
+};
+
+export function useUpdateCrew() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (args: UpdateCrewArgs) => {
+      const patch: Record<string, unknown> = { updated_at: new Date().toISOString() };
+      if (args.name !== undefined) patch.name = args.name.trim();
+      if (args.description !== undefined) patch.description = args.description?.trim() || null;
+      if (args.homeGymId !== undefined) patch.home_gym_id = args.homeGymId;
+      const { error } = await supabase.from('crews').update(patch).eq('id', args.crewId);
+      if (error) throw new Error(error.message);
+    },
+    onSuccess: (_d, vars) => {
+      queryClient.invalidateQueries({ queryKey: ['crews', 'detail', vars.crewId] });
+      queryClient.invalidateQueries({ queryKey: ['crews', 'mine'] });
+    },
+  });
+}
+
+export function useDeleteCrew() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (crewId: string) => {
+      const { error } = await supabase.from('crews').delete().eq('id', crewId);
+      if (error) throw new Error(error.message);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['crews'] });
+    },
+  });
+}
