@@ -315,9 +315,6 @@ function BodyInfoStrip({
     );
   }
 
-  const apeIndex =
-    heightCm != null && reachCm != null ? reachCm - heightCm : null;
-
   return (
     <View style={s.bodyStripWrap}>
       <Pressable
@@ -327,24 +324,23 @@ function BodyInfoStrip({
         ]}
       >
         <View style={s.bodyStripCard}>
-          <BodyMetric
-            icon={<MaterialCommunityIcons name="human-male-height" size={16} color="#64748b" />}
-            value={heightCm != null ? `${heightCm}cm` : '-'}
+          <BodyMetricPill
+            icon={<MaterialCommunityIcons name="arrow-up-down" size={15} color="#475569" />}
+            value={heightCm != null ? String(heightCm) : '-'}
+            unit={heightCm != null ? 'cm' : ''}
           />
-          <BodyDivider />
-          <BodyMetric
-            icon={<MaterialCommunityIcons name="arm-flex" size={16} color="#64748b" />}
-            value={reachCm != null ? `${reachCm}cm` : '-'}
-            sub={apeIndex != null ? `${apeIndex > 0 ? '+' : ''}${apeIndex}` : null}
+          <BodyMetricPill
+            icon={<MaterialCommunityIcons name="arrow-left-right" size={15} color="#475569" />}
+            value={reachCm != null ? String(reachCm) : '-'}
+            unit={reachCm != null ? 'cm' : ''}
           />
-          <BodyDivider />
-          <BodyMetric
-            icon={<MaterialCommunityIcons name="scale-bathroom" size={16} color="#64748b" />}
-            value={weightKg != null ? `${weightKg}kg` : '-'}
+          <BodyMetricPill
+            icon={<MaterialCommunityIcons name="weight" size={15} color="#475569" />}
+            value={weightKg != null ? String(weightKg) : '-'}
+            unit={weightKg != null ? 'kg' : ''}
           />
-          <BodyDivider />
-          <BodyMetric
-            icon={<MaterialCommunityIcons name="trending-up" size={16} color="#64748b" />}
+          <BodyMetricPill
+            icon={<MaterialCommunityIcons name="trending-up" size={15} color="#475569" />}
             value={
               climbingStartDate
                 ? formatClimbingDuration(climbingStartDate)
@@ -358,26 +354,27 @@ function BodyInfoStrip({
   );
 }
 
-function BodyMetric({
+function BodyMetricPill({
   icon,
   value,
+  unit,
   sub,
 }: {
   icon: React.ReactNode;
   value: string;
+  unit?: string;
   sub?: string | null;
 }) {
   return (
-    <View style={s.bodyMetricCol}>
-      {icon}
-      <Text style={s.bodyMetricVal}>{value}</Text>
-      {sub ? <Text style={s.bodyMetricSub}>{sub}</Text> : null}
+    <View style={s.bodyPill}>
+      <View style={s.bodyPillRow}>
+        {icon}
+        <Text style={s.bodyPillVal}>{value}</Text>
+        {unit ? <Text style={s.bodyPillUnit}>{unit}</Text> : null}
+      </View>
+      {sub ? <Text style={s.bodyPillSub}>{sub}</Text> : null}
     </View>
   );
-}
-
-function BodyDivider() {
-  return <View style={s.bodyDivider} />;
 }
 
 function MembershipsSection() {
@@ -984,39 +981,42 @@ const s = StyleSheet.create({
   },
   bodyStripCard: {
     flexDirection: 'row',
-    backgroundColor: '#f8fafc',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  bodyPill: {
+    flexGrow: 1,
+    minWidth: '22%',
+    backgroundColor: '#ffffff',
     borderWidth: 1,
     borderColor: '#e2e8f0',
-    borderRadius: 14,
-    paddingVertical: 16,
-  },
-  bodyMetricCol: {
-    flex: 1,
+    borderRadius: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
     alignItems: 'center',
-    gap: 3,
+    gap: 2,
   },
-  bodyMetricLabel: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#94a3b8',
-    letterSpacing: 0.2,
+  bodyPillRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
   },
-  bodyMetricVal: {
+  bodyPillVal: {
     fontSize: 15,
     fontWeight: '800',
     color: '#0f172a',
-    letterSpacing: -0.2,
+    letterSpacing: -0.3,
   },
-  bodyMetricSub: {
+  bodyPillUnit: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#94a3b8',
+    marginLeft: -2,
+  },
+  bodyPillSub: {
     fontSize: 10,
     color: '#64748b',
     fontWeight: '600',
-  },
-  bodyDivider: {
-    width: 1,
-    height: 36,
-    backgroundColor: '#e2e8f0',
-    alignSelf: 'center',
   },
 
   // Stats Section

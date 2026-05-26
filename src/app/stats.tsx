@@ -11,7 +11,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 
-import { BarChart } from 'react-native-gifted-charts';
+import { BarChart, LineChart } from 'react-native-gifted-charts';
 
 import { GymStatsCard } from '@/components/stats/gym-stats-card';
 import { useMonthlyStats } from '@/hooks/use-monthly-stats';
@@ -169,30 +169,24 @@ export default function StatsScreen() {
   );
 }
 
+const COLOR_SESSION = '#38BDF8';  // sky-400 — 산뜻 파랑
+const COLOR_SEND = '#34D399';     // emerald-400 — 산뜻 초록
+const COLOR_GRADE = '#22D3EE';    // cyan-400
+
 function MonthlyTrendCard({ deep }: { deep: { monthly: { monthLabel: string; sessionCount: number; sendCount: number }[] } }) {
-  // grouped bars: 세션 + 완등
   const sessionMax = Math.max(...deep.monthly.map((m) => m.sessionCount), 1);
   const sendMax = Math.max(...deep.monthly.map((m) => m.sendCount), 1);
   const maxVal = Math.max(sessionMax, sendMax);
 
-  const barData: Array<{
-    value: number;
-    label?: string;
-    spacing?: number;
-    frontColor: string;
-  }> = [];
-  for (const m of deep.monthly) {
-    barData.push({
-      value: m.sessionCount,
-      label: m.monthLabel,
-      spacing: 4,
-      frontColor: '#2563eb',
-    });
-    barData.push({
-      value: m.sendCount,
-      frontColor: '#16a34a',
-    });
-  }
+  const sessionData = deep.monthly.map((m) => ({
+    value: m.sessionCount,
+    label: m.monthLabel,
+    dataPointColor: COLOR_SESSION,
+  }));
+  const sendData = deep.monthly.map((m) => ({
+    value: m.sendCount,
+    dataPointColor: COLOR_SEND,
+  }));
 
   return (
     <View style={s.chartCard}>
@@ -200,24 +194,33 @@ function MonthlyTrendCard({ deep }: { deep: { monthly: { monthLabel: string; ses
         <Text style={s.chartTitle}>최근 6개월 추이</Text>
         <View style={s.chartLegendRow}>
           <View style={s.chartLegendItem}>
-            <View style={[s.chartLegendDot, { backgroundColor: '#2563eb' }]} />
+            <View style={[s.chartLegendDot, { backgroundColor: COLOR_SESSION }]} />
             <Text style={s.chartLegendText}>세션</Text>
           </View>
           <View style={s.chartLegendItem}>
-            <View style={[s.chartLegendDot, { backgroundColor: '#16a34a' }]} />
+            <View style={[s.chartLegendDot, { backgroundColor: COLOR_SEND }]} />
             <Text style={s.chartLegendText}>완등</Text>
           </View>
         </View>
       </View>
-      <BarChart
-        data={barData}
+      <LineChart
+        data={sessionData}
+        data2={sendData}
+        color1={COLOR_SESSION}
+        color2={COLOR_SEND}
+        thickness={2.5}
+        thickness2={2.5}
+        curved
         height={140}
-        barWidth={14}
-        spacing={18}
-        initialSpacing={8}
-        barBorderRadius={3}
+        spacing={42}
+        initialSpacing={14}
+        endSpacing={10}
+        dataPointsRadius={4}
+        dataPointsColor1={COLOR_SESSION}
+        dataPointsColor2={COLOR_SEND}
         yAxisThickness={0}
-        xAxisThickness={0}
+        xAxisThickness={1}
+        xAxisColor="#e2e8f0"
         xAxisLabelTextStyle={{ color: '#94a3b8', fontSize: 10 }}
         yAxisTextStyle={{ color: '#94a3b8', fontSize: 10 }}
         noOfSections={Math.min(4, maxVal)}
@@ -237,7 +240,7 @@ function GradeDistributionCard({
   const barData = deep.gradeDistribution.map((g) => ({
     value: g.sendCount,
     label: g.vGrade,
-    frontColor: '#06b6d4',
+    frontColor: COLOR_GRADE,
   }));
   const maxVal = Math.max(...barData.map((b) => b.value), 1);
 
@@ -281,14 +284,15 @@ function ScopeBtn({
   active: boolean;
   onPress: () => void;
 }) {
+  // Pressable 함수형 style 이 flex: 1 을 silently drop 해서 width 0 으로
+  // 무너지는 케이스. children-as-function + inner View 패턴으로 안전하게.
   return (
-    <Pressable
-      onPress={onPress}
-      style={({ pressed }) => [{ flex: 1, opacity: pressed ? 0.7 : 1 }]}
-    >
-      <View style={[s.scopeBtn, active && s.scopeBtnActive]}>
-        <Text style={[s.scopeBtnLabel, active && s.scopeBtnLabelActive]}>{label}</Text>
-      </View>
+    <Pressable onPress={onPress} style={s.scopeBtnPressable}>
+      {({ pressed }) => (
+        <View style={[s.scopeBtn, active && s.scopeBtnActive, pressed && { opacity: 0.85 }]}>
+          <Text style={[s.scopeBtnLabel, active && s.scopeBtnLabelActive]}>{label}</Text>
+        </View>
+      )}
     </Pressable>
   );
 }
@@ -393,8 +397,10 @@ const s = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#e2e8f0',
   },
-  scopeBtn: {
+  scopeBtnPressable: {
     flex: 1,
+  },
+  scopeBtn: {
     paddingVertical: 9,
     borderRadius: 10,
     alignItems: 'center',
