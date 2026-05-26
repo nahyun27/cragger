@@ -6,6 +6,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  useWindowDimensions,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -211,7 +212,14 @@ const COLOR_SESSION = '#38BDF8';  // sky-400 — 산뜻 파랑
 const COLOR_SEND = '#34D399';     // emerald-400 — 산뜻 초록
 const COLOR_GRADE = '#22D3EE';    // cyan-400
 
+// 카드 내부 차트가 그릴 수 있는 가로 폭.
+// 화면 폭 - ScrollView padding(16*2) - card padding(16*2) - yAxis 라벨(~32)
+function chartInnerWidth(windowWidth: number): number {
+  return Math.max(180, windowWidth - 16 * 2 - 16 * 2 - 32);
+}
+
 function MonthlyTrendCard({ deep, title = '최근 6개월 추이' }: { deep: { monthly: { monthLabel: string; sessionCount: number; sendCount: number }[] }; title?: string }) {
+  const { width: winW } = useWindowDimensions();
   const sessionMax = Math.max(...deep.monthly.map((m) => m.sessionCount), 1);
   const sendMax = Math.max(...deep.monthly.map((m) => m.sendCount), 1);
   const maxVal = Math.max(sessionMax, sendMax);
@@ -226,10 +234,20 @@ function MonthlyTrendCard({ deep, title = '최근 6개월 추이' }: { deep: { m
     dataPointColor: COLOR_SEND,
   }));
 
+  const N = deep.monthly.length;
+  const innerW = chartInnerWidth(winW);
+  const initialSpacing = 10;
+  const endSpacing = 10;
+  const spacing = N > 1
+    ? Math.max(2, Math.floor((innerW - initialSpacing - endSpacing) / (N - 1)))
+    : innerW;
+  // 데이터 포인트 많으면 작게.
+  const pointRadius = N > 16 ? 2 : N > 10 ? 3 : 4;
+
   return (
     <View style={s.chartCard}>
       <View style={s.chartHeader}>
-        <Text style={s.chartTitle}>최근 6개월 추이</Text>
+        <Text style={s.chartTitle}>{title}</Text>
         <View style={s.chartLegendRow}>
           <View style={s.chartLegendItem}>
             <View style={[s.chartLegendDot, { backgroundColor: COLOR_SESSION }]} />
@@ -250,10 +268,11 @@ function MonthlyTrendCard({ deep, title = '최근 6개월 추이' }: { deep: { m
         thickness2={2.5}
         curved
         height={140}
-        spacing={42}
-        initialSpacing={14}
-        endSpacing={10}
-        dataPointsRadius={4}
+        width={innerW}
+        spacing={spacing}
+        initialSpacing={initialSpacing}
+        endSpacing={endSpacing}
+        dataPointsRadius={pointRadius}
         dataPointsColor1={COLOR_SESSION}
         dataPointsColor2={COLOR_SEND}
         yAxisThickness={0}
@@ -275,12 +294,22 @@ function GradeDistributionCard({
 }: {
   deep: { gradeDistribution: { vGrade: string; sendCount: number }[]; maxVGrade: string | null };
 }) {
+  const { width: winW } = useWindowDimensions();
   const barData = deep.gradeDistribution.map((g) => ({
     value: g.sendCount,
     label: g.vGrade,
     frontColor: COLOR_GRADE,
   }));
   const maxVal = Math.max(...barData.map((b) => b.value), 1);
+
+  // bar + spacing 합산이 inner 너비 안에 들어가게.
+  const N = barData.length;
+  const innerW = chartInnerWidth(winW);
+  const initialSpacing = 8;
+  // bar 1개 + spacing 1개 = (innerW - initialSpacing) / N
+  const unit = N > 0 ? Math.max(8, Math.floor((innerW - initialSpacing) / N)) : 30;
+  const barWidth = Math.max(6, Math.floor(unit * 0.6));
+  const spacing = Math.max(2, unit - barWidth);
 
   return (
     <View style={s.chartCard}>
@@ -296,9 +325,11 @@ function GradeDistributionCard({
       <BarChart
         data={barData}
         height={120}
-        barWidth={22}
-        spacing={14}
-        initialSpacing={8}
+        width={innerW}
+        barWidth={barWidth}
+        spacing={spacing}
+        initialSpacing={initialSpacing}
+        endSpacing={4}
         barBorderRadius={3}
         yAxisThickness={0}
         xAxisThickness={0}
