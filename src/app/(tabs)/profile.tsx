@@ -77,7 +77,7 @@ export default function ProfileScreen() {
         </View>
       </View>
 
-      <ScrollView contentContainerStyle={s.scrollContent}>
+      <ScrollView style={{ flex: 1, backgroundColor: '#f8fafc' }} contentContainerStyle={s.scrollContent}>
         {/* Profile Card */}
         <View style={s.profileCard}>
           <View style={s.avatarContainer}>
@@ -137,11 +137,6 @@ export default function ProfileScreen() {
           weightKg={profile?.weight_visible ? (profile?.weight_kg ?? null) : null}
           climbingStartDate={profile?.climbing_start_date ?? null}
           onEdit={() => router.push('/profile/edit')}
-        />
-
-        <FootProfileCard
-          profile={profile}
-          onEdit={() => router.push('/profile/foot' as never)}
         />
 
         {/* Stats section — scoped to this month */}
@@ -270,44 +265,47 @@ function FootProfileCard({
   profile: Profile | undefined;
   onEdit: () => void;
 }) {
-  const empty =
-    !profile ||
-    (profile.foot_length_mm == null &&
-      profile.shoe_size_mm == null &&
-      profile.foot_shape == null &&
-      profile.foot_width == null &&
-      profile.instep_height == null &&
-      profile.arch_type == null);
+  const chips = profile
+    ? ([
+        profile.foot_length_mm != null ? `${profile.foot_length_mm}mm` : null,
+        profile.shoe_size_mm != null ? `운동화 ${profile.shoe_size_mm}mm` : null,
+        profile.foot_shape ? FOOT_SHAPE_LABEL[profile.foot_shape] : null,
+        profile.foot_width ? `${FOOT_WIDTH_LABEL[profile.foot_width]} 폭` : null,
+        profile.instep_height ? INSTEP_LABEL[profile.instep_height] : null,
+        profile.arch_type ? ARCH_LABEL[profile.arch_type] : null,
+      ].filter(Boolean) as string[])
+    : [];
+  const empty = chips.length === 0;
 
   return (
     <Pressable onPress={onEdit}>
       {({ pressed }) => (
-        <View style={[s.footCard, pressed && { opacity: 0.85 }]}>
-          <View style={s.footCardHeader}>
-            <View style={s.footCardTitleRow}>
-              <Feather name="award" size={13} color="#0f172a" />
-              <Text style={s.footCardTitle}>내 발 프로필</Text>
-            </View>
-            <Text style={s.footCardEdit}>{empty ? '등록' : '수정'}</Text>
+        <View style={[s.footCard, pressed && { opacity: 0.92 }]}>
+          <View style={s.footCardLeft}>
+            <Text style={s.footEmoji}>🦶</Text>
           </View>
-          {empty ? (
-            <Text style={s.footCardEmpty}>
-              암벽화 추천을 위해 발 정보를 등록해보세요
-            </Text>
-          ) : (
-            <Text style={s.footCardSummary} numberOfLines={2}>
-              {[
-                profile.foot_length_mm != null ? `${profile.foot_length_mm}mm` : null,
-                profile.shoe_size_mm != null ? `운동화 ${profile.shoe_size_mm}mm` : null,
-                profile.foot_shape ? FOOT_SHAPE_LABEL[profile.foot_shape] : null,
-                profile.foot_width ? `${FOOT_WIDTH_LABEL[profile.foot_width]} 폭` : null,
-                profile.instep_height ? INSTEP_LABEL[profile.instep_height] : null,
-                profile.arch_type ? ARCH_LABEL[profile.arch_type] : null,
-              ]
-                .filter(Boolean)
-                .join(' · ')}
-            </Text>
-          )}
+          <View style={s.footCardBody}>
+            <View style={s.footCardHeaderRow}>
+              <Text style={s.footCardTitle}>내 발 프로필</Text>
+              <View style={s.footEditChip}>
+                <Text style={s.footEditChipText}>{empty ? '등록' : '수정'}</Text>
+                <Feather name="chevron-right" size={12} color="#0891b2" />
+              </View>
+            </View>
+            {empty ? (
+              <Text style={s.footEmptyText}>
+                발 정보를 등록하면 비슷한 발형 추천 사이즈를 볼 수 있어요
+              </Text>
+            ) : (
+              <View style={s.footChipsRow}>
+                {chips.map((c) => (
+                  <View key={c} style={s.footMiniChip}>
+                    <Text style={s.footMiniChipText}>{c}</Text>
+                  </View>
+                ))}
+              </View>
+            )}
+          </View>
         </View>
       )}
     </Pressable>
@@ -739,6 +737,9 @@ function MembershipCard({
     );
   }
 
+  const total = membership.total_passes ?? 0;
+  const remaining = Math.max(0, total - membership.used_passes);
+
   const isPasses = membership.membership_type === 'passes';
   const iconName = isPasses ? 'layers' : 'calendar';
 
@@ -832,6 +833,13 @@ function MembershipCard({
                   {resolveTypeLabel(membership.membership_type)}
                 </Text>
               </View>
+              {isPasses && (
+                <View style={expired ? s.mCountBadgeExpired : s.mCountBadge}>
+                  <Text style={expired ? s.mCountBadgeTextExpired : s.mCountBadgeText}>
+                    {remaining}/{total}회
+                  </Text>
+                </View>
+              )}
               {expSoon && (
                 <View style={s.mBadgeUrgent}>
                   <Text style={s.mBadgeTextUrgent}>만료 임박</Text>
@@ -850,29 +858,19 @@ function MembershipCard({
           {/* Dashed divider */}
           <View style={[s.ticketDivider, { borderColor: dividerColor }]} />
 
-          {/* Right: stat + use-pass button */}
-          <View style={s.mRightCol}>
-            <Text style={[s.mRightStatText, expSoon && s.mSubtitleTextUrgent]}>
-              {formatMembershipRightStat(membership, expired)}
-            </Text>
-
-            {!expired && isPasses && (
+          {/* Right: stat / use-pass button */}
+          {!expired && isPasses ? (
+            <View style={s.mRightCol}>
               <Pressable
                 onPress={handleUsePass}
-                disabled={
-                  usePass.isPending ||
-                  (membership.total_passes != null &&
-                    membership.used_passes >= membership.total_passes)
-                }
-                hitSlop={4}
+                disabled={usePass.isPending || remaining <= 0}
+                hitSlop={8}
               >
                 {({ pressed: btnPressed }) => (
                   <View
                     style={[
                       s.usePassBtn,
-                      membership.total_passes != null &&
-                        membership.used_passes >= membership.total_passes &&
-                        s.usePassBtnDisabled,
+                      remaining <= 0 && s.usePassBtnDisabled,
                       btnPressed && { opacity: 0.8 },
                     ]}
                   >
@@ -880,19 +878,25 @@ function MembershipCard({
                       <ActivityIndicator size="small" color="white" />
                     ) : (
                       <>
-                        <Feather name="check" size={12} color="white" />
+                        <Feather name="check" size={13} color="white" />
                         <Text style={s.usePassBtnText}>사용</Text>
                       </>
                     )}
                   </View>
                 )}
               </Pressable>
-            )}
-          </View>
+            </View>
+          ) : (
+            <View style={s.mRightCol}>
+              <Text style={[s.mRightStatText, expSoon && s.mSubtitleTextUrgent]}>
+                {formatMembershipRightStat(membership, expired)}
+              </Text>
+            </View>
+          )}
 
           {/* Ticket Cutouts */}
-          <View style={[s.ticketCutoutLeft, { borderColor: cutoutBorderColor }]} />
-          <View style={[s.ticketCutoutRight, { borderColor: cutoutBorderColor }]} />
+          <View style={[s.ticketCutoutTop, { borderColor: cutoutBorderColor }]} />
+          <View style={[s.ticketCutoutBottom, { borderColor: cutoutBorderColor }]} />
         </View>
       )}
     </Pressable>
@@ -901,10 +905,7 @@ function MembershipCard({
 
 function formatMembershipRightStat(m: MembershipRow, expired?: boolean): string {
   if (m.membership_type === 'passes') {
-    const total = m.total_passes ?? 0;
-    const remaining = Math.max(0, total - m.used_passes);
-    if (expired) return `0/${total}`;
-    return `${remaining}/${total}`;
+    return expired ? '소진됨' : '';
   }
   if (!m.end_date) return '';
   if (expired) return '만료됨';
@@ -912,23 +913,28 @@ function formatMembershipRightStat(m: MembershipRow, expired?: boolean): string 
   return d === 0 ? 'D-Day' : `D-${d}`;
 }
 
+
 // ─── Shoes section ───────────────────────────────────────────
 function ShoesSection() {
   const router = useRouter();
+  const { data: profile } = useProfile();
   const { data, isLoading, error } = useShoes();
   const [guideOpen, setGuideOpen] = useState(false);
+  const count = data?.length ?? 0;
 
   return (
     <View style={s.sectionContainer}>
       <View style={s.sectionHeaderRow}>
         <View style={s.shoesTitleRow}>
-          <Text style={s.sectionTitle}>내 신발장</Text>
+          <Text style={s.sectionTitle}>
+            내 신발장 {count > 0 && <Text style={s.sectionTitleCount}>{count}</Text>}
+          </Text>
           <Pressable
             onPress={() => setGuideOpen(true)}
             hitSlop={8}
             style={({ pressed }) => [{ opacity: pressed ? 0.5 : 1 }]}
           >
-            <Feather name="info" size={14} color="#64748b" />
+            <Feather name="info" size={14} color="#94a3b8" />
           </Pressable>
         </View>
         <Pressable
@@ -942,6 +948,11 @@ function ShoesSection() {
           </View>
         </Pressable>
       </View>
+
+      <FootProfileCard
+        profile={profile}
+        onEdit={() => router.push('/profile/foot' as never)}
+      />
 
       <ShoeSizeGuide visible={guideOpen} onClose={() => setGuideOpen(false)} />
 
@@ -958,17 +969,26 @@ function ShoesSection() {
       )}
 
       {data && data.length === 0 && (
-        <View style={s.emptyStatsCard}>
-          <Feather name="package" size={24} color="#94a3b8" />
-          <Text style={s.emptyStatsTitle}>신발장에 등록된 암벽화가 없어요</Text>
-          <Text style={s.emptyStatsSubtitle}>
-            우측 상단 + 추가 버튼으로 등록하세요
-          </Text>
-        </View>
+        <Pressable onPress={() => router.push('/shoes/new')}>
+          {({ pressed }) => (
+            <View style={[s.shoeEmptyCard, pressed && { opacity: 0.85 }]}>
+              <View style={s.shoeEmptyIconBox}>
+                <Feather name="plus" size={20} color="#06b6d4" />
+              </View>
+              <View style={s.flex1}>
+                <Text style={s.shoeEmptyTitle}>첫 암벽화 등록하기</Text>
+                <Text style={s.shoeEmptySub}>
+                  핏·평점을 남기면 비슷한 발형 사용자와 비교돼요
+                </Text>
+              </View>
+              <Feather name="chevron-right" size={18} color="#cbd5e1" />
+            </View>
+          )}
+        </Pressable>
       )}
 
       {data && data.length > 0 && (
-        <View style={s.shoeList}>
+        <View style={s.shoeListGap}>
           {data.map((shoe) => (
             <ShoeCard key={shoe.id} shoe={shoe} />
           ))}
@@ -1009,6 +1029,11 @@ const FIT_PERCEPTION_SHORT_LOCAL: Record<string, string> = {
   slightly_larger: '약간 큼',
   much_larger: '훨씬 큼',
 };
+const STATUS_LABEL_LOCAL: Record<ShoeStatus, string> = {
+  active: '사용 중',
+  resole_pending: '창갈이 대기',
+  retired: '은퇴',
+};
 
 function ShoeCard({ shoe }: { shoe: ClimbingShoe }) {
   const router = useRouter();
@@ -1027,15 +1052,37 @@ function ShoeCard({ shoe }: { shoe: ClimbingShoe }) {
           </View>
           <View style={s.shoeCardBody}>
             {shoe.brand && <Text style={s.shoeBrand}>{shoe.brand}</Text>}
-            <Text style={s.shoeModelName} numberOfLines={1}>
-              {shoe.model}
-            </Text>
-            {shoe.is_primary && (
-              <View style={s.primaryChip}>
-                <Text style={s.primaryChipText}>🌟 주력</Text>
-              </View>
-            )}
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+              <Text style={[s.shoeModelName, { flexShrink: 1 }]} numberOfLines={1}>
+                {shoe.model}
+              </Text>
+              {shoe.is_primary && (
+                <View style={s.primaryChip}>
+                  <Text style={s.primaryChipText}>🌟 주력</Text>
+                </View>
+              )}
+            </View>
             <View style={s.shoeMetaRow}>
+              <View
+                style={[
+                  s.shoeStatusBadge,
+                  {
+                    backgroundColor: STATUS_PALETTE[shoe.status].bg,
+                    borderColor: STATUS_PALETTE[shoe.status].border,
+                  },
+                ]}
+              >
+                <Text
+                  style={[
+                    s.shoeStatusText,
+                    {
+                      color: STATUS_PALETTE[shoe.status].text,
+                    },
+                  ]}
+                >
+                  {STATUS_LABEL_LOCAL[shoe.status]}
+                </Text>
+              </View>
               {shoe.size && (
                 <View style={s.sizePill}>
                   <Text style={s.sizePillText}>{shoe.size.replace(/^EU\s*/i, '')} EU</Text>
@@ -1188,7 +1235,7 @@ function MenuButton({ icon, label, color = '#0f172a', onPress }: any) {
 const s = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8fafc',
+    backgroundColor: '#ffffff',
   },
   header: {
     flexDirection: 'row',
@@ -1248,25 +1295,75 @@ const s = StyleSheet.create({
   },
 
   footCard: {
-    marginHorizontal: 16,
-    marginTop: 12,
+    flexDirection: 'row',
+    gap: 12,
     padding: 14,
+    backgroundColor: '#f0f9ff',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#bae6fd',
+    marginBottom: 12,
+  },
+  footCardLeft: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#bae6fd',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  footEmoji: { fontSize: 22 },
+  footCardBody: { flex: 1, gap: 6 },
+  footCardHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  footCardTitle: { fontSize: 14, fontWeight: '900', color: '#0c4a6e' },
+  footEditChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+  },
+  footEditChipText: { fontSize: 12, fontWeight: '800', color: '#0891b2' },
+  footEmptyText: { fontSize: 12, color: '#64748b', lineHeight: 17 },
+  footChipsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 4 },
+  footMiniChip: {
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#bae6fd',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  footMiniChipText: { fontSize: 11, fontWeight: '700', color: '#0c4a6e' },
+
+  sectionTitleCount: { color: '#06b6d4' },
+  flex1: { flex: 1 },
+  shoeListGap: { gap: 10 },
+  shoeEmptyCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    padding: 16,
     backgroundColor: '#ffffff',
     borderRadius: 14,
     borderWidth: 1,
     borderColor: '#e2e8f0',
+    borderStyle: 'dashed',
   },
-  footCardHeader: {
-    flexDirection: 'row',
+  shoeEmptyIconBox: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: '#ecfeff',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 6,
+    justifyContent: 'center',
   },
-  footCardTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  footCardTitle: { fontSize: 13, fontWeight: '800', color: '#0f172a' },
-  footCardEdit: { fontSize: 12, fontWeight: '700', color: '#06b6d4' },
-  footCardEmpty: { fontSize: 12, color: '#94a3b8' },
-  footCardSummary: { fontSize: 13, color: '#475569', lineHeight: 18 },
+  shoeEmptyTitle: { fontSize: 14, fontWeight: '800', color: '#0f172a' },
+  shoeEmptySub: { fontSize: 11, color: '#94a3b8', marginTop: 2 },
 
   // Profile Card — 인스타 스타일 (중앙 정렬, 큰 아바타)
   profileCard: {
@@ -1644,11 +1741,10 @@ const s = StyleSheet.create({
     borderStyle: 'dashed',
     marginHorizontal: 4,
   },
-  ticketCutoutLeft: {
+  ticketCutoutTop: {
     position: 'absolute',
-    left: -10,
-    top: '50%',
-    marginTop: -10,
+    right: 78,
+    top: -10,
     width: 20,
     height: 20,
     borderRadius: 10,
@@ -1657,11 +1753,10 @@ const s = StyleSheet.create({
     borderColor: '#e2e8f0',
     zIndex: 10,
   },
-  ticketCutoutRight: {
+  ticketCutoutBottom: {
     position: 'absolute',
-    right: -10,
-    top: '50%',
-    marginTop: -10,
+    right: 78,
+    bottom: -10,
     width: 20,
     height: 20,
     borderRadius: 10,
@@ -1725,6 +1820,32 @@ const s = StyleSheet.create({
     fontWeight: '800',
     color: '#4f46e5',
   },
+  mCountBadge: {
+    backgroundColor: '#ecfeff',
+    borderWidth: 1,
+    borderColor: '#cffafe',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 8,
+  },
+  mCountBadgeText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#0891b2',
+  },
+  mCountBadgeExpired: {
+    backgroundColor: '#f1f5f9',
+    borderWidth: 1,
+    borderColor: '#cbd5e1',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 8,
+  },
+  mCountBadgeTextExpired: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#64748b',
+  },
   mBadgeExpired: {
     backgroundColor: '#f1f5f9',
     borderWidth: 1,
@@ -1771,32 +1892,31 @@ const s = StyleSheet.create({
     color: '#ef4444',
   },
   mRightCol: {
-    alignItems: 'flex-end',
+    width: 58,
+    alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
     flexShrink: 0,
   },
   mRightStatText: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '800',
     color: '#0f172a',
     letterSpacing: -0.3,
   },
   usePassBtn: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
+    width: 58,
+    height: 34,
+    borderRadius: 10,
     backgroundColor: '#06b6d4',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 4,
+    gap: 2,
     shadowColor: '#06b6d4',
     shadowOpacity: 0.15,
     shadowRadius: 4,
     shadowOffset: { width: 0, height: 2 },
     elevation: 2,
-    minWidth: 60,
   },
   usePassBtnDisabled: {
     backgroundColor: '#cbd5e1',
@@ -1868,18 +1988,14 @@ const s = StyleSheet.create({
     fontSize: 12,
     fontWeight: '800',
   },
-  shoeList: { gap: 10 },
+  shoeList: { gap: 0 },
+
   shoeCard: {
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-    borderRadius: 16,
     padding: 14,
     backgroundColor: '#ffffff',
-    shadowColor: '#0f172a',
-    shadowOpacity: 0.04,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 1,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
     gap: 12,
   },
   shoeCardTop: { flexDirection: 'row', gap: 12 },
