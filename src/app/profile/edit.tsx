@@ -101,7 +101,7 @@ function formatLongDate(s: string | null): string {
 export default function ProfileEditScreen() {
   const router = useRouter();
   const { session: authSession } = useAuth();
-  const { data: profile, isLoading } = useProfile();
+  const { data: profile, isLoading, error: profileError } = useProfile();
   const updateProfile = useUpdateProfile();
 
   const {
@@ -239,6 +239,27 @@ export default function ProfileEditScreen() {
     }
   }
 
+  if (profileError) {
+    return (
+      <SafeAreaView
+        className="flex-1 bg-background-primary items-center justify-center p-6"
+        edges={['top', 'bottom']}
+      >
+        <Text className="text-status-danger text-center mb-4 text-sm font-semibold">
+          프로필을 불러올 수 없어요
+        </Text>
+        <Text className="text-text-tertiary text-center text-xs mb-4">
+          {profileError.message}
+        </Text>
+        <Pressable
+          onPress={() => router.back()}
+          className="border border-border-default rounded-md px-4 py-2"
+        >
+          <Text className="text-text-primary text-sm">돌아가기</Text>
+        </Pressable>
+      </SafeAreaView>
+    );
+  }
   if (isLoading || !profile) {
     return (
       <SafeAreaView
