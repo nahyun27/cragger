@@ -394,6 +394,7 @@ const s = StyleSheet.create({
     borderColor: '#e2e8f0',
   },
   scopeBtn: {
+    flex: 1,
     paddingVertical: 9,
     borderRadius: 10,
     alignItems: 'center',

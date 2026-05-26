@@ -13,7 +13,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Feather } from '@expo/vector-icons';
+import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 
 import { ShoeSizeGuide } from '@/components/shoes/shoe-size-guide';
 import { GymStatsCard } from '@/components/stats/gym-stats-card';
@@ -327,21 +327,24 @@ function BodyInfoStrip({
         ]}
       >
         <View style={s.bodyStripCard}>
-          <BodyMetric label="키" value={heightCm != null ? `${heightCm}cm` : '-'} />
-          <BodyDivider />
           <BodyMetric
-            label="몸무게"
-            value={weightKg != null ? `${weightKg}kg` : '-'}
+            icon={<MaterialCommunityIcons name="human-male-height" size={16} color="#64748b" />}
+            value={heightCm != null ? `${heightCm}cm` : '-'}
           />
           <BodyDivider />
           <BodyMetric
-            label="리치"
+            icon={<MaterialCommunityIcons name="arm-flex" size={16} color="#64748b" />}
             value={reachCm != null ? `${reachCm}cm` : '-'}
             sub={apeIndex != null ? `${apeIndex > 0 ? '+' : ''}${apeIndex}` : null}
           />
           <BodyDivider />
           <BodyMetric
-            label="클라이밍"
+            icon={<MaterialCommunityIcons name="scale-bathroom" size={16} color="#64748b" />}
+            value={weightKg != null ? `${weightKg}kg` : '-'}
+          />
+          <BodyDivider />
+          <BodyMetric
+            icon={<MaterialCommunityIcons name="trending-up" size={16} color="#64748b" />}
             value={
               climbingStartDate
                 ? formatClimbingDuration(climbingStartDate)
@@ -356,17 +359,17 @@ function BodyInfoStrip({
 }
 
 function BodyMetric({
-  label,
+  icon,
   value,
   sub,
 }: {
-  label: string;
+  icon: React.ReactNode;
   value: string;
   sub?: string | null;
 }) {
   return (
     <View style={s.bodyMetricCol}>
-      <Text style={s.bodyMetricLabel}>{label}</Text>
+      {icon}
       <Text style={s.bodyMetricVal}>{value}</Text>
       {sub ? <Text style={s.bodyMetricSub}>{sub}</Text> : null}
     </View>
