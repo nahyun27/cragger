@@ -27,6 +27,7 @@ import {
   useToggleLike,
   type PostRow,
 } from '@/hooks/use-community';
+import { effectiveStatus, useBattles, type Battle } from '@/hooks/use-battles';
 
 function getAvatarBg(name: string) {
   const colors = ['#e0f2fe', '#fef3c7', '#dcfce7', '#f3e8ff', '#fee2e2', '#e0e7ff'];
@@ -221,19 +222,14 @@ export default function CrewDetailScreen() {
           </View>
         </View>
 
+        {/* 크루 대결 */}
+        {isMember && <CrewBattlesSection crewId={data.id} />}
+
         {/* 크루 모임 */}
         {isMember && <CrewMeetupsSection crewId={data.id} />}
 
         {/* 크루 피드 */}
         {isMember && <CrewFeedSection crewId={data.id} />}
-
-        {/* 대결 placeholder */}
-        <View className="bg-background-secondary border border-border-subtle rounded-2xl p-4 items-center gap-1">
-          <Feather name="info" size={14} color="#94a3b8" />
-          <Text className="text-text-tertiary text-xs font-semibold text-center">
-            크루 대결 기능은 곧 추가될 예정입니다
-          </Text>
-        </View>
 
         {/* 탈퇴 (member 만) */}
         {isMember && !isOwner && (
@@ -246,6 +242,166 @@ export default function CrewDetailScreen() {
         )}
       </ScrollView>
     </SafeAreaView>
+  );
+}
+
+function CrewBattlesSection({ crewId }: { crewId: string }) {
+  const router = useRouter();
+  const { data, isLoading, error } = useBattles(crewId);
+
+  const partitioned = React.useMemo(() => {
+    if (!data) return { active: [] as Battle[], ended: [] as Battle[], pending: [] as Battle[] };
+    const active: Battle[] = [];
+    const ended: Battle[] = [];
+    const pending: Battle[] = [];
+    for (const b of data) {
+      const st = effectiveStatus(b);
+      if (st === 'pending') pending.push(b);
+      else if (st === 'ended' || st === 'declined') ended.push(b);
+      else active.push(b);
+    }
+    return { active, ended, pending };
+  }, [data]);
+
+  return (
+    <View className="gap-3">
+      <View className="flex-row items-baseline justify-between px-1">
+        <Text className="text-text-primary text-base font-extrabold">크루 대결</Text>
+        <Pressable
+          onPress={() =>
+            router.push({ pathname: '/battle/new', params: { crewId } } as never)
+          }
+          hitSlop={6}
+        >
+          {({ pressed }) => (
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 4,
+                paddingHorizontal: 12,
+                paddingVertical: 7,
+                borderRadius: 10,
+                backgroundColor: '#06b6d4',
+                opacity: pressed ? 0.85 : 1,
+                shadowColor: '#06b6d4',
+                shadowOpacity: 0.25,
+                shadowRadius: 6,
+                shadowOffset: { width: 0, height: 2 },
+                elevation: 2,
+              }}
+            >
+              <Feather name="zap" size={12} color="#ffffff" />
+              <Text style={{ color: '#ffffff', fontSize: 12, fontWeight: '800' }}>
+                대결 만들기
+              </Text>
+            </View>
+          )}
+        </Pressable>
+      </View>
+
+      {isLoading && (
+        <View className="py-6 items-center">
+          <ActivityIndicator color="#06b6d4" />
+        </View>
+      )}
+      {error && (
+        <View className="p-4 rounded-2xl bg-status-danger/10 border border-status-danger/20">
+          <Text className="text-status-danger text-xs font-semibold">{error.message}</Text>
+        </View>
+      )}
+
+      {data && data.length === 0 && (
+        <View className="p-6 items-center gap-2 bg-background-secondary border border-border-subtle rounded-2xl">
+          <Feather name="zap" size={20} color="#94a3b8" />
+          <Text className="text-text-tertiary text-sm font-semibold">
+            아직 대결이 없어요
+          </Text>
+        </View>
+      )}
+
+      {partitioned.pending.length > 0 && (
+        <View className="gap-2">
+          {partitioned.pending.map((b) => <BattleCard key={b.id} battle={b} crewId={crewId} />)}
+        </View>
+      )}
+      {partitioned.active.length > 0 && (
+        <View className="gap-2">
+          {partitioned.active.map((b) => <BattleCard key={b.id} battle={b} crewId={crewId} />)}
+        </View>
+      )}
+      {partitioned.ended.length > 0 && (
+        <View className="gap-2 mt-2">
+          <Text className="text-text-tertiary text-xs font-bold px-1">지난 대결</Text>
+          {partitioned.ended.map((b) => <BattleCard key={b.id} battle={b} crewId={crewId} past />)}
+        </View>
+      )}
+    </View>
+  );
+}
+
+function BattleCard({ battle, crewId, past }: { battle: Battle; crewId: string; past?: boolean }) {
+  const router = useRouter();
+  const status = effectiveStatus(battle);
+  const isCrewVs = battle.battle_type === 'crew_vs_crew';
+  const isHome = battle.crew_id === crewId;
+  const opponent = isHome ? battle.opponent_crew : battle.crew;
+
+  const statusMeta = {
+    pending: { bg: '#fff7ed', fg: '#c2410c', label: '수락 대기' },
+    active: { bg: '#ecfeff', fg: '#0e7490', label: '진행 중' },
+    ended: { bg: '#f1f5f9', fg: '#64748b', label: '종료' },
+    declined: { bg: '#fef2f2', fg: '#b91c1c', label: '거절됨' },
+  }[status] ?? { bg: '#f1f5f9', fg: '#64748b', label: status };
+
+  return (
+    <Pressable
+      onPress={() =>
+        router.push({ pathname: '/battle/[id]', params: { id: battle.id } } as never)
+      }
+      style={({ pressed }) => [{ opacity: pressed ? 0.92 : 1 }]}
+    >
+      <View
+        style={{
+          backgroundColor: '#ffffff',
+          borderWidth: 1,
+          borderColor: '#e2e8f0',
+          borderRadius: 14,
+          padding: 12,
+          gap: 6,
+          opacity: past ? 0.75 : 1,
+        }}
+      >
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+          <View
+            style={{
+              paddingHorizontal: 8,
+              paddingVertical: 2,
+              borderRadius: 999,
+              backgroundColor: statusMeta.bg,
+            }}
+          >
+            <Text style={{ fontSize: 10, fontWeight: '800', color: statusMeta.fg }}>
+              {statusMeta.label}
+            </Text>
+          </View>
+          <Text style={{ fontSize: 10, fontWeight: '700', color: '#94a3b8' }}>
+            {isCrewVs ? '크루전' : '개인전'}
+          </Text>
+        </View>
+        <Text style={{ fontSize: 14, fontWeight: '800', color: '#0f172a' }} numberOfLines={1}>
+          {battle.title}
+        </Text>
+        {isCrewVs && opponent && (
+          <Text style={{ fontSize: 11, fontWeight: '700', color: '#475569' }} numberOfLines={1}>
+            VS {opponent.name}
+          </Text>
+        )}
+        <Text style={{ fontSize: 11, fontWeight: '600', color: '#94a3b8' }}>
+          {battle.starts_at.slice(0, 10)} ~ {battle.ends_at.slice(0, 10)}
+        </Text>
+      </View>
+    </Pressable>
   );
 }
 
