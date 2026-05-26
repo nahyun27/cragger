@@ -172,17 +172,18 @@ function ToggleBtn({
   active: boolean;
   onPress: () => void;
 }) {
+  // Pressable 함수형 style 의 flex 가 silently drop 되는 케이스를 피하려고
+  // children-as-function + 정적 style 패턴.
   return (
-    <Pressable
-      onPress={onPress}
-      style={({ pressed }) => [{ flex: 1, opacity: pressed ? 0.7 : 1 }]}
-    >
-      <View style={[s.toggleBtn, active && s.toggleBtnActive]}>
-        <Feather name={icon} size={14} color={active ? '#0f172a' : '#94a3b8'} />
-        <Text style={[s.toggleBtnLabel, active && s.toggleBtnLabelActive]}>
-          {label}
-        </Text>
-      </View>
+    <Pressable onPress={onPress} style={s.togglePressable}>
+      {({ pressed }) => (
+        <View style={[s.toggleBtn, active && s.toggleBtnActive, pressed && { opacity: 0.85 }]}>
+          <Feather name={icon} size={14} color={active ? '#ffffff' : '#64748b'} />
+          <Text style={[s.toggleBtnLabel, active && s.toggleBtnLabelActive]}>
+            {label}
+          </Text>
+        </View>
+      )}
     </Pressable>
   );
 }
@@ -236,45 +237,49 @@ const s = StyleSheet.create({
     letterSpacing: -0.2,
   },
 
-  // View toggle
+  // View toggle (stats 화면과 동일 패턴)
   toggleWrap: {
     paddingHorizontal: 16,
-    paddingTop: 12,
-    paddingBottom: 4,
+    paddingTop: 14,
+    paddingBottom: 6,
     backgroundColor: '#f8fafc',
   },
   toggle: {
     flexDirection: 'row',
-    backgroundColor: '#f1f5f9',
-    borderRadius: 12,
-    padding: 4,
+    backgroundColor: '#ffffff',
+    borderRadius: 14,
+    padding: 5,
     gap: 4,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  togglePressable: {
+    flex: 1,
   },
   toggleBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    paddingVertical: 8,
-    borderRadius: 9,
-    backgroundColor: 'transparent',
+    paddingVertical: 9,
+    borderRadius: 10,
   },
   toggleBtnActive: {
-    backgroundColor: '#ffffff',
-    shadowColor: '#0f172a',
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    shadowOffset: { width: 0, height: 1 },
-    elevation: 1,
+    backgroundColor: '#06b6d4',
+    shadowColor: '#06b6d4',
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 2,
   },
   toggleBtnLabel: {
     fontSize: 13,
-    fontWeight: '600',
-    color: '#94a3b8',
+    fontWeight: '700',
+    color: '#64748b',
   },
   toggleBtnLabelActive: {
     fontWeight: '800',
-    color: '#0f172a',
+    color: '#ffffff',
   },
 
   loadingContainer: {
