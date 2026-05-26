@@ -58,8 +58,7 @@ export function LeadEntry({ value, onChange }: Props) {
   const needsSub = mainGrade != null && gradeNeedsSub(mainGrade);
   const canAdd = mainGrade != null && (!needsSub || subGrade != null);
 
-  // 결과 누르면 즉시 추가 — 별도 "추가" 버튼 없음. 등급은 그대로 유지해서
-  // 같은 등급 여러 시도 / 다른 결과 연속 입력 빠름.
+  // 결과 누르면 즉시 추가. 추가 후 등급/sub 모두 해제 — 다음 루트는 처음부터.
   function handlePickResult(result: LeadResult) {
     if (!canAdd || !mainGrade) return;
     const grade = fullGrade(mainGrade, subGrade);
@@ -69,6 +68,8 @@ export function LeadEntry({ value, onChange }: Props) {
       result,
     };
     onChange([...value, next]);
+    setMainGrade(null);
+    setSubGrade(null);
   }
 
   function handleRemove(id: string) {
