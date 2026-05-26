@@ -480,7 +480,7 @@ function MemberRow({
       </Text>
       {member.role === 'owner' && (
         <View className="px-2 py-0.5 rounded-full bg-amber-50 border border-amber-200">
-          <Text className="text-amber-700 text-[10px] font-extrabold">OWNER</Text>
+          <Text className="text-amber-700 text-[10px] font-extrabold">크루장</Text>
         </View>
       )}
       {showKick && (

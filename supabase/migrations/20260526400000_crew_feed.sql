@@ -11,6 +11,7 @@ create index if not exists idx_posts_crew
 
 -- 기존 posts_select_all 정책을 크루 인식 버전으로 교체.
 drop policy if exists posts_select_all on posts;
+drop policy if exists posts_select_visible on posts;
 
 create policy posts_select_visible on posts for select using (
   crew_id is null
