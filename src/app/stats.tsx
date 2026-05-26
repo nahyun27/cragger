@@ -15,7 +15,6 @@ import { Feather } from '@expo/vector-icons';
 import { BarChart, LineChart } from 'react-native-gifted-charts';
 
 import { GymStatsCard } from '@/components/stats/gym-stats-card';
-import { useMonthlySessions } from '@/hooks/use-monthly-sessions';
 import { useMonthlyStats } from '@/hooks/use-monthly-stats';
 import { useUserStats } from '@/hooks/use-user-stats';
 import {
@@ -45,38 +44,9 @@ export default function StatsScreen() {
 
   const { data: stats, isLoading, error } = useUserStats(range);
 
-  // 추이 — scope 별:
-  // - month: 그 달의 일별 (useMonthlySessions)
-  // - year: 그 해 12개월
-  // - all: 최근 12개월
-  const monthlyOpts = useMemo(() => {
-    if (scope === 'year') return { months: 12, endYearMonth: `${yearAnchor}-12` };
-    return { months: 12 };
-  }, [scope, yearAnchor]);
-  const { data: deep } = useMonthlyStats(monthlyOpts);
-  const monthlySessions = useMonthlySessions(monthAnchor.year, monthAnchor.month);
-
-  const dailyTrend = useMemo(() => {
-    if (scope !== 'month' || !monthlySessions.data) return null;
-    const daysInMonth = new Date(monthAnchor.year, monthAnchor.month, 0).getDate();
-    const pad = (n: number) => (n < 10 ? `0${n}` : String(n));
-    return Array.from({ length: daysInMonth }, (_, i) => {
-      const day = i + 1;
-      const ymd = `${monthAnchor.year}-${pad(monthAnchor.month)}-${pad(day)}`;
-      return {
-        monthLabel: day % 5 === 0 || day === 1 ? String(day) : '',
-        sessionCount: monthlySessions.data!.byDate[ymd]?.length ?? 0,
-        sendCount: monthlySessions.data!.sendCountsByDate[ymd] ?? 0,
-      };
-    });
-  }, [scope, monthlySessions.data, monthAnchor]);
-
-  const trendTitle =
-    scope === 'year'
-      ? `${yearAnchor}년 월별 추이`
-      : scope === 'month'
-      ? `${monthAnchor.month}월 일별 추이`
-      : '최근 12개월 추이';
+  // 추이는 scope 무관 항상 최근 6개월 (토글 위 별도 카드).
+  // 클라이밍 안 한 날도 있으니 scope 별 분기는 과해보임.
+  const { data: deep } = useMonthlyStats({ months: 6 });
 
   function shiftMonth(delta: number) {
     setMonthAnchor((cur) => {
@@ -110,37 +80,38 @@ export default function StatsScreen() {
         <View style={{ width: 38 }} />
       </View>
 
-      {/* Scope toggle */}
-      <View style={s.toggleWrap}>
+      <ScrollView contentContainerStyle={s.scrollContent}>
+        {/* 1) 추이 — scope 무관 항상 최근 6개월 */}
+        {deep && deep.monthly.some((m) => m.sessionCount > 0 || m.sendCount > 0) && (
+          <MonthlyTrendCard deep={{ monthly: deep.monthly }} title="최근 6개월 추이" />
+        )}
+
+        {/* 2) Scope toggle + anchor */}
         <View style={s.toggle}>
           <ScopeBtn label="월별" active={scope === 'month'} onPress={() => setScope('month')} />
           <ScopeBtn label="년별" active={scope === 'year'} onPress={() => setScope('year')} />
           <ScopeBtn label="전체" active={scope === 'all'} onPress={() => setScope('all')} />
         </View>
-      </View>
+        {scope === 'month' && (
+          <AnchorPicker
+            label={formatMonth(monthAnchor.year, monthAnchor.month)}
+            onPrev={() => shiftMonth(-1)}
+            onNext={() => shiftMonth(1)}
+            canGoNext={
+              monthAnchor.year < currentYear() ||
+              (monthAnchor.year === currentYear() && monthAnchor.month < currentMonth().month)
+            }
+          />
+        )}
+        {scope === 'year' && (
+          <AnchorPicker
+            label={formatYear(yearAnchor)}
+            onPrev={() => setYearAnchor((y) => y - 1)}
+            onNext={() => setYearAnchor((y) => y + 1)}
+            canGoNext={yearAnchor < currentYear()}
+          />
+        )}
 
-      {/* Anchor picker (month/year) */}
-      {scope === 'month' && (
-        <AnchorPicker
-          label={formatMonth(monthAnchor.year, monthAnchor.month)}
-          onPrev={() => shiftMonth(-1)}
-          onNext={() => shiftMonth(1)}
-          canGoNext={
-            monthAnchor.year < currentYear() ||
-            (monthAnchor.year === currentYear() && monthAnchor.month < currentMonth().month)
-          }
-        />
-      )}
-      {scope === 'year' && (
-        <AnchorPicker
-          label={formatYear(yearAnchor)}
-          onPrev={() => setYearAnchor((y) => y - 1)}
-          onNext={() => setYearAnchor((y) => y + 1)}
-          canGoNext={yearAnchor < currentYear()}
-        />
-      )}
-
-      <ScrollView contentContainerStyle={s.scrollContent}>
         {isLoading && (
           <View style={s.loaderWrap}>
             <ActivityIndicator color="#06b6d4" />
@@ -151,13 +122,6 @@ export default function StatsScreen() {
           <View style={s.errorCard}>
             <Text style={s.errorText}>{error.message}</Text>
           </View>
-        )}
-
-        {scope !== 'month' && deep && deep.monthly.some((m) => m.sessionCount > 0 || m.sendCount > 0) && (
-          <MonthlyTrendCard deep={{ monthly: deep.monthly }} title={trendTitle} />
-        )}
-        {scope === 'month' && dailyTrend && dailyTrend.some((d) => d.sessionCount > 0 || d.sendCount > 0) && (
-          <MonthlyTrendCard deep={{ monthly: dailyTrend }} title={trendTitle} />
         )}
 
         {stats && stats.gradeDistribution.length > 0 && (
