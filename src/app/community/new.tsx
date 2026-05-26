@@ -50,13 +50,18 @@ function formatMeetupAt(d: Date): string {
 
 export default function NewPostScreen() {
   const router = useRouter();
-  const { crewId } = useLocalSearchParams<{ crewId?: string }>();
+  const { crewId, type } = useLocalSearchParams<{ crewId?: string; type?: string }>();
   const createPost = useCreatePost();
   const { data: allGyms } = useGyms();
   const { data: recentGyms } = useRecentGyms();
   const { session: authSession } = useAuth();
 
-  const [postType, setPostType] = useState<PostType>('general');
+  // URL ?type=meetup 으로 진입 시 default 모임으로
+  const initialType: PostType =
+    type === 'meetup' || type === 'question' || type === 'review' || type === 'general'
+      ? (type as PostType)
+      : 'general';
+  const [postType, setPostType] = useState<PostType>(initialType);
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
   const [gymId, setGymId] = useState<string | null>(null);

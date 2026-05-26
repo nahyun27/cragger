@@ -100,6 +100,46 @@ export function useCommunityFeed(
   });
 }
 
+// ── Crew Meetups ──────────────────────────────────────────────
+// 한 크루의 모임 (post_type='meetup' + crew_id) — 다가오는·지난 분리.
+// 단일 쿼리 + 클라이언트에서 분리.
+export type CrewMeetups = {
+  upcoming: PostRow[];   // meetup_at >= now, 가까운 순
+  past: PostRow[];       // meetup_at <  now, 최근 종료 순
+};
+
+export function useCrewMeetups(crewId: string | undefined) {
+  return useQuery({
+    queryKey: ['community', 'crew-meetups', crewId] as const,
+    enabled: !!crewId,
+    queryFn: async (): Promise<CrewMeetups> => {
+      const { data, error } = await supabase
+        .from('posts')
+        .select(POST_SELECT_COLS)
+        .eq('crew_id', crewId!)
+        .eq('post_type', 'meetup')
+        .order('meetup_at', { ascending: true, nullsFirst: false });
+      if (error) throw new Error(error.message);
+      const rows = (data ?? []) as unknown as PostRow[];
+      const now = Date.now();
+      const upcoming: PostRow[] = [];
+      const past: PostRow[] = [];
+      for (const p of rows) {
+        if (p.meetup_at && new Date(p.meetup_at).getTime() < now) {
+          past.push(p);
+        } else {
+          upcoming.push(p);
+        }
+      }
+      // past 는 최근 종료가 위로
+      past.sort((a, b) =>
+        (b.meetup_at ?? '').localeCompare(a.meetup_at ?? ''),
+      );
+      return { upcoming, past };
+    },
+  });
+}
+
 // ── Crew Feed ─────────────────────────────────────────────────
 // 특정 크루의 글만. RLS 가 비멤버 가로채니 caller 는 그냥 호출.
 export function useCrewFeed(crewId: string | undefined) {
