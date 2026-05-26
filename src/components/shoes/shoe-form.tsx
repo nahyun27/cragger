@@ -17,7 +17,6 @@ import { Section } from '@/components/ui/section';
 import {
   FIT_FEATURE_OPTIONS,
   FIT_PERCEPTION_LABEL,
-  OWNERSHIP_LABEL,
   RATING_LABEL,
   SHOE_STATUS_LABEL,
   STIFFNESS_LABEL,
@@ -71,7 +70,7 @@ export const EMPTY_SHOE_FORM: ShoeFormValue = {
   status: 'active',
   purchasedAt: null,
   note: '',
-  ownershipStatus: 'owned',
+  ownershipStatus: null,
   wantedFit: null,
   fitPerception: null,
   stiffness: null,
@@ -83,7 +82,6 @@ export const EMPTY_SHOE_FORM: ShoeFormValue = {
 };
 
 const STATUS_OPTIONS: ShoeStatus[] = ['active', 'resole_pending', 'retired'];
-const OWNERSHIP_OPTIONS: OwnershipStatus[] = ['owned', 'resale_size', 'resale_fit'];
 const WANTED_FIT_OPTIONS: WantedFit[] = ['performance', 'comfort'];
 const FIT_PERCEPTION_OPTIONS: FitPerception[] = [
   'much_smaller',
@@ -169,47 +167,6 @@ export function ShoeForm({ value, onChange }: Props) {
           onChangeText={(t) => onChange({ ...value, model: t.slice(0, 50) })}
           style={s.textInput}
         />
-      </Section>
-
-      <Section title="소유 상태">
-        <View style={s.chipWrap}>
-          {OWNERSHIP_OPTIONS.map((opt) => {
-            const active = value.ownershipStatus === opt;
-            return (
-              <Pressable
-                key={opt}
-                onPress={() =>
-                  onChange({
-                    ...value,
-                    ownershipStatus: active ? null : opt,
-                  })
-                }
-              >
-                {({ pressed }) => (
-                  <View
-                    style={[
-                      s.chip,
-                      active ? s.chipActive : s.chipInactive,
-                      pressed && s.btnPressed,
-                    ]}
-                  >
-                    {active && (
-                      <Feather name="check" size={12} color="#0891b2" />
-                    )}
-                    <Text
-                      style={[
-                        s.chipText,
-                        active ? s.chipTextActive : s.chipTextInactive,
-                      ]}
-                    >
-                      {OWNERSHIP_LABEL[opt]}
-                    </Text>
-                  </View>
-                )}
-              </Pressable>
-            );
-          })}
-        </View>
       </Section>
 
       <Section title="사이즈" required>
