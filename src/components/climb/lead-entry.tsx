@@ -54,16 +54,14 @@ type Props = {
 export function LeadEntry({ value, onChange }: Props) {
   const [mainGrade, setMainGrade] = useState<string | null>(null);
   const [subGrade, setSubGrade] = useState<string | null>(null);
-  const [result, setResult] = useState<LeadResult | null>(null);
 
   const needsSub = mainGrade != null && gradeNeedsSub(mainGrade);
-  const canAdd =
-    mainGrade != null &&
-    result != null &&
-    (!needsSub || subGrade != null);
+  const canAdd = mainGrade != null && (!needsSub || subGrade != null);
 
-  function handleAdd() {
-    if (!canAdd || !mainGrade || !result) return;
+  // 결과 누르면 즉시 추가 — 별도 "추가" 버튼 없음. 등급은 그대로 유지해서
+  // 같은 등급 여러 시도 / 다른 결과 연속 입력 빠름.
+  function handlePickResult(result: LeadResult) {
+    if (!canAdd || !mainGrade) return;
     const grade = fullGrade(mainGrade, subGrade);
     const next: LeadRoute = {
       id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
@@ -71,8 +69,6 @@ export function LeadEntry({ value, onChange }: Props) {
       result,
     };
     onChange([...value, next]);
-    // 다음 입력 위해 result 만 reset (등급은 같은 등급 연속 입력 편의)
-    setResult(null);
   }
 
   function handleRemove(id: string) {
@@ -181,74 +177,50 @@ export function LeadEntry({ value, onChange }: Props) {
         </View>
       )}
 
-      {/* 결과 4개 — 카드형 강조 */}
+      {/* 결과 4개 — 누르면 즉시 추가 (별도 "추가" 버튼 없음) */}
       <Text style={{ fontSize: 11, fontWeight: '700', color: '#94a3b8', marginTop: 2 }}>
-        완등 방식
+        완등 방식 (눌러서 추가)
       </Text>
       <View style={{ flexDirection: 'row', gap: 6 }}>
-        {RESULT_OPTIONS.map((opt) => {
-          const active = result === opt.value;
-          return (
-            <Pressable
-              key={opt.value}
-              onPress={() => setResult(opt.value)}
-              style={{ flex: 1 }}
-            >
-              {({ pressed }) => (
-                <View
+        {RESULT_OPTIONS.map((opt) => (
+          <Pressable
+            key={opt.value}
+            onPress={() => handlePickResult(opt.value)}
+            disabled={!canAdd}
+            style={{ flex: 1 }}
+          >
+            {({ pressed }) => (
+              <View
+                style={{
+                  paddingVertical: 14,
+                  borderRadius: 12,
+                  borderWidth: 1.5,
+                  borderColor: opt.border,
+                  backgroundColor: opt.bg,
+                  alignItems: 'center',
+                  opacity: !canAdd ? 0.4 : pressed ? 0.8 : 1,
+                }}
+              >
+                <Text
                   style={{
-                    paddingVertical: 12,
-                    borderRadius: 12,
-                    borderWidth: 1.5,
-                    borderColor: active ? opt.border : '#e2e8f0',
-                    backgroundColor: active ? opt.bg : '#ffffff',
-                    alignItems: 'center',
-                    opacity: pressed ? 0.8 : 1,
+                    fontSize: 11,
+                    fontWeight: '800',
+                    color: opt.fg,
+                    letterSpacing: -0.2,
                   }}
                 >
-                  <Text
-                    style={{
-                      fontSize: 11,
-                      fontWeight: '800',
-                      color: active ? opt.fg : '#64748b',
-                      letterSpacing: -0.2,
-                    }}
-                  >
-                    {opt.label}
-                  </Text>
-                </View>
-              )}
-            </Pressable>
-          );
-        })}
+                  {opt.label}
+                </Text>
+              </View>
+            )}
+          </Pressable>
+        ))}
       </View>
-
-      {/* 추가 버튼 */}
-      <Pressable
-        onPress={handleAdd}
-        disabled={!canAdd}
-        style={({ pressed }) => ({
-          paddingVertical: 12,
-          borderRadius: 12,
-          alignItems: 'center',
-          flexDirection: 'row',
-          justifyContent: 'center',
-          gap: 6,
-          backgroundColor: canAdd ? '#06b6d4' : '#e2e8f0',
-          opacity: pressed && canAdd ? 0.85 : 1,
-        })}
-      >
-        <Feather name="plus" size={14} color={canAdd ? '#ffffff' : '#94a3b8'} />
-        <Text
-          style={{
-            fontSize: 13,
-            fontWeight: '800',
-            color: canAdd ? '#ffffff' : '#94a3b8',
-          }}
-        >
-          루트 추가
+      {!canAdd && (
+        <Text style={{ fontSize: 11, color: '#94a3b8', textAlign: 'center' }}>
+          {mainGrade == null ? '등급을 선택하세요' : 'a/b/c/d 를 선택하세요'}
         </Text>
-      </Pressable>
+      )}
 
       {/* 누적 리스트 */}
       {value.length > 0 && (
