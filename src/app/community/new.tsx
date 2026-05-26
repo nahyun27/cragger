@@ -18,6 +18,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 
 import { GymPickerModal } from '@/components/session/gym-picker-modal';
+import {
+  EMPTY_POLL_DRAFT,
+  PollComposer,
+  type PollDraft,
+} from '@/components/community/poll-composer';
 import { Chip } from '@/components/ui/chip';
 import { Section } from '@/components/ui/section';
 import {
@@ -25,6 +30,7 @@ import {
   useCreatePost,
   type PostType,
 } from '@/hooks/use-community';
+import { useCreatePoll } from '@/hooks/use-polls';
 import { useGyms } from '@/hooks/use-gyms';
 import { useRecentGyms } from '@/hooks/use-recent-gyms';
 import { useAuth } from '@/lib/auth-context';
@@ -52,6 +58,7 @@ export default function NewPostScreen() {
   const router = useRouter();
   const { crewId, type } = useLocalSearchParams<{ crewId?: string; type?: string }>();
   const createPost = useCreatePost();
+  const createPoll = useCreatePoll();
   const { data: allGyms } = useGyms();
   const { data: recentGyms } = useRecentGyms();
   const { session: authSession } = useAuth();
@@ -75,6 +82,9 @@ export default function NewPostScreen() {
   const [meetupLocation, setMeetupLocation] = useState('');
   const [meetupCapacity, setMeetupCapacity] = useState('');
 
+  // 투표
+  const [poll, setPoll] = useState<PollDraft>(EMPTY_POLL_DRAFT);
+
   const selectedGym = useMemo(
     () => allGyms?.find((g) => g.id === gymId) ?? null,
     [allGyms, gymId],
@@ -84,8 +94,17 @@ export default function NewPostScreen() {
   const meetupReady =
     !isMeetup ||
     (meetupAt != null && (gymId != null || meetupLocation.trim().length > 0));
+  const pollReady =
+    !poll.enabled ||
+    (poll.question.trim().length > 0 &&
+      poll.options.filter((o) => o.trim().length > 0).length >= 2);
   const canSubmit =
-    body.trim().length > 0 && meetupReady && !createPost.isPending && !uploading;
+    body.trim().length > 0 &&
+    meetupReady &&
+    pollReady &&
+    !createPost.isPending &&
+    !uploading &&
+    !createPoll.isPending;
 
   async function handlePickImages() {
     const remaining = MAX_IMAGES - pickedAssets.length;
@@ -145,6 +164,22 @@ export default function NewPostScreen() {
         meetupLocation:
           isMeetup && !gymId && meetupLocation.trim() ? meetupLocation.trim() : null,
       });
+      if (poll.enabled) {
+        try {
+          await createPoll.mutateAsync({
+            postId: id,
+            question: poll.question,
+            isMulti: poll.isMulti,
+            closesAt: poll.closesAt ? poll.closesAt.toISOString() : null,
+            options: poll.options,
+          });
+        } catch (pe) {
+          Alert.alert(
+            '투표 생성 실패',
+            pe instanceof Error ? pe.message : '글은 등록됐지만 투표는 실패했어요',
+          );
+        }
+      }
       router.replace({ pathname: '/community/[id]', params: { id } });
     } catch (e) {
       Alert.alert('등록 실패', e instanceof Error ? e.message : '알 수 없는 오류');
@@ -347,6 +382,8 @@ export default function NewPostScreen() {
               </View>
             )}
           </Section>
+
+          <PollComposer value={poll} onChange={setPoll} />
 
           <Section title="사진">
             <View className="flex-row flex-wrap gap-2">

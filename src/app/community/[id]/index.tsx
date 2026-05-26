@@ -34,6 +34,8 @@ import {
   type MeetupParticipant,
   type PostRow,
 } from '@/hooks/use-community';
+import { PollWidget } from '@/components/community/poll-widget';
+import { usePoll } from '@/hooks/use-polls';
 import { useAuth } from '@/lib/auth-context';
 
 const KO_WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
@@ -107,6 +109,7 @@ export default function PostDetailScreen() {
   const insets = useSafeAreaInsets();
 
   const postQ = usePost(id);
+  const pollQ = usePoll(id);
   const commentsQ = useComments(id);
   const { data: likedSet } = useMyLikes();
   const toggleLike = useToggleLike();
@@ -293,6 +296,12 @@ export default function PostDetailScreen() {
             {post.title && <Text style={s.postTitle}>{post.title}</Text>}
 
             <Text style={s.postBody}>{post.body}</Text>
+
+            {pollQ.data && (
+              <View style={{ marginTop: 14 }}>
+                <PollWidget poll={pollQ.data} />
+              </View>
+            )}
 
             {post.image_urls.length > 0 && (
               <View style={s.imageGrid}>
