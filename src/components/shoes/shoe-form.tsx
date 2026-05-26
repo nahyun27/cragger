@@ -14,7 +14,24 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 
 import { Section } from '@/components/ui/section';
-import { SHOE_STATUS_LABEL, type ShoeStatus } from '@/hooks/use-shoes';
+import {
+  FIT_FEATURE_OPTIONS,
+  FIT_PERCEPTION_LABEL,
+  OWNERSHIP_LABEL,
+  RATING_LABEL,
+  SHOE_STATUS_LABEL,
+  STIFFNESS_LABEL,
+  STRETCH_LABEL,
+  USAGE_OPTIONS,
+  WANTED_FIT_LABEL,
+  type FitPerception,
+  type OwnershipStatus,
+  type RatingKey,
+  type ShoeStatus,
+  type Stiffness,
+  type Stretch,
+  type WantedFit,
+} from '@/hooks/use-shoes';
 
 export type ShoeFormValue = {
   brand: string;
@@ -23,6 +40,28 @@ export type ShoeFormValue = {
   status: ShoeStatus;
   purchasedAt: string | null; // YYYY-MM-DD
   note: string;
+  ownershipStatus: OwnershipStatus | null;
+  wantedFit: WantedFit | null;
+  fitPerception: FitPerception | null;
+  stiffness: Stiffness | null;
+  stretch: Stretch | null;
+  usages: string[];
+  fitFeatures: string[];
+  isPrimary: boolean;
+  ratings: Record<RatingKey, number | null>;
+};
+
+const EMPTY_RATINGS: Record<RatingKey, number | null> = {
+  overall: null,
+  edging: null,
+  smearing: null,
+  toehook: null,
+  heelhook: null,
+  sensitivity: null,
+  comfort: null,
+  durability: null,
+  value: null,
+  design: null,
 };
 
 export const EMPTY_SHOE_FORM: ShoeFormValue = {
@@ -32,9 +71,40 @@ export const EMPTY_SHOE_FORM: ShoeFormValue = {
   status: 'active',
   purchasedAt: null,
   note: '',
+  ownershipStatus: 'owned',
+  wantedFit: null,
+  fitPerception: null,
+  stiffness: null,
+  stretch: null,
+  usages: [],
+  fitFeatures: [],
+  isPrimary: false,
+  ratings: { ...EMPTY_RATINGS },
 };
 
 const STATUS_OPTIONS: ShoeStatus[] = ['active', 'resole_pending', 'retired'];
+const OWNERSHIP_OPTIONS: OwnershipStatus[] = ['owned', 'resale_size', 'resale_fit'];
+const WANTED_FIT_OPTIONS: WantedFit[] = ['performance', 'comfort'];
+const FIT_PERCEPTION_OPTIONS: FitPerception[] = [
+  'much_smaller',
+  'slightly_smaller',
+  'perfect',
+  'slightly_larger',
+  'much_larger',
+];
+const STIFFNESS_OPTIONS: Stiffness[] = ['very_soft', 'soft', 'normal', 'stiff', 'very_stiff'];
+const STRETCH_OPTIONS: Stretch[] = ['none', 'little', 'normal', 'much', 'very_much'];
+const RATING_DETAILS: RatingKey[] = [
+  'edging',
+  'smearing',
+  'toehook',
+  'heelhook',
+  'sensitivity',
+  'comfort',
+  'durability',
+  'value',
+  'design',
+];
 
 // 암벽화 EU 사이즈 — 33 ~ 49, 0.5 단위.
 const EU_SIZES: string[] = (() => {
@@ -104,10 +174,222 @@ export function ShoeForm({ value, onChange }: Props) {
         />
       </Section>
 
-      <Section title="사이즈">
+      <Section title="소유 상태">
+        <View style={s.chipWrap}>
+          {OWNERSHIP_OPTIONS.map((opt) => {
+            const active = value.ownershipStatus === opt;
+            return (
+              <Pressable
+                key={opt}
+                onPress={() =>
+                  onChange({
+                    ...value,
+                    ownershipStatus: active ? null : opt,
+                  })
+                }
+              >
+                {({ pressed }) => (
+                  <View
+                    style={[
+                      s.chip,
+                      active ? s.chipActive : s.chipInactive,
+                      pressed && s.btnPressed,
+                    ]}
+                  >
+                    {active && (
+                      <Feather name="check" size={12} color="#0891b2" />
+                    )}
+                    <Text
+                      style={[
+                        s.chipText,
+                        active ? s.chipTextActive : s.chipTextInactive,
+                      ]}
+                    >
+                      {OWNERSHIP_LABEL[opt]}
+                    </Text>
+                  </View>
+                )}
+              </Pressable>
+            );
+          })}
+        </View>
+      </Section>
+
+      <Section title="사이즈" required>
         <SizePicker
           value={value.size}
           onSelect={(next) => onChange({ ...value, size: next })}
+        />
+      </Section>
+
+      <Section title="원했던 핏 스타일">
+        <View style={s.rowGap8}>
+          {WANTED_FIT_OPTIONS.map((opt) => {
+            const active = value.wantedFit === opt;
+            const meta = WANTED_FIT_LABEL[opt];
+            return (
+              <Pressable
+                key={opt}
+                onPress={() =>
+                  onChange({ ...value, wantedFit: active ? null : opt })
+                }
+                style={s.flex1}
+              >
+                {({ pressed }) => (
+                  <View
+                    style={[
+                      s.bigCard,
+                      active && s.bigCardActive,
+                      pressed && s.btnPressed,
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        s.bigCardLabel,
+                        active && s.bigCardLabelActive,
+                      ]}
+                    >
+                      {meta.label}
+                    </Text>
+                    <Text style={s.bigCardSub}>{meta.sub}</Text>
+                  </View>
+                )}
+              </Pressable>
+            );
+          })}
+        </View>
+      </Section>
+
+      <Section
+        title={
+          value.size
+            ? `내 발에 느껴지는 ${value.size} 사이즈의 핏은?`
+            : '내 발에 느껴지는 핏은?'
+        }
+      >
+        <View style={s.radio5Row}>
+          {FIT_PERCEPTION_OPTIONS.map((opt) => {
+            const active = value.fitPerception === opt;
+            return (
+              <Pressable
+                key={opt}
+                onPress={() =>
+                  onChange({
+                    ...value,
+                    fitPerception: active ? null : opt,
+                  })
+                }
+                style={s.radio5Col}
+              >
+                {({ pressed }) => (
+                  <View
+                    style={[s.radio5Cell, pressed && { opacity: 0.7 }]}
+                  >
+                    <View
+                      style={[s.radioDot, active && s.radioDotActive]}
+                    />
+                    <Text
+                      style={[
+                        s.radio5Label,
+                        active && s.radio5LabelActive,
+                      ]}
+                      numberOfLines={2}
+                    >
+                      {FIT_PERCEPTION_LABEL[opt]}
+                    </Text>
+                  </View>
+                )}
+              </Pressable>
+            );
+          })}
+        </View>
+      </Section>
+
+      <Section title="부드러움 / 딱딱함">
+        <View style={s.radio5Row}>
+          {STIFFNESS_OPTIONS.map((opt) => {
+            const active = value.stiffness === opt;
+            return (
+              <Pressable
+                key={opt}
+                onPress={() =>
+                  onChange({ ...value, stiffness: active ? null : opt })
+                }
+                style={s.radio5Col}
+              >
+                {({ pressed }) => (
+                  <View
+                    style={[s.radio5Cell, pressed && { opacity: 0.7 }]}
+                  >
+                    <View
+                      style={[s.radioDot, active && s.radioDotActive]}
+                    />
+                    <Text
+                      style={[
+                        s.radio5Label,
+                        active && s.radio5LabelActive,
+                      ]}
+                      numberOfLines={2}
+                    >
+                      {STIFFNESS_LABEL[opt]}
+                    </Text>
+                  </View>
+                )}
+              </Pressable>
+            );
+          })}
+        </View>
+      </Section>
+
+      <Section title="길들여지는 정도 (늘어남)">
+        <View style={s.radio5Row}>
+          {STRETCH_OPTIONS.map((opt) => {
+            const active = value.stretch === opt;
+            return (
+              <Pressable
+                key={opt}
+                onPress={() =>
+                  onChange({ ...value, stretch: active ? null : opt })
+                }
+                style={s.radio5Col}
+              >
+                {({ pressed }) => (
+                  <View
+                    style={[s.radio5Cell, pressed && { opacity: 0.7 }]}
+                  >
+                    <View
+                      style={[s.radioDot, active && s.radioDotActive]}
+                    />
+                    <Text
+                      style={[
+                        s.radio5Label,
+                        active && s.radio5LabelActive,
+                      ]}
+                      numberOfLines={2}
+                    >
+                      {STRETCH_LABEL[opt]}
+                    </Text>
+                  </View>
+                )}
+              </Pressable>
+            );
+          })}
+        </View>
+      </Section>
+
+      <Section title="용도 (복수 선택)">
+        <MultiPillRow
+          options={USAGE_OPTIONS as unknown as string[]}
+          selected={value.usages}
+          onToggle={(next) => onChange({ ...value, usages: next })}
+        />
+      </Section>
+
+      <Section title="핏 특징 (복수 선택)">
+        <MultiPillRow
+          options={FIT_FEATURE_OPTIONS as unknown as string[]}
+          selected={value.fitFeatures}
+          onToggle={(next) => onChange({ ...value, fitFeatures: next })}
         />
       </Section>
 
@@ -204,6 +486,39 @@ export function ShoeForm({ value, onChange }: Props) {
         )}
       </Section>
 
+      <Section title="전반적 평점">
+        <Text style={s.ratingSubLabel}>
+          {RATING_LABEL.overall.sub}
+        </Text>
+        <RatingBar
+          value={value.ratings.overall}
+          onChange={(v) =>
+            onChange({
+              ...value,
+              ratings: { ...value.ratings, overall: v },
+            })
+          }
+        />
+      </Section>
+
+      <View style={s.sectionDivider} />
+      <Text style={s.subsectionTitle}>성능 평가</Text>
+
+      {RATING_DETAILS.map((key) => (
+        <Section title={RATING_LABEL[key].label} key={key}>
+          <Text style={s.ratingSubLabel}>{RATING_LABEL[key].sub}</Text>
+          <RatingBar
+            value={value.ratings[key]}
+            onChange={(v) =>
+              onChange({
+                ...value,
+                ratings: { ...value.ratings, [key]: v },
+              })
+            }
+          />
+        </Section>
+      ))}
+
       <Section title="메모">
         <TextInput
           placeholder="다운사이즈 폭 / 사용 빈도 / 발 느낌 등"
@@ -217,6 +532,32 @@ export function ShoeForm({ value, onChange }: Props) {
         />
       </Section>
 
+      <Pressable
+        onPress={() => onChange({ ...value, isPrimary: !value.isPrimary })}
+      >
+        {({ pressed }) => (
+          <View style={[s.primaryToggle, pressed && s.btnPressed]}>
+            <View style={s.primaryToggleLeft}>
+              <Text style={s.primaryToggleStar}>⭐</Text>
+              <Text style={s.primaryToggleLabel}>주력 신발로 지정</Text>
+            </View>
+            <View
+              style={[
+                s.toggleTrack,
+                value.isPrimary && s.toggleTrackActive,
+              ]}
+            >
+              <View
+                style={[
+                  s.toggleThumb,
+                  value.isPrimary && s.toggleThumbActive,
+                ]}
+              />
+            </View>
+          </View>
+        )}
+      </Pressable>
+
       <Section title="사진">
         <View style={s.photoBanner}>
           <Feather name="image" size={15} color="#94a3b8" />
@@ -224,6 +565,98 @@ export function ShoeForm({ value, onChange }: Props) {
         </View>
       </Section>
     </ScrollView>
+  );
+}
+
+function MultiPillRow({
+  options,
+  selected,
+  onToggle,
+}: {
+  options: string[];
+  selected: string[];
+  onToggle: (next: string[]) => void;
+}) {
+  return (
+    <View style={s.chipWrap}>
+      {options.map((opt) => {
+        const active = selected.includes(opt);
+        return (
+          <Pressable
+            key={opt}
+            onPress={() =>
+              onToggle(active ? selected.filter((x) => x !== opt) : [...selected, opt])
+            }
+          >
+            {({ pressed }) => (
+              <View
+                style={[
+                  s.chip,
+                  active ? s.chipActive : s.chipInactive,
+                  pressed && s.btnPressed,
+                ]}
+              >
+                {active && <Feather name="check" size={12} color="#0891b2" />}
+                <Text
+                  style={[
+                    s.chipText,
+                    active ? s.chipTextActive : s.chipTextInactive,
+                  ]}
+                >
+                  {opt}
+                </Text>
+              </View>
+            )}
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
+
+function RatingBar({
+  value,
+  onChange,
+}: {
+  value: number | null;
+  onChange: (v: number) => void;
+}) {
+  const filled = value ?? 0;
+  return (
+    <View>
+      <View style={s.ratingRangeRow}>
+        <Text style={s.ratingRangeLabel}>나쁨</Text>
+        <Text style={s.ratingRangeLabel}>좋음</Text>
+      </View>
+      <View style={s.ratingBarRow}>
+        {Array.from({ length: 10 }).map((_, i) => {
+          const n = i + 1;
+          const active = n <= filled;
+          return (
+            <Pressable
+              key={i}
+              onPress={() => onChange(n === value ? Math.max(0, n - 1) : n)}
+              style={s.ratingCellSlot}
+              hitSlop={4}
+            >
+              {({ pressed }) => (
+                <View
+                  style={[
+                    s.ratingCell,
+                    active ? s.ratingCellActive : s.ratingCellInactive,
+                    pressed && { opacity: 0.7 },
+                  ]}
+                />
+              )}
+            </Pressable>
+          );
+        })}
+        <Text style={s.ratingValueText}>
+          <Text style={s.ratingValueNum}>{filled}</Text>
+          <Text style={s.ratingValueDenom}> / 10</Text>
+        </Text>
+      </View>
+    </View>
   );
 }
 
@@ -481,4 +914,132 @@ const s = StyleSheet.create({
     fontSize: 11,
     fontWeight: '700',
   },
+
+  // Multi-select + ownership chip
+  chipWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  chip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 999,
+    borderWidth: 1,
+  },
+  chipActive: { borderColor: '#06b6d4', backgroundColor: '#ecfeff' },
+  chipInactive: { borderColor: '#e2e8f0', backgroundColor: '#ffffff' },
+  chipText: { fontSize: 12, fontWeight: '700' },
+  chipTextActive: { color: '#0891b2' },
+  chipTextInactive: { color: '#475569' },
+
+  // Big card — wanted fit
+  bigCard: {
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    borderRadius: 14,
+    paddingVertical: 16,
+    paddingHorizontal: 14,
+    alignItems: 'center',
+    minHeight: 78,
+    justifyContent: 'center',
+  },
+  bigCardActive: {
+    borderColor: '#06b6d4',
+    borderWidth: 2,
+    backgroundColor: '#ecfeff',
+  },
+  bigCardLabel: { fontSize: 14, fontWeight: '900', color: '#0f172a', marginBottom: 4 },
+  bigCardLabelActive: { color: '#0891b2' },
+  bigCardSub: { fontSize: 11, color: '#64748b' },
+
+  // 5-option radio row (fit perception, stiffness, stretch)
+  radio5Row: { flexDirection: 'row', gap: 6 },
+  radio5Col: { flex: 1 },
+  radio5Cell: { alignItems: 'center', gap: 6, paddingVertical: 6 },
+  radioDot: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    borderWidth: 2,
+    borderColor: '#cbd5e1',
+    backgroundColor: '#ffffff',
+  },
+  radioDotActive: {
+    borderColor: '#06b6d4',
+    backgroundColor: '#06b6d4',
+  },
+  radio5Label: {
+    fontSize: 10,
+    color: '#64748b',
+    fontWeight: '600',
+    textAlign: 'center',
+    lineHeight: 13,
+  },
+  radio5LabelActive: { color: '#0891b2', fontWeight: '800' },
+
+  // Rating bar
+  ratingSubLabel: { fontSize: 12, color: '#94a3b8', marginBottom: 8 },
+  ratingRangeRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 4,
+  },
+  ratingRangeLabel: { fontSize: 11, color: '#94a3b8', fontWeight: '600' },
+  ratingBarRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  ratingCellSlot: { flex: 1 },
+  ratingCell: {
+    height: 14,
+    borderRadius: 4,
+  },
+  ratingCellActive: { backgroundColor: '#06b6d4' },
+  ratingCellInactive: { backgroundColor: '#e2e8f0' },
+  ratingValueText: { marginLeft: 8, minWidth: 56, textAlign: 'right' },
+  ratingValueNum: { fontSize: 16, fontWeight: '900', color: '#0f172a' },
+  ratingValueDenom: { fontSize: 12, color: '#94a3b8', fontWeight: '700' },
+
+  // Subsection ("성능 평가")
+  sectionDivider: {
+    height: 1,
+    backgroundColor: '#e2e8f0',
+    marginVertical: 4,
+  },
+  subsectionTitle: {
+    fontSize: 14,
+    fontWeight: '900',
+    color: '#0f172a',
+    marginTop: 4,
+  },
+
+  // Primary toggle
+  primaryToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#fffbeb',
+    borderWidth: 1,
+    borderColor: '#fde68a',
+    borderRadius: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+  },
+  primaryToggleLeft: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  primaryToggleStar: { fontSize: 18 },
+  primaryToggleLabel: { fontSize: 14, fontWeight: '800', color: '#0f172a' },
+  toggleTrack: {
+    width: 44,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: '#e2e8f0',
+    padding: 2,
+    justifyContent: 'center',
+  },
+  toggleTrackActive: { backgroundColor: '#f59e0b' },
+  toggleThumb: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: '#ffffff',
+  },
+  toggleThumbActive: { alignSelf: 'flex-end' },
 });

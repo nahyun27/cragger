@@ -744,21 +744,65 @@ function MembershipCard({
 
   const cardStyle = [
     s.mCard,
-    expired && s.mCardExpired,
-    expSoon && s.mCardUrgent,
+    expired
+      ? s.mCardExpired
+      : expSoon
+      ? s.mCardUrgent
+      : isPasses
+      ? s.mCardPasses
+      : s.mCardPeriod,
   ];
 
   const badgeStyle = expired
     ? s.mBadgeExpired
     : expSoon
     ? s.mBadgeUrgent
-    : s.mBadge;
+    : isPasses
+    ? s.mBadge
+    : s.mBadgePeriod;
 
   const badgeTextStyle = expired
     ? s.mBadgeTextExpired
     : expSoon
     ? s.mBadgeTextUrgent
-    : s.mBadgeText;
+    : isPasses
+    ? s.mBadgeText
+    : s.mBadgeTextPeriod;
+
+  const iconBoxStyle = [
+    s.mIconBox,
+    expired
+      ? s.mIconBoxMuted
+      : expSoon
+      ? s.mIconBoxUrgent
+      : isPasses
+      ? s.mIconBoxPasses
+      : s.mIconBoxPeriod,
+  ];
+
+  const iconColor = expired
+    ? '#94a3b8'
+    : expSoon
+    ? '#ef4444'
+    : isPasses
+    ? '#0891b2'
+    : '#4f46e5';
+
+  const dividerColor = expired
+    ? '#cbd5e1'
+    : expSoon
+    ? '#fca5a5'
+    : isPasses
+    ? '#a5f3fc'
+    : '#c7d2fe';
+
+  const cutoutBorderColor = expired
+    ? '#cbd5e1'
+    : expSoon
+    ? '#fecaca'
+    : isPasses
+    ? '#cffafe'
+    : '#c7d2fe';
 
   // 카드 전체를 Pressable로 — Pressable의 함수형 style 배열이 내부 row
   // layout을 자꾸 무너뜨려서 children-as-function 패턴으로 옮김.
@@ -772,11 +816,11 @@ function MembershipCard({
       {({ pressed }) => (
         <View style={[s.mCardRow, pressed && { opacity: 0.85 }]}>
           {/* Left: icon */}
-          <View style={[s.mIconBox, expired && s.mIconBoxMuted]}>
+          <View style={iconBoxStyle}>
             <Feather
               name={iconName}
               size={20}
-              color={expired ? '#94a3b8' : '#475569'}
+              color={iconColor}
             />
           </View>
 
@@ -804,7 +848,7 @@ function MembershipCard({
           </View>
 
           {/* Dashed divider */}
-          <View style={s.ticketDivider} />
+          <View style={[s.ticketDivider, { borderColor: dividerColor }]} />
 
           {/* Right: stat + use-pass button */}
           <View style={s.mRightCol}>
@@ -847,8 +891,8 @@ function MembershipCard({
           </View>
 
           {/* Ticket Cutouts */}
-          <View style={s.ticketCutoutLeft} />
-          <View style={s.ticketCutoutRight} />
+          <View style={[s.ticketCutoutLeft, { borderColor: cutoutBorderColor }]} />
+          <View style={[s.ticketCutoutRight, { borderColor: cutoutBorderColor }]} />
         </View>
       )}
     </Pressable>
@@ -859,8 +903,8 @@ function formatMembershipRightStat(m: MembershipRow, expired?: boolean): string 
   if (m.membership_type === 'passes') {
     const total = m.total_passes ?? 0;
     const remaining = Math.max(0, total - m.used_passes);
-    if (expired) return '소진됨';
-    return `${remaining}회 남음`;
+    if (expired) return `0/${total}`;
+    return `${remaining}/${total}`;
   }
   if (!m.end_date) return '';
   if (expired) return '만료됨';
@@ -934,44 +978,124 @@ function ShoesSection() {
   );
 }
 
+const MINI_BAR_KEYS: Array<{
+  field: keyof Pick<
+    ClimbingShoe,
+    | 'rating_edging'
+    | 'rating_smearing'
+    | 'rating_toehook'
+    | 'rating_heelhook'
+    | 'rating_sensitivity'
+    | 'rating_comfort'
+  >;
+  label: string;
+}> = [
+  { field: 'rating_edging', label: '에징' },
+  { field: 'rating_smearing', label: '스미어링' },
+  { field: 'rating_toehook', label: '토훅' },
+  { field: 'rating_heelhook', label: '힐훅' },
+  { field: 'rating_sensitivity', label: '감도' },
+  { field: 'rating_comfort', label: '편안함' },
+];
+
+const WANTED_FIT_SHORT: Record<string, string> = {
+  performance: '퍼포먼스',
+  comfort: '컴포트',
+};
+const FIT_PERCEPTION_SHORT_LOCAL: Record<string, string> = {
+  much_smaller: '훨씬 작음',
+  slightly_smaller: '약간 작음',
+  perfect: '딱 맞음',
+  slightly_larger: '약간 큼',
+  much_larger: '훨씬 큼',
+};
+
 function ShoeCard({ shoe }: { shoe: ClimbingShoe }) {
   const router = useRouter();
-  const palette = STATUS_PALETTE[shoe.status];
-  const title = [shoe.brand, shoe.model].filter(Boolean).join(' ') || shoe.model;
+  const hasRatings = MINI_BAR_KEYS.some((k) => shoe[k.field] != null);
   return (
     <Pressable
       onPress={() =>
         router.push({ pathname: '/shoes/[id]', params: { id: shoe.id } })
       }
-      style={({ pressed }) => ({ opacity: pressed ? 0.92 : 1 })}
+      style={({ pressed }) => ({ opacity: pressed ? 0.94 : 1 })}
     >
       <View style={s.shoeCard}>
-        <View style={s.shoeIcon}>
-          <Feather name="package" size={18} color="#475569" />
-        </View>
-        <View style={{ flex: 1, minWidth: 0 }}>
-          <Text style={s.shoeTitle} numberOfLines={1}>
-            {title}
-          </Text>
-          <View style={s.shoeMetaRow}>
-            {shoe.size ? (
-              <Text style={s.shoeMetaText}>{shoe.size}</Text>
-            ) : (
-              <Text style={s.shoeMetaText}>사이즈 미입력</Text>
+        <View style={s.shoeCardTop}>
+          <View style={s.shoeThumb}>
+            <Feather name="package" size={20} color="#94a3b8" />
+          </View>
+          <View style={s.shoeCardBody}>
+            {shoe.brand && <Text style={s.shoeBrand}>{shoe.brand}</Text>}
+            <Text style={s.shoeModelName} numberOfLines={1}>
+              {shoe.model}
+            </Text>
+            {shoe.is_primary && (
+              <View style={s.primaryChip}>
+                <Text style={s.primaryChipText}>🌟 주력</Text>
+              </View>
             )}
-            <View
-              style={[
-                s.shoeStatusBadge,
-                { backgroundColor: palette.bg, borderColor: palette.border },
-              ]}
-            >
-              <Text style={[s.shoeStatusText, { color: palette.text }]}>
-                {SHOE_STATUS_LABEL[shoe.status]}
-              </Text>
+            <View style={s.shoeMetaRow}>
+              {shoe.size && (
+                <View style={s.sizePill}>
+                  <Text style={s.sizePillText}>{shoe.size.replace(/^EU\s*/i, '')} EU</Text>
+                </View>
+              )}
+              {shoe.rating_overall != null && (
+                <View style={s.overallRow}>
+                  <Text style={s.overallStar}>★</Text>
+                  <Text style={s.overallNum}>{shoe.rating_overall}</Text>
+                </View>
+              )}
+            </View>
+            <View style={s.shoeChipsRow}>
+              {shoe.wanted_fit && (
+                <View style={s.tagChipActive}>
+                  <Text style={s.tagChipActiveText}>{WANTED_FIT_SHORT[shoe.wanted_fit]}</Text>
+                </View>
+              )}
+              {shoe.fit_perception && (
+                <View style={s.tagChip}>
+                  <Text style={s.tagChipText}>
+                    {FIT_PERCEPTION_SHORT_LOCAL[shoe.fit_perception]}
+                  </Text>
+                </View>
+              )}
             </View>
           </View>
+          <View style={s.shoeActionsCol}>
+            <Pressable
+              onPress={() =>
+                router.push({ pathname: '/shoes/[id]', params: { id: shoe.id } })
+              }
+              hitSlop={6}
+            >
+              {({ pressed }) => (
+                <View style={[s.shoeActionBtn, pressed && { opacity: 0.6 }]}>
+                  <Feather name="edit-2" size={14} color="#475569" />
+                </View>
+              )}
+            </Pressable>
+          </View>
         </View>
-        <Feather name="chevron-right" size={16} color="#cbd5e1" />
+
+        {hasRatings && (
+          <View style={s.miniBarGrid}>
+            {MINI_BAR_KEYS.map((k) => {
+              const v = shoe[k.field];
+              if (v == null) return null;
+              return (
+                <View key={k.field} style={s.miniBarCol}>
+                  <Text style={s.miniBarLabel}>{k.label}</Text>
+                  <View style={s.miniBarTrack}>
+                    <View style={[s.miniBarFill, { width: `${(v / 10) * 100}%` }]} />
+                  </View>
+                  <Text style={s.miniBarValue}>{v}</Text>
+                </View>
+              );
+            })}
+          </View>
+        )}
       </View>
     </Pressable>
   );
@@ -1487,11 +1611,30 @@ const s = StyleSheet.create({
     opacity: 0.7,
     shadowOpacity: 0,
     elevation: 0,
+    borderLeftWidth: 5,
+    borderLeftColor: '#cbd5e1',
   },
   mCardUrgent: {
     borderColor: '#fecaca',
-    borderLeftWidth: 4,
+    borderLeftWidth: 5,
     borderLeftColor: '#ef4444',
+  },
+  mCardPasses: {
+    borderLeftWidth: 5,
+    borderLeftColor: '#06b6d4',
+  },
+  mCardPeriod: {
+    borderLeftWidth: 5,
+    borderLeftColor: '#6366f1',
+  },
+  mIconBoxPasses: {
+    backgroundColor: '#ecfeff',
+  },
+  mIconBoxPeriod: {
+    backgroundColor: '#e0e7ff',
+  },
+  mIconBoxUrgent: {
+    backgroundColor: '#ffe4e6',
   },
   ticketDivider: {
     width: 0,
@@ -1568,6 +1711,19 @@ const s = StyleSheet.create({
     fontSize: 10,
     fontWeight: '800',
     color: '#06b6d4',
+  },
+  mBadgePeriod: {
+    backgroundColor: '#e0e7ff',
+    borderWidth: 1,
+    borderColor: '#c7d2fe',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 8,
+  },
+  mBadgeTextPeriod: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#4f46e5',
   },
   mBadgeExpired: {
     backgroundColor: '#f1f5f9',
@@ -1714,9 +1870,6 @@ const s = StyleSheet.create({
   },
   shoeList: { gap: 10 },
   shoeCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
     borderWidth: 1,
     borderColor: '#e2e8f0',
     borderRadius: 16,
@@ -1727,7 +1880,101 @@ const s = StyleSheet.create({
     shadowRadius: 10,
     shadowOffset: { width: 0, height: 4 },
     elevation: 1,
+    gap: 12,
   },
+  shoeCardTop: { flexDirection: 'row', gap: 12 },
+  shoeThumb: {
+    width: 56,
+    height: 56,
+    borderRadius: 12,
+    backgroundColor: '#f1f5f9',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  shoeCardBody: { flex: 1, minWidth: 0, gap: 4 },
+  shoeBrand: { fontSize: 11, fontWeight: '700', color: '#94a3b8' },
+  shoeModelName: {
+    fontSize: 15,
+    fontWeight: '900',
+    color: '#0f172a',
+    letterSpacing: -0.3,
+  },
+  primaryChip: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#fffbeb',
+    borderWidth: 1,
+    borderColor: '#fde68a',
+    borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    marginTop: 2,
+  },
+  primaryChipText: { fontSize: 10, fontWeight: '800', color: '#92400e' },
+  sizePill: {
+    backgroundColor: '#f1f5f9',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  sizePillText: { fontSize: 11, fontWeight: '900', color: '#0f172a' },
+  overallRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  overallStar: { fontSize: 13, color: '#10b981' },
+  overallNum: { fontSize: 13, fontWeight: '900', color: '#0f172a' },
+  shoeChipsRow: { flexDirection: 'row', gap: 6, marginTop: 2, flexWrap: 'wrap' },
+  tagChipActive: {
+    borderWidth: 1,
+    borderColor: '#10b981',
+    backgroundColor: '#ecfdf5',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  tagChipActiveText: { fontSize: 10, fontWeight: '800', color: '#047857' },
+  tagChip: {
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    backgroundColor: '#ffffff',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  tagChipText: { fontSize: 10, fontWeight: '700', color: '#475569' },
+  shoeActionsCol: { gap: 6 },
+  shoeActionBtn: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#f1f5f9',
+  },
+  miniBarGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  miniBarCol: {
+    width: '31%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  miniBarLabel: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#475569',
+    width: 36,
+  },
+  miniBarTrack: {
+    flex: 1,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#e2e8f0',
+    overflow: 'hidden',
+  },
+  miniBarFill: { height: '100%', backgroundColor: '#10b981', borderRadius: 3 },
+  miniBarValue: { fontSize: 10, fontWeight: '800', color: '#0f172a', minWidth: 12, textAlign: 'right' },
   shoeIcon: {
     width: 40,
     height: 40,

@@ -8,6 +8,7 @@ import {
   Pressable,
   Text,
   View,
+  StyleSheet,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
@@ -34,6 +35,24 @@ export default function NewShoeScreen() {
         status: form.status,
         purchasedAt: form.purchasedAt,
         note: form.note || null,
+        ownershipStatus: form.ownershipStatus,
+        wantedFit: form.wantedFit,
+        fitPerception: form.fitPerception,
+        stiffness: form.stiffness,
+        stretch: form.stretch,
+        usages: form.usages,
+        fitFeatures: form.fitFeatures,
+        isPrimary: form.isPrimary,
+        ratingOverall: form.ratings.overall,
+        ratingEdging: form.ratings.edging,
+        ratingSmearing: form.ratings.smearing,
+        ratingToehook: form.ratings.toehook,
+        ratingHeelhook: form.ratings.heelhook,
+        ratingSensitivity: form.ratings.sensitivity,
+        ratingComfort: form.ratings.comfort,
+        ratingDurability: form.ratings.durability,
+        ratingValue: form.ratings.value,
+        ratingDesign: form.ratings.design,
       });
       router.back();
     } catch (e) {
@@ -42,51 +61,61 @@ export default function NewShoeScreen() {
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-background-primary" edges={['top', 'bottom']}>
-      <View className="flex-row items-center px-4 py-2 border-b border-border-subtle">
-        <Pressable onPress={() => router.back()} className="p-2 -ml-2 active:opacity-60" hitSlop={8}>
-          <Feather name="arrow-left" size={24} color="#0f172a" />
+    <SafeAreaView style={s.safeContainer} edges={['top', 'bottom']}>
+      {/* Header */}
+      <View style={s.headerRow}>
+        <Pressable onPress={() => router.back()} hitSlop={8}>
+          {({ pressed }) => (
+            <View style={[s.headerIconBtn, pressed && s.btnPressed]}>
+              <Feather name="arrow-left" size={22} color="#0f172a" />
+            </View>
+          )}
         </Pressable>
-        <Text className="flex-1 text-center text-text-primary text-base font-semibold mr-6">
-          암벽화 추가
-        </Text>
+        <Text style={s.headerTitle}>새 신발 등록</Text>
+        <View style={{ width: 36 }} />
       </View>
 
       <KeyboardAvoidingView
-        className="flex-1"
+        style={s.flex1}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
+        {/* Sizing Guide banner */}
         <Pressable
           onPress={() => setGuideOpen(true)}
-          className="flex-row items-center justify-center gap-1.5 px-4 py-3 border-b border-border-subtle active:opacity-60"
           hitSlop={6}
         >
-          <Feather name="info" size={14} color="#06b6d4" />
-          <Text className="text-brand-primary text-sm font-bold">
-            사이즈 가이드
-          </Text>
+          {({ pressed }) => (
+            <View style={[s.guideBanner, pressed && s.btnPressed]}>
+              <Feather name="info" size={14} color="#06b6d4" />
+              <Text style={s.guideBannerText}>
+                어떤 사이즈가 맞을까요? 사이즈 가이드 확인하기
+              </Text>
+            </View>
+          )}
         </Pressable>
 
         <ShoeForm value={form} onChange={setForm} />
 
-        <View className="px-4 pt-2 pb-2 border-t border-border-subtle">
+        {/* Footer sticky button */}
+        <View style={s.footer}>
           <Pressable
             onPress={handleSubmit}
             disabled={!canSubmit}
-            className={`rounded-md p-4 items-center ${
-              !canSubmit ? 'bg-background-tertiary' : 'bg-brand-primary'
-            }`}
           >
-            {createShoe.isPending ? (
-              <ActivityIndicator color="white" />
-            ) : (
-              <Text
-                className={`font-semibold ${
-                  !canSubmit ? 'text-text-muted' : 'text-background-primary'
-                }`}
-              >
-                저장
-              </Text>
+            {({ pressed }) => (
+              <View style={[
+                s.submitBtn,
+                !canSubmit && s.submitBtnDisabled,
+                pressed && s.btnPressed
+              ]}>
+                {createShoe.isPending ? (
+                  <ActivityIndicator color="white" />
+                ) : (
+                  <Text style={[s.submitBtnText, !canSubmit && s.submitBtnTextDisabled]}>
+                    등록 완료
+                  </Text>
+                )}
+              </View>
             )}
           </Pressable>
         </View>
@@ -96,3 +125,90 @@ export default function NewShoeScreen() {
     </SafeAreaView>
   );
 }
+
+const s = StyleSheet.create({
+  safeContainer: {
+    flex: 1,
+    backgroundColor: '#f8fafc',
+  },
+  flex1: {
+    flex: 1,
+  },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f1f5f9',
+    backgroundColor: '#ffffff',
+  },
+  headerTitle: {
+    color: '#0f172a',
+    fontSize: 16,
+    fontWeight: '800',
+    letterSpacing: -0.3,
+  },
+  headerIconBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#ffffff',
+  },
+  btnPressed: {
+    opacity: 0.65,
+    transform: [{ scale: 0.96 }],
+  },
+  guideBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: '#ecfeff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#cffafe',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+  },
+  guideBannerText: {
+    color: '#0891b2',
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  footer: {
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    paddingBottom: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#e2e8f0',
+    backgroundColor: '#ffffff',
+  },
+  submitBtn: {
+    backgroundColor: '#06b6d4',
+    borderRadius: 16,
+    paddingVertical: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#06b6d4',
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 3,
+  },
+  submitBtnDisabled: {
+    backgroundColor: '#cbd5e1',
+    shadowOpacity: 0,
+    elevation: 0,
+  },
+  submitBtnText: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '800',
+  },
+  submitBtnTextDisabled: {
+    color: '#94a3b8',
+  },
+});
