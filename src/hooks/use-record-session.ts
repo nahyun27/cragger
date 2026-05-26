@@ -4,6 +4,7 @@ import { useAuth } from '@/lib/auth-context';
 import { supabase } from '@/lib/supabase';
 
 import type { GridColor } from '@/components/climb/color-grid';
+import type { LeadResult, LeadRoute } from '@/components/climb/lead-entry';
 
 // 색깔별 카운트. 적어도 하나의 색깔이 tries > 0 이어야 의미 있음.
 // sends <= tries는 호출 측에서 보장.
@@ -13,13 +14,17 @@ export type ColorCount = {
   sends: number;
 };
 
+export type ClimbingDiscipline = 'boulder' | 'lead';
+
 export type RecordSessionArgs = {
   gymId: string;
   sessionDate: string; // 'YYYY-MM-DD'
   durationMin: number | null;
   condition: number | null; // 1..5 or null
   notes: string | null;
-  colors: ColorCount[]; // tries === 0 인 항목은 호출 측에서 걸러서 들어옴
+  discipline: ClimbingDiscipline;
+  colors?: ColorCount[];     // boulder 일 때
+  leadRoutes?: LeadRoute[];  // lead 일 때
 };
 
 // 사후 기록 폼의 "기록" 버튼 mutation. 모두 batch INSERT:
@@ -37,9 +42,15 @@ export function useRecordSession() {
       const userId = authSession?.user.id;
       if (!userId) throw new Error('Not authenticated');
 
-      const usedColors = args.colors.filter((c) => c.tries > 0);
-      if (usedColors.length === 0) {
-        throw new Error('최소 한 색깔의 시도 수를 1 이상으로 입력하세요');
+      if (args.discipline === 'boulder') {
+        const usedColors = (args.colors ?? []).filter((c) => c.tries > 0);
+        if (usedColors.length === 0) {
+          throw new Error('최소 한 색깔의 시도 수를 1 이상으로 입력하세요');
+        }
+      } else {
+        if (!args.leadRoutes || args.leadRoutes.length === 0) {
+          throw new Error('최소 한 루트를 추가하세요');
+        }
       }
 
       // 1) sessions
@@ -59,56 +70,10 @@ export function useRecordSession() {
       if (sessionErr) throw new Error(sessionErr.message);
       const sessionId = (sessionRow as { id: string }).id;
 
-      // 2) problems (1 per color)
-      const { data: problemRows, error: problemErr } = await supabase
-        .from('problems')
-        .insert(
-          usedColors.map((c) => ({
-            gym_id: args.gymId,
-            color: c.color,
-            created_by: userId,
-          })),
-        )
-        .select('id, color');
-      if (problemErr) throw new Error(problemErr.message);
-
-      const colorToProblemId = new Map<string, string>();
-      for (const p of (problemRows ?? []) as Array<{ id: string; color: string }>) {
-        colorToProblemId.set(p.color, p.id);
-      }
-
-      // 3) attempts
-      const attemptRows: Array<{
-        session_id: string;
-        problem_id: string;
-        climbing_type: 'boulder';
-        result: 'send' | 'project';
-      }> = [];
-      for (const c of usedColors) {
-        const problemId = colorToProblemId.get(c.color);
-        if (!problemId) continue;
-        for (let i = 0; i < c.sends; i++) {
-          attemptRows.push({
-            session_id: sessionId,
-            problem_id: problemId,
-            climbing_type: 'boulder',
-            result: 'send',
-          });
-        }
-        const projects = Math.max(0, c.tries - c.sends);
-        for (let i = 0; i < projects; i++) {
-          attemptRows.push({
-            session_id: sessionId,
-            problem_id: problemId,
-            climbing_type: 'boulder',
-            result: 'project',
-          });
-        }
-      }
-
-      if (attemptRows.length > 0) {
-        const { error: attemptErr } = await supabase.from('attempts').insert(attemptRows);
-        if (attemptErr) throw new Error(attemptErr.message);
+      if (args.discipline === 'boulder') {
+        await insertBoulder(sessionId, args.gymId, userId, args.colors ?? []);
+      } else {
+        await insertLead(sessionId, args.gymId, userId, args.leadRoutes ?? []);
       }
 
       return { sessionId };
@@ -117,4 +82,112 @@ export function useRecordSession() {
       queryClient.invalidateQueries({ queryKey: ['sessions'] });
     },
   });
+}
+
+async function insertBoulder(
+  sessionId: string,
+  gymId: string,
+  userId: string,
+  colors: ColorCount[],
+) {
+  const used = colors.filter((c) => c.tries > 0);
+  if (used.length === 0) return;
+
+  const { data: problemRows, error: problemErr } = await supabase
+    .from('problems')
+    .insert(
+      used.map((c) => ({
+        gym_id: gymId,
+        color: c.color,
+        created_by: userId,
+      })),
+    )
+    .select('id, color');
+  if (problemErr) throw new Error(problemErr.message);
+
+  const colorToProblemId = new Map<string, string>();
+  for (const p of (problemRows ?? []) as Array<{ id: string; color: string }>) {
+    colorToProblemId.set(p.color, p.id);
+  }
+
+  const attemptRows: Array<{
+    session_id: string;
+    problem_id: string;
+    climbing_type: 'boulder';
+    result: 'send' | 'project';
+  }> = [];
+  for (const c of used) {
+    const problemId = colorToProblemId.get(c.color);
+    if (!problemId) continue;
+    for (let i = 0; i < c.sends; i++) {
+      attemptRows.push({
+        session_id: sessionId,
+        problem_id: problemId,
+        climbing_type: 'boulder',
+        result: 'send',
+      });
+    }
+    const projects = Math.max(0, c.tries - c.sends);
+    for (let i = 0; i < projects; i++) {
+      attemptRows.push({
+        session_id: sessionId,
+        problem_id: problemId,
+        climbing_type: 'boulder',
+        result: 'project',
+      });
+    }
+  }
+  if (attemptRows.length > 0) {
+    const { error: attemptErr } = await supabase.from('attempts').insert(attemptRows);
+    if (attemptErr) throw new Error(attemptErr.message);
+  }
+}
+
+async function insertLead(
+  sessionId: string,
+  gymId: string,
+  userId: string,
+  routes: LeadRoute[],
+) {
+  if (routes.length === 0) return;
+
+  // 같은 grade 면 한 problem 으로 묶기 (dedupe). 같은 등급 여러 시도 = 한 problem 의 여러 attempt.
+  const uniqueGrades = Array.from(new Set(routes.map((r) => r.grade)));
+
+  const { data: problemRows, error: problemErr } = await supabase
+    .from('problems')
+    .insert(
+      uniqueGrades.map((g) => ({
+        gym_id: gymId,
+        route_grade: g,
+        color: null,
+        created_by: userId,
+      })),
+    )
+    .select('id, route_grade');
+  if (problemErr) throw new Error(problemErr.message);
+
+  const gradeToProblemId = new Map<string, string>();
+  for (const p of (problemRows ?? []) as Array<{ id: string; route_grade: string }>) {
+    gradeToProblemId.set(p.route_grade, p.id);
+  }
+
+  const attemptRows = routes
+    .map((r) => {
+      const problemId = gradeToProblemId.get(r.grade);
+      if (!problemId) return null;
+      return {
+        session_id: sessionId,
+        problem_id: problemId,
+        climbing_type: 'lead' as const,
+        result: r.result,
+        lead_style: 'lead' as const,
+      };
+    })
+    .filter((x): x is NonNullable<typeof x> => x !== null);
+
+  if (attemptRows.length > 0) {
+    const { error: attemptErr } = await supabase.from('attempts').insert(attemptRows);
+    if (attemptErr) throw new Error(attemptErr.message);
+  }
 }

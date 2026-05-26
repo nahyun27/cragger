@@ -13,6 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 
 import { GRID_COLORS, type GridColor } from '@/components/climb/color-grid';
+import { LeadEntry, type LeadRoute } from '@/components/climb/lead-entry';
 import {
   ColorCountsTable,
   emptyColorCounts,
@@ -25,7 +26,7 @@ import { useGyms } from '@/hooks/use-gyms';
 import { useGymRegisteredColors } from '@/hooks/use-gym-registered-colors';
 import { useRecentColorActivity } from '@/hooks/use-recent-color-activity';
 import { useRecentGyms } from '@/hooks/use-recent-gyms';
-import { useRecordSession } from '@/hooks/use-record-session';
+import { useRecordSession, type ClimbingDiscipline } from '@/hooks/use-record-session';
 
 // ── 날짜 칩 헬퍼 ────────────────────────────────────────────
 type DateChoice = 'today' | 'yesterday' | 'day_before';
@@ -59,6 +60,52 @@ const CONDITION_OPTIONS: { value: number; icon: 'frown' | 'meh' | 'smile'; color
   { value: 5, icon: 'smile', color: '#06b6d4', label: '최상' },
 ];
 
+function DisciplineBtn({
+  label,
+  icon,
+  active,
+  disabled,
+  onPress,
+}: {
+  label: string;
+  icon: React.ComponentProps<typeof Feather>['name'];
+  active: boolean;
+  disabled?: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => ({
+        flex: 1,
+        paddingVertical: 10,
+        borderRadius: 12,
+        alignItems: 'center',
+        gap: 4,
+        borderWidth: 1,
+        borderColor: active ? '#06b6d4' : '#e2e8f0',
+        backgroundColor: active ? '#ecfeff' : '#ffffff',
+        opacity: disabled ? 0.5 : pressed ? 0.75 : 1,
+      })}
+    >
+      <Feather
+        name={icon}
+        size={16}
+        color={active ? '#06b6d4' : '#64748b'}
+      />
+      <Text
+        style={{
+          fontSize: 11,
+          fontWeight: '800',
+          color: active ? '#0e7490' : '#64748b',
+        }}
+      >
+        {label}
+      </Text>
+    </Pressable>
+  );
+}
+
 export default function NewSessionScreen() {
   const router = useRouter();
   const recordSession = useRecordSession();
@@ -69,7 +116,9 @@ export default function NewSessionScreen() {
   const [durationMin, setDurationMin] = useState<number | null>(null);
   const [condition, setCondition] = useState<number | null>(null);
   const [notes, setNotes] = useState('');
+  const [discipline, setDiscipline] = useState<ClimbingDiscipline>('boulder');
   const [colorCounts, setColorCounts] = useState<ColorCountsValue>(emptyColorCounts);
+  const [leadRoutes, setLeadRoutes] = useState<LeadRoute[]>([]);
 
   const { data: recentGyms } = useRecentGyms();
   const { data: recentColors } = useRecentColorActivity(gymId);
@@ -117,8 +166,11 @@ export default function NewSessionScreen() {
 
   const canSubmit = useMemo(() => {
     if (!gymId) return false;
-    return Object.values(colorCounts).some((c) => c.tries > 0);
-  }, [gymId, colorCounts]);
+    if (discipline === 'boulder') {
+      return Object.values(colorCounts).some((c) => c.tries > 0);
+    }
+    return leadRoutes.length > 0;
+  }, [gymId, discipline, colorCounts, leadRoutes]);
 
   async function handleSubmit() {
     if (!gymId || recordSession.isPending) return;
@@ -129,7 +181,9 @@ export default function NewSessionScreen() {
         durationMin,
         condition,
         notes: notes.trim() ? notes.trim().slice(0, 100) : null,
-        colors: Object.values(colorCounts),
+        discipline,
+        colors: discipline === 'boulder' ? Object.values(colorCounts) : undefined,
+        leadRoutes: discipline === 'lead' ? leadRoutes : undefined,
       });
       router.replace('/(tabs)/log');
     } catch (e) {
@@ -242,15 +296,52 @@ export default function NewSessionScreen() {
           </View>
         </Section>
 
-        <Section title="색깔별 기록">
-          <Text className="text-text-tertiary text-xs mb-2">안 적어도 돼요 (옵션)</Text>
-          <ColorCountsTable
-            value={colorCounts}
-            onChange={setColorCounts}
-            colors={colorOrder}
-            primaryCount={primaryCount}
-          />
+        <Section title="종목" required>
+          <View className="flex-row gap-2">
+            <DisciplineBtn
+              label="볼더링"
+              icon="square"
+              active={discipline === 'boulder'}
+              onPress={() => setDiscipline('boulder')}
+            />
+            <DisciplineBtn
+              label="리드"
+              icon="trending-up"
+              active={discipline === 'lead'}
+              onPress={() => setDiscipline('lead')}
+            />
+            <DisciplineBtn
+              label="보드"
+              icon="grid"
+              active={false}
+              disabled
+              onPress={() => Alert.alert('준비 중', '보드 기록은 v1.1에서 추가됩니다.')}
+            />
+            <DisciplineBtn
+              label="지구력"
+              icon="activity"
+              active={false}
+              disabled
+              onPress={() => Alert.alert('준비 중', '지구력 기록은 v1.1에서 추가됩니다.')}
+            />
+          </View>
         </Section>
+
+        {discipline === 'boulder' ? (
+          <Section title="색깔별 기록">
+            <Text className="text-text-tertiary text-xs mb-2">안 적어도 돼요 (옵션)</Text>
+            <ColorCountsTable
+              value={colorCounts}
+              onChange={setColorCounts}
+              colors={colorOrder}
+              primaryCount={primaryCount}
+            />
+          </Section>
+        ) : (
+          <Section title="루트 기록" required>
+            <LeadEntry value={leadRoutes} onChange={setLeadRoutes} />
+          </Section>
+        )}
 
         <Section title="메모">
           <TextInput
