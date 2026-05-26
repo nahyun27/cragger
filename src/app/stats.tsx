@@ -125,8 +125,16 @@ export default function StatsScreen() {
         )}
 
         {stats && stats.gradeDistribution.length > 0 && (
-          <GradeDistributionCard
-            deep={{ gradeDistribution: stats.gradeDistribution, maxVGrade: stats.maxVGrade }}
+          <BoulderStatsCard
+            grades={stats.gradeDistribution}
+            maxGrade={stats.maxVGrade}
+          />
+        )}
+
+        {stats && stats.leadDistribution.length > 0 && (
+          <LeadStatsCard
+            grades={stats.leadDistribution}
+            maxGrade={stats.maxLeadGrade}
           />
         )}
 
@@ -253,16 +261,60 @@ function MonthlyTrendCard({ deep, title = '최근 6개월 추이' }: { deep: { m
   );
 }
 
-function GradeDistributionCard({
-  deep,
+function BoulderStatsCard({
+  grades,
+  maxGrade,
 }: {
-  deep: { gradeDistribution: { vGrade: string; sendCount: number }[]; maxVGrade: string | null };
+  grades: { vGrade: string; sendCount: number }[];
+  maxGrade: string | null;
+}) {
+  return (
+    <DistributionCard
+      title="볼더링 통계"
+      labelKey="vGrade"
+      data={grades}
+      maxGrade={maxGrade}
+      barColor={COLOR_GRADE}
+    />
+  );
+}
+
+function LeadStatsCard({
+  grades,
+  maxGrade,
+}: {
+  grades: { grade: string; sendCount: number }[];
+  maxGrade: string | null;
+}) {
+  return (
+    <DistributionCard
+      title="리드 통계"
+      labelKey="grade"
+      data={grades}
+      maxGrade={maxGrade}
+      barColor="#F59E0B"  // amber — 리드 톤
+    />
+  );
+}
+
+function DistributionCard<T extends { sendCount: number }>({
+  title,
+  labelKey,
+  data,
+  maxGrade,
+  barColor,
+}: {
+  title: string;
+  labelKey: keyof T;
+  data: T[];
+  maxGrade: string | null;
+  barColor: string;
 }) {
   const { width: winW } = useWindowDimensions();
-  const barData = deep.gradeDistribution.map((g) => ({
+  const barData = data.map((g) => ({
     value: g.sendCount,
-    label: g.vGrade,
-    frontColor: COLOR_GRADE,
+    label: String(g[labelKey]),
+    frontColor: barColor,
   }));
   const maxVal = Math.max(...barData.map((b) => b.value), 1);
 
@@ -278,11 +330,11 @@ function GradeDistributionCard({
   return (
     <View style={s.chartCard}>
       <View style={s.chartHeader}>
-        <Text style={s.chartTitle}>V그레이드 분포</Text>
-        {deep.maxVGrade && (
+        <Text style={s.chartTitle}>{title}</Text>
+        {maxGrade && (
           <View style={s.maxVPill}>
             <Feather name="award" size={11} color="#d97706" />
-            <Text style={s.maxVPillText}>최고 {deep.maxVGrade}</Text>
+            <Text style={s.maxVPillText}>최고 {maxGrade}</Text>
           </View>
         )}
       </View>

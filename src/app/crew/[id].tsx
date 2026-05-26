@@ -134,8 +134,17 @@ export default function CrewDetailScreen() {
         </Pressable>
         <Text className="text-text-primary text-base font-bold">크루</Text>
         {isOwner ? (
-          <Pressable onPress={handleDelete} className="p-2 active:opacity-60" hitSlop={8}>
-            <Feather name="trash-2" size={20} color="#ef4444" />
+          <Pressable
+            onPress={() =>
+              Alert.alert('크루 관리', '', [
+                { text: '크루 삭제', style: 'destructive', onPress: handleDelete },
+                { text: '취소', style: 'cancel' },
+              ])
+            }
+            className="p-2 active:opacity-60"
+            hitSlop={8}
+          >
+            <Feather name="more-vertical" size={20} color="#64748b" />
           </Pressable>
         ) : (
           <View style={{ width: 40 }} />

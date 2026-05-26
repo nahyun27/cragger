@@ -23,16 +23,26 @@ export type GradeBucket = {
   vNum: number;
 };
 
+export type LeadBucket = {
+  grade: string;      // '5.10a', '5.11b' 등
+  sendCount: number;
+  num: number;        // 정렬용 — 5.10a=10.2, 5.11b=11.4 등
+};
+
 export type UserStats = {
   totalSessions: number;
   totalSends: number;
   activityDays: number;
   gyms: GymStats[];
+  // 볼더링 (felt_grade)
   gradeDistribution: GradeBucket[];
   maxVGrade: string | null;
+  // 리드 (problem.route_grade)
+  leadDistribution: LeadBucket[];
+  maxLeadGrade: string | null;
 };
 
-const SEND_RESULTS = new Set(['send', 'onsight', 'flash']);
+const SEND_RESULTS = new Set(['send', 'onsight', 'flash', 'redpoint']);
 
 function vGradeToNum(g: string): number | null {
   const m = /^V(\d+)([+-])?$/.exec(g.trim());
@@ -42,6 +52,15 @@ function vGradeToNum(g: string): number | null {
   if (suffix === '+') return n + 0.5;
   if (suffix === '-') return n - 0.5;
   return n;
+}
+
+function leadGradeToNum(g: string): number | null {
+  // '5.10a' → 10.2, '5.11b' → 11.4, '5.9' → 9
+  const m = /^5\.(\d+)([a-d])?$/.exec(g.trim());
+  if (!m) return null;
+  const main = parseInt(m[1], 10);
+  const sub = m[2] ? ('abcd'.indexOf(m[2]) + 1) * 0.2 : 0;
+  return main + sub;
 }
 
 // Client-side 집계. 마이그레이션 회피.
@@ -87,6 +106,8 @@ export function useUserStats(range: UserStatsRange = {}) {
           gyms: [],
           gradeDistribution: [],
           maxVGrade: null,
+          leadDistribution: [],
+          maxLeadGrade: null,
         };
       }
 
@@ -103,14 +124,15 @@ export function useUserStats(range: UserStatsRange = {}) {
       const sessionIds = sessionsList.map((s) => s.id);
       const { data: attempts, error: aErr } = await supabase
         .from('attempts')
-        .select('session_id, result, felt_grade, problem:problems(color)')
+        .select('session_id, result, climbing_type, felt_grade, problem:problems(color, route_grade)')
         .in('session_id', sessionIds);
       if (aErr) throw new Error(aErr.message);
       const attemptsList = (attempts ?? []) as Array<{
         session_id: string;
         result: string;
+        climbing_type: 'boulder' | 'lead' | 'board';
         felt_grade: string | null;
-        problem: { color: string } | null;
+        problem: { color: string | null; route_grade: string | null } | null;
       }>;
 
       // Per-gym aggregator
@@ -144,16 +166,30 @@ export function useUserStats(range: UserStatsRange = {}) {
       let totalSends = 0;
       const gradeCounts = new Map<string, number>();
       let maxV: { grade: string; n: number } | null = null;
+      const leadCounts = new Map<string, number>();
+      let maxLead: { grade: string; n: number } | null = null;
       for (const a of attemptsList) {
         if (!SEND_RESULTS.has(a.result)) continue;
         totalSends += 1;
+
+        // 볼더링: felt_grade (V그레이드)
         if (a.felt_grade) {
           const g = a.felt_grade.trim();
           gradeCounts.set(g, (gradeCounts.get(g) ?? 0) + 1);
           const n = vGradeToNum(g);
           if (n != null && (maxV == null || n > maxV.n)) maxV = { grade: g, n };
         }
-        if (!a.problem) continue;
+
+        // 리드: climbing_type='lead' + problem.route_grade
+        if (a.climbing_type === 'lead' && a.problem?.route_grade) {
+          const g = a.problem.route_grade.trim();
+          leadCounts.set(g, (leadCounts.get(g) ?? 0) + 1);
+          const n = leadGradeToNum(g);
+          if (n != null && (maxLead == null || n > maxLead.n)) maxLead = { grade: g, n };
+        }
+
+        // 색깔 (볼더링 그라데이션) — 기존 로직
+        if (!a.problem?.color) continue;
         const sessionGym = sessionToGym.get(a.session_id);
         if (!sessionGym) continue;
         const bucket = gymMap.get(sessionGym.id);
@@ -168,6 +204,13 @@ export function useUserStats(range: UserStatsRange = {}) {
         })
         .filter((x): x is GradeBucket => x !== null)
         .sort((a, b) => a.vNum - b.vNum);
+      const leadDistribution: LeadBucket[] = Array.from(leadCounts.entries())
+        .map(([grade, count]) => {
+          const n = leadGradeToNum(grade);
+          return n != null ? { grade, sendCount: count, num: n } : null;
+        })
+        .filter((x): x is LeadBucket => x !== null)
+        .sort((a, b) => a.num - b.num);
 
       const uniqueDates = new Set(sessionsList.map((s) => s.session_date));
 
@@ -195,6 +238,8 @@ export function useUserStats(range: UserStatsRange = {}) {
         gyms,
         gradeDistribution,
         maxVGrade: maxV?.grade ?? null,
+        leadDistribution,
+        maxLeadGrade: maxLead?.grade ?? null,
       };
     },
   });
