@@ -155,12 +155,9 @@ export function ShoeForm({ value, onChange }: Props) {
       showsVerticalScrollIndicator={false}
     >
       <Section title="브랜드">
-        <TextInput
-          placeholder="예: 스카르파, 라스포르티바"
-          placeholderTextColor="#94a3b8"
+        <BrandPicker
           value={value.brand}
-          onChangeText={(t) => onChange({ ...value, brand: t.slice(0, 30) })}
-          style={s.textInput}
+          onChange={(next) => onChange({ ...value, brand: next })}
         />
       </Section>
 
@@ -568,6 +565,116 @@ export function ShoeForm({ value, onChange }: Props) {
   );
 }
 
+const BRAND_PRESETS = [
+  'La Sportiva',
+  'Scarpa',
+  'Tenaya',
+  'Mad Rock',
+  'Evolv',
+  'Black Diamond',
+  'Butora',
+  'Unparallel',
+  'So iLL',
+] as const;
+
+function BrandPicker({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (next: string) => void;
+}) {
+  const isPreset = (BRAND_PRESETS as readonly string[]).includes(value);
+  const [customMode, setCustomMode] = useState(value !== '' && !isPreset);
+
+  const allMode = value === '' && !customMode;
+  const customActive = customMode;
+
+  return (
+    <View>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={s.brandPillRow}
+      >
+        <BrandPill
+          label="전체"
+          active={allMode}
+          onPress={() => {
+            setCustomMode(false);
+            onChange('');
+          }}
+        />
+        {BRAND_PRESETS.map((b) => {
+          const active = !customMode && value === b;
+          return (
+            <BrandPill
+              key={b}
+              label={b}
+              active={active}
+              onPress={() => {
+                setCustomMode(false);
+                onChange(b);
+              }}
+            />
+          );
+        })}
+        <BrandPill
+          label="직접입력"
+          active={customActive}
+          onPress={() => {
+            setCustomMode(true);
+            if (isPreset) onChange('');
+          }}
+        />
+      </ScrollView>
+
+      {customMode && (
+        <TextInput
+          placeholder="브랜드명 직접 입력"
+          placeholderTextColor="#94a3b8"
+          value={value}
+          onChangeText={(t) => onChange(t.slice(0, 30))}
+          style={[s.textInput, { marginTop: 10 }]}
+        />
+      )}
+    </View>
+  );
+}
+
+function BrandPill({
+  label,
+  active,
+  onPress,
+}: {
+  label: string;
+  active: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable onPress={onPress}>
+      {({ pressed }) => (
+        <View
+          style={[
+            s.brandPill,
+            active ? s.brandPillActive : s.brandPillInactive,
+            pressed && s.btnPressed,
+          ]}
+        >
+          <Text
+            style={[
+              s.brandPillText,
+              active ? s.brandPillTextActive : s.brandPillTextInactive,
+            ]}
+          >
+            {label}
+          </Text>
+        </View>
+      )}
+    </Pressable>
+  );
+}
+
 function MultiPillRow({
   options,
   selected,
@@ -914,6 +1021,20 @@ const s = StyleSheet.create({
     fontSize: 11,
     fontWeight: '700',
   },
+
+  // Brand picker
+  brandPillRow: { flexDirection: 'row', gap: 8, paddingVertical: 2 },
+  brandPill: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 999,
+    borderWidth: 1,
+  },
+  brandPillActive: { backgroundColor: '#0f172a', borderColor: '#0f172a' },
+  brandPillInactive: { backgroundColor: '#ffffff', borderColor: '#e2e8f0' },
+  brandPillText: { fontSize: 12, fontWeight: '700' },
+  brandPillTextActive: { color: '#ffffff' },
+  brandPillTextInactive: { color: '#475569' },
 
   // Multi-select + ownership chip
   chipWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
