@@ -55,6 +55,14 @@ const schema = z.object({
       (v) => v === '' || (Number(v) >= 80 && Number(v) <= 270),
       '80~270 사이',
     ),
+  weightKg: z
+    .string()
+    .trim()
+    .refine((v) => v === '' || /^\d+$/.test(v), '숫자만 입력')
+    .refine(
+      (v) => v === '' || (Number(v) >= 30 && Number(v) <= 300),
+      '30~300 사이',
+    ),
 });
 
 type FormValues = z.infer<typeof schema>;
@@ -105,12 +113,13 @@ export default function ProfileEditScreen() {
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
     mode: 'onChange',
-    defaultValues: { username: '', instagramHandle: '', heightCm: '', reachCm: '' },
+    defaultValues: { username: '', instagramHandle: '', heightCm: '', reachCm: '', weightKg: '' },
   });
 
   const [climbingStartDate, setClimbingStartDate] = useState<string | null>(null);
   const [startDateDirty, setStartDateDirty] = useState(false);
   const [showPicker, setShowPicker] = useState(false);
+  const [weightVisible, setWeightVisible] = useState(true);
 
   // Avatar: pending = newly picked but not yet uploaded; removeAvatar = user tapped 삭제
   const [pendingAvatar, setPendingAvatar] = useState<ImagePicker.ImagePickerAsset | null>(null);
@@ -127,9 +136,11 @@ export default function ProfileEditScreen() {
         instagramHandle: profile.instagram_handle ?? '',
         heightCm: profile.height_cm != null ? String(profile.height_cm) : '',
         reachCm: profile.reach_cm != null ? String(profile.reach_cm) : '',
+        weightKg: profile.weight_kg != null ? String(profile.weight_kg) : '',
       });
       setClimbingStartDate(profile.climbing_start_date);
       setStartDateDirty(false);
+      setWeightVisible(profile.weight_visible);
       setPendingAvatar(null);
       setRemoveAvatar(false);
     }
@@ -213,6 +224,8 @@ export default function ProfileEditScreen() {
         instagramHandle: cleanedInsta ? cleanedInsta : null,
         heightCm: values.heightCm.trim() ? Number(values.heightCm.trim()) : null,
         reachCm: values.reachCm.trim() ? Number(values.reachCm.trim()) : null,
+        weightKg: values.weightKg.trim() ? Number(values.weightKg.trim()) : null,
+        weightVisible,
         climbingStartDate: startDateDirty ? climbingStartDate : undefined,
         avatarUrl: avatarUrlArg,
       });
@@ -373,6 +386,55 @@ export default function ProfileEditScreen() {
                       {errors.reachCm.message}
                     </Text>
                   )}
+                </View>
+              )}
+            />
+          </Section>
+
+          <Section title="몸무게">
+            <Controller
+              control={control}
+              name="weightKg"
+              render={({ field: { onChange, value } }) => (
+                <View>
+                  <View className="flex-row items-center border border-border-default rounded-md px-3">
+                    <TextInput
+                      placeholder="예: 60"
+                      placeholderTextColor="#9CA3AF"
+                      value={value}
+                      onChangeText={onChange}
+                      keyboardType="number-pad"
+                      maxLength={3}
+                      className="flex-1 py-2.5 text-text-primary text-base"
+                    />
+                    <Text className="text-text-tertiary text-sm">kg</Text>
+                  </View>
+                  {errors.weightKg && (
+                    <Text className="text-status-danger text-xs mt-1">
+                      {errors.weightKg.message}
+                    </Text>
+                  )}
+                  <Pressable
+                    onPress={() => setWeightVisible((v) => !v)}
+                    className="mt-2 flex-row items-center gap-2 active:opacity-70"
+                    hitSlop={6}
+                  >
+                    <View
+                      className={`w-5 h-5 rounded border items-center justify-center ${
+                        weightVisible
+                          ? 'bg-brand-primary border-brand-primary'
+                          : 'bg-background-primary border-border-default'
+                      }`}
+                    >
+                      {weightVisible && <Feather name="check" size={12} color="white" />}
+                    </View>
+                    <Text className="text-text-secondary text-sm">
+                      마이페이지에 표시
+                    </Text>
+                  </Pressable>
+                  <Text className="text-text-tertiary text-xs mt-1">
+                    숨기면 본인 페이지에도 노출되지 않아요
+                  </Text>
                 </View>
               )}
             />

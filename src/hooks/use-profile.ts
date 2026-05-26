@@ -12,11 +12,13 @@ export type Profile = {
   instagram_handle: string | null;
   height_cm: number | null;
   reach_cm: number | null;
+  weight_kg: number | null;
+  weight_visible: boolean;
   climbing_start_date: string | null;
 };
 
 const PROFILE_COLUMNS =
-  'id, username, display_name, avatar_url, bio, instagram_handle, height_cm, reach_cm, climbing_start_date';
+  'id, username, display_name, avatar_url, bio, instagram_handle, height_cm, reach_cm, weight_kg, weight_visible, climbing_start_date';
 
 export function useProfile() {
   const { session: authSession } = useAuth();
@@ -43,6 +45,8 @@ export type UpdateProfileArgs = {
   bio?: string | null;
   heightCm?: number | null;
   reachCm?: number | null;
+  weightKg?: number | null;
+  weightVisible?: boolean;
   climbingStartDate?: string | null;
   avatarUrl?: string | null;
 };
@@ -61,6 +65,8 @@ export function useUpdateProfile() {
       if (args.bio !== undefined) patch.bio = args.bio;
       if (args.heightCm !== undefined) patch.height_cm = args.heightCm;
       if (args.reachCm !== undefined) patch.reach_cm = args.reachCm;
+      if (args.weightKg !== undefined) patch.weight_kg = args.weightKg;
+      if (args.weightVisible !== undefined) patch.weight_visible = args.weightVisible;
       if (args.climbingStartDate !== undefined) patch.climbing_start_date = args.climbingStartDate;
       if (args.avatarUrl !== undefined) patch.avatar_url = args.avatarUrl;
       const { error } = await supabase.from('profiles').update(patch).eq('id', userId);

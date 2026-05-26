@@ -33,7 +33,6 @@ import {
   useUsePass,
   type MembershipRow,
 } from '@/hooks/use-memberships';
-import { useAuth } from '@/lib/auth-context';
 import { currentMonth, monthRange } from '@/lib/date-ranges';
 import { supabase } from '@/lib/supabase';
 
@@ -41,7 +40,6 @@ const DEFAULT_EXPANDED_COUNT = 2;
 
 export default function ProfileScreen() {
   const router = useRouter();
-  const { session } = useAuth();
   const { data: profile } = useProfile();
   // 마페이지 카드는 "이번 달" 스코프. 전체 통계는 /stats 라우트로 이동.
   const monthAnchor = React.useMemo(() => currentMonth(), []);
@@ -52,7 +50,6 @@ export default function ProfileScreen() {
   const { data: stats, isLoading, error } = useUserStats(thisMonthRange);
   const [menuVisible, setMenuVisible] = useState(false);
 
-  const email = session?.user.email ?? '';
   const username = profile?.username ?? '...';
   const firstChar = username && username.length > 0 ? username.charAt(0).toUpperCase() : '?';
 
@@ -92,9 +89,6 @@ export default function ProfileScreen() {
             <Text style={s.profileName} numberOfLines={1}>
               {username}
             </Text>
-            <Text style={s.profileEmail} numberOfLines={1}>
-              {email}
-            </Text>
             {profile?.instagram_handle ? (
               <Pressable
                 onPress={() =>
@@ -132,6 +126,7 @@ export default function ProfileScreen() {
         <BodyInfoStrip
           heightCm={profile?.height_cm ?? null}
           reachCm={profile?.reach_cm ?? null}
+          weightKg={profile?.weight_visible ? (profile?.weight_kg ?? null) : null}
           climbingStartDate={profile?.climbing_start_date ?? null}
           onEdit={() => router.push('/profile/edit')}
         />
@@ -280,15 +275,21 @@ function formatStartDate(iso: string): string {
 function BodyInfoStrip({
   heightCm,
   reachCm,
+  weightKg,
   climbingStartDate,
   onEdit,
 }: {
   heightCm: number | null;
   reachCm: number | null;
+  weightKg: number | null;
   climbingStartDate: string | null;
   onEdit: () => void;
 }) {
-  const hasAny = heightCm != null || reachCm != null || climbingStartDate != null;
+  const hasAny =
+    heightCm != null ||
+    reachCm != null ||
+    weightKg != null ||
+    climbingStartDate != null;
   if (!hasAny) {
     return (
       <View style={s.bodyStripWrap}>
@@ -298,7 +299,7 @@ function BodyInfoStrip({
         >
           <Feather name="plus" size={14} color="#94a3b8" />
           <Text style={s.bodyStripEmptyText}>
-            키 · 리치 · 클라이밍 시작일 추가
+            키 · 몸무게 · 리치 · 클라이밍 시작일 추가
           </Text>
         </Pressable>
       </View>
@@ -318,6 +319,11 @@ function BodyInfoStrip({
       >
         <View style={s.bodyStripCard}>
           <BodyMetric label="키" value={heightCm != null ? `${heightCm}cm` : '-'} />
+          <BodyDivider />
+          <BodyMetric
+            label="몸무게"
+            value={weightKg != null ? `${weightKg}kg` : '-'}
+          />
           <BodyDivider />
           <BodyMetric
             label="리치"
