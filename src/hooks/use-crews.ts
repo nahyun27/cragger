@@ -265,6 +265,64 @@ export function useUpdateCrew() {
   });
 }
 
+// owner 위임 + 본인 탈퇴 (옵션). 트랜잭션 없이 순차 — 부분 실패 시
+// caller 가 inconsistency 인지 가능 (rare, MVP 수용).
+export function useTransferAndLeave() {
+  const queryClient = useQueryClient();
+  const { session: authSession } = useAuth();
+  return useMutation({
+    mutationFn: async ({
+      crewId,
+      newOwnerId,
+      alsoLeave,
+    }: {
+      crewId: string;
+      newOwnerId: string;
+      alsoLeave: boolean;
+    }) => {
+      const userId = authSession?.user.id;
+      if (!userId) throw new Error('Not authenticated');
+      if (newOwnerId === userId) throw new Error('자기 자신에게 위임할 수 없어요');
+
+      // 1) 새 owner 의 crew_members.role → 'owner'
+      const { error: e1 } = await supabase
+        .from('crew_members')
+        .update({ role: 'owner' })
+        .eq('crew_id', crewId)
+        .eq('user_id', newOwnerId);
+      if (e1) throw new Error(e1.message);
+
+      // 2) 본인 crew_members.role → 'member'
+      const { error: e2 } = await supabase
+        .from('crew_members')
+        .update({ role: 'member' })
+        .eq('crew_id', crewId)
+        .eq('user_id', userId);
+      if (e2) throw new Error(e2.message);
+
+      // 3) crews.owner_id 변경
+      const { error: e3 } = await supabase
+        .from('crews')
+        .update({ owner_id: newOwnerId, updated_at: new Date().toISOString() })
+        .eq('id', crewId);
+      if (e3) throw new Error(e3.message);
+
+      // 4) (옵션) 본인 탈퇴
+      if (alsoLeave) {
+        const { error: e4 } = await supabase
+          .from('crew_members')
+          .delete()
+          .eq('crew_id', crewId)
+          .eq('user_id', userId);
+        if (e4) throw new Error(e4.message);
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['crews'] });
+    },
+  });
+}
+
 export function useDeleteCrew() {
   const queryClient = useQueryClient();
   return useMutation({

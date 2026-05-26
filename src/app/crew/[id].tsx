@@ -1,9 +1,10 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React from 'react';
+import React, { useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
   Image,
+  Modal,
   Pressable,
   ScrollView,
   Text,
@@ -18,6 +19,8 @@ import {
   useDeleteCrew,
   useKickMember,
   useLeaveCrew,
+  useTransferAndLeave,
+  type CrewDetail,
   type CrewMember,
 } from '@/hooks/use-crews';
 import {
@@ -51,6 +54,7 @@ export default function CrewDetailScreen() {
   const { data, isLoading, error } = useCrewDetail(id);
   const leaveCrew = useLeaveCrew();
   const deleteCrew = useDeleteCrew();
+  const [transferOpen, setTransferOpen] = useState(false);
 
   if (isLoading) {
     return (
@@ -231,7 +235,7 @@ export default function CrewDetailScreen() {
         {/* 크루 피드 */}
         {isMember && <CrewFeedSection crewId={data.id} />}
 
-        {/* 탈퇴 (member 만) */}
+        {/* 탈퇴 (member) — owner 는 위임 후 탈퇴 */}
         {isMember && !isOwner && (
           <Pressable
             onPress={handleLeave}
@@ -240,8 +244,222 @@ export default function CrewDetailScreen() {
             <Text className="text-status-danger text-sm font-bold">크루 나가기</Text>
           </Pressable>
         )}
+        {isOwner && (
+          <Pressable
+            onPress={() => {
+              if (data.members.length <= 1) {
+                Alert.alert(
+                  '혼자 있는 크루',
+                  '본인뿐이라 위임할 멤버가 없어요. 크루를 삭제해주세요.',
+                );
+                return;
+              }
+              setTransferOpen(true);
+            }}
+            className="border border-amber-300 rounded-xl py-3.5 items-center active:opacity-70"
+          >
+            <Text className="text-amber-700 text-sm font-bold">
+              크루장 위임 후 나가기
+            </Text>
+          </Pressable>
+        )}
       </ScrollView>
+
+      <TransferOwnerModal
+        visible={transferOpen}
+        crew={data}
+        meId={meId}
+        onClose={() => setTransferOpen(false)}
+        onDone={() => {
+          setTransferOpen(false);
+          router.replace('/(tabs)/profile');
+        }}
+      />
     </SafeAreaView>
+  );
+}
+
+function TransferOwnerModal({
+  visible,
+  crew,
+  meId,
+  onClose,
+  onDone,
+}: {
+  visible: boolean;
+  crew: CrewDetail;
+  meId: string | undefined;
+  onClose: () => void;
+  onDone: () => void;
+}) {
+  const [selected, setSelected] = useState<string | null>(null);
+  const [alsoLeave, setAlsoLeave] = useState(true);
+  const transfer = useTransferAndLeave();
+  const candidates = crew.members.filter((m) => m.user_id !== meId);
+
+  React.useEffect(() => {
+    if (!visible) {
+      setSelected(null);
+      setAlsoLeave(true);
+    }
+  }, [visible]);
+
+  function handleConfirm() {
+    if (!selected) return;
+    Alert.alert(
+      alsoLeave ? '위임 + 탈퇴할까요?' : '크루장 위임할까요?',
+      alsoLeave
+        ? '선택한 멤버가 크루장이 되고, 본인은 크루를 나가요.'
+        : '선택한 멤버가 크루장이 되고, 본인은 일반 멤버로 남아요.',
+      [
+        { text: '취소', style: 'cancel' },
+        {
+          text: '확인',
+          onPress: async () => {
+            try {
+              await transfer.mutateAsync({
+                crewId: crew.id,
+                newOwnerId: selected,
+                alsoLeave,
+              });
+              if (alsoLeave) onDone();
+              else onClose();
+            } catch (e) {
+              Alert.alert('실패', e instanceof Error ? e.message : '오류');
+            }
+          },
+        },
+      ],
+    );
+  }
+
+  return (
+    <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
+      <SafeAreaView className="flex-1 bg-background-primary" edges={['top']}>
+        <View className="flex-row items-center px-4 py-2 border-b border-border-subtle">
+          <Pressable onPress={onClose} className="p-2 -ml-2 active:opacity-60" hitSlop={8}>
+            <Feather name="x" size={22} color="#0f172a" />
+          </Pressable>
+          <Text className="flex-1 text-center text-text-primary text-base font-semibold mr-6">
+            크루장 위임
+          </Text>
+        </View>
+
+        <ScrollView contentContainerClassName="p-5 gap-4">
+          <Text className="text-text-secondary text-sm">
+            다음 크루장이 될 멤버를 선택하세요.
+          </Text>
+
+          <View className="bg-background-secondary border border-border-subtle rounded-2xl overflow-hidden">
+            {candidates.map((m, i) => (
+              <Pressable
+                key={m.user_id}
+                onPress={() => setSelected(m.user_id)}
+              >
+                {({ pressed }) => {
+                  const active = selected === m.user_id;
+                  const name = m.user?.display_name || m.user?.username || '익명';
+                  return (
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: 10,
+                        paddingHorizontal: 14,
+                        paddingVertical: 12,
+                        backgroundColor: active ? '#ecfeff' : '#ffffff',
+                        borderBottomWidth: i === candidates.length - 1 ? 0 : 1,
+                        borderColor: '#f1f5f9',
+                        opacity: pressed ? 0.85 : 1,
+                      }}
+                    >
+                      <View
+                        style={{
+                          width: 32,
+                          height: 32,
+                          borderRadius: 16,
+                          backgroundColor: '#f1f5f9',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          overflow: 'hidden',
+                        }}
+                      >
+                        {m.user?.avatar_url ? (
+                          <Image
+                            source={{ uri: m.user.avatar_url }}
+                            style={{ width: '100%', height: '100%' }}
+                            resizeMode="cover"
+                          />
+                        ) : (
+                          <Text style={{ fontSize: 12, fontWeight: '800', color: '#64748b' }}>
+                            {(name[0] ?? '?').toUpperCase()}
+                          </Text>
+                        )}
+                      </View>
+                      <Text style={{ flex: 1, fontSize: 14, fontWeight: '700', color: '#0f172a' }} numberOfLines={1}>
+                        {name}
+                      </Text>
+                      <View
+                        style={{
+                          width: 20,
+                          height: 20,
+                          borderRadius: 10,
+                          borderWidth: 1.5,
+                          borderColor: active ? '#06b6d4' : '#cbd5e1',
+                          backgroundColor: active ? '#06b6d4' : '#ffffff',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}
+                      >
+                        {active && <Feather name="check" size={12} color="#ffffff" />}
+                      </View>
+                    </View>
+                  );
+                }}
+              </Pressable>
+            ))}
+          </View>
+
+          <Pressable
+            onPress={() => setAlsoLeave(!alsoLeave)}
+            className="flex-row items-center gap-2 px-1 py-2 active:opacity-70"
+          >
+            <View
+              className={`w-5 h-5 rounded border-[1.5px] items-center justify-center ${
+                alsoLeave ? 'bg-brand-primary border-brand-primary' : 'bg-white border-border-default'
+              }`}
+            >
+              {alsoLeave && <Feather name="check" size={11} color="#ffffff" />}
+            </View>
+            <Text className="text-text-primary text-sm font-semibold">
+              위임 후 크루 나가기
+            </Text>
+          </Pressable>
+        </ScrollView>
+
+        <View className="px-5 pt-3 pb-5 border-t border-border-subtle">
+          <Pressable
+            onPress={handleConfirm}
+            disabled={!selected || transfer.isPending}
+            className={`rounded-xl py-4 items-center ${
+              !selected ? 'bg-background-tertiary' : 'bg-brand-primary'
+            }`}
+          >
+            {transfer.isPending ? (
+              <ActivityIndicator color="white" />
+            ) : (
+              <Text
+                className={`font-bold text-base ${
+                  !selected ? 'text-text-muted' : 'text-background-primary'
+                }`}
+              >
+                {alsoLeave ? '위임 + 나가기' : '위임'}
+              </Text>
+            )}
+          </Pressable>
+        </View>
+      </SafeAreaView>
+    </Modal>
   );
 }
 

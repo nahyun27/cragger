@@ -54,12 +54,22 @@ export const SessionShareCard = forwardRef<View, Props>(
       height = size * 1.777;
     }
 
+    const isLead = session.discipline === 'lead';
     const sends = session.color_summary
       .filter((c) => c.sends > 0)
       .sort((a, b) => b.sends - a.sends);
-    const totalSends = sends.reduce((acc, c) => acc + c.sends, 0);
+    const boulderSendsTotal = sends.reduce((acc, c) => acc + c.sends, 0);
 
-    // Expand sends to individual color dots for Grid Layout
+    // Lead: 등급 내림차순 (최고 → 최저)
+    const leadSorted = [...(session.lead_summary ?? [])]
+      .filter((r) => r.sends > 0)
+      .reverse();
+    const leadSendsTotal = leadSorted.reduce((acc, r) => acc + r.sends, 0);
+    const topGrade = leadSorted[0]?.grade ?? null;
+
+    const totalSends = isLead ? leadSendsTotal : boulderSendsTotal;
+
+    // Expand sends to individual color dots for Grid Layout (boulder only)
     const dots: { color: string; key: string }[] = [];
     for (const c of sends) {
       for (let i = 0; i < c.sends; i++) {
@@ -154,7 +164,48 @@ export const SessionShareCard = forwardRef<View, Props>(
             marginVertical: size * 0.04,
           }}
         >
-          {layoutType === 'grid' && (
+          {layoutType === 'grid' && isLead && (
+            <View
+              style={{
+                flexDirection: 'row',
+                flexWrap: 'wrap',
+                justifyContent: 'center',
+                alignItems: 'center',
+                gap: 8,
+                paddingHorizontal: 16,
+              }}
+            >
+              {leadSorted.length === 0 ? (
+                <Text style={{ color: textMutedColor, fontSize: size * 0.04, fontWeight: '500' }}>
+                  완등 기록 없음
+                </Text>
+              ) : (
+                leadSorted.map((r) => (
+                  <View
+                    key={r.grade}
+                    style={{
+                      paddingHorizontal: size * 0.04,
+                      paddingVertical: size * 0.022,
+                      backgroundColor: itemBg,
+                      borderWidth: 1.5,
+                      borderColor: itemBorder,
+                      borderRadius: 14,
+                      alignItems: 'center',
+                    }}
+                  >
+                    <Text style={{ color: textColor, fontSize: size * 0.05, fontWeight: '900', letterSpacing: -0.3 }}>
+                      {r.grade}
+                    </Text>
+                    <Text style={{ color: textMutedColor, fontSize: size * 0.025, fontWeight: '700', marginTop: 1 }}>
+                      ×{r.sends}
+                    </Text>
+                  </View>
+                ))
+              )}
+            </View>
+          )}
+
+          {layoutType === 'grid' && !isLead && (
             <View
               style={{
                 flexDirection: 'row',
@@ -196,7 +247,41 @@ export const SessionShareCard = forwardRef<View, Props>(
             </View>
           )}
 
-          {layoutType === 'list' && (
+          {layoutType === 'list' && isLead && (
+            <View style={{ width: '100%', gap: 6, paddingHorizontal: 10 }}>
+              {leadSorted.length === 0 ? (
+                <Text style={{ color: textMutedColor, fontSize: size * 0.04, fontWeight: '500', textAlign: 'center' }}>
+                  완등 기록 없음
+                </Text>
+              ) : (
+                leadSorted.map((r) => (
+                  <View
+                    key={r.grade}
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      paddingVertical: size * 0.024,
+                      paddingHorizontal: size * 0.035,
+                      backgroundColor: itemBg,
+                      borderWidth: 1,
+                      borderColor: itemBorder,
+                      borderRadius: 16,
+                    }}
+                  >
+                    <Text style={{ color: textColor, fontWeight: '900', fontSize: size * 0.05, letterSpacing: -0.3 }}>
+                      {r.grade}
+                    </Text>
+                    <Text style={{ color: textColor, fontWeight: '800', fontSize: size * 0.038 }}>
+                      {r.sends} 완등
+                    </Text>
+                  </View>
+                ))
+              )}
+            </View>
+          )}
+
+          {layoutType === 'list' && !isLead && (
             <View style={{ width: '100%', gap: 6, paddingHorizontal: 10 }}>
               {sends.length === 0 ? (
                 <Text style={{ color: textMutedColor, fontSize: size * 0.04, fontWeight: '500', textAlign: 'center' }}>
@@ -245,7 +330,84 @@ export const SessionShareCard = forwardRef<View, Props>(
             </View>
           )}
 
-          {layoutType === 'stats' && (
+          {layoutType === 'stats' && isLead && (
+            <View style={{ alignItems: 'center', justifyContent: 'center', gap: size * 0.05 }}>
+              {/* Hero — 최고 등급 + 완등 수 */}
+              <View
+                style={{
+                  paddingHorizontal: size * 0.08,
+                  paddingVertical: size * 0.045,
+                  borderRadius: size * 0.06,
+                  borderWidth: 4,
+                  borderColor: '#06b6d4',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  backgroundColor: itemBg,
+                  shadowColor: '#06b6d4',
+                  shadowOpacity: 0.1,
+                  shadowRadius: 8,
+                  elevation: 2,
+                  minWidth: size * 0.5,
+                }}
+              >
+                <Text style={{ color: textMutedColor, fontSize: size * 0.028, fontWeight: '700', letterSpacing: 1 }}>
+                  TOP GRADE
+                </Text>
+                <Text
+                  style={{
+                    color: '#06b6d4',
+                    fontSize: size * 0.14,
+                    fontWeight: '900',
+                    letterSpacing: -1,
+                    marginTop: 2,
+                  }}
+                >
+                  {topGrade ?? '—'}
+                </Text>
+                <Text style={{ color: textMutedColor, fontSize: size * 0.032, fontWeight: '700', marginTop: 4 }}>
+                  완등 {totalSends}
+                </Text>
+              </View>
+
+              {leadSorted.length > 0 && (
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    flexWrap: 'wrap',
+                    justifyContent: 'center',
+                    gap: 6,
+                    paddingHorizontal: 20,
+                  }}
+                >
+                  {leadSorted.map((r) => (
+                    <View
+                      key={r.grade}
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: 4,
+                        paddingVertical: 4,
+                        paddingHorizontal: 8,
+                        backgroundColor: itemBg,
+                        borderWidth: 1,
+                        borderColor: itemBorder,
+                        borderRadius: 10,
+                      }}
+                    >
+                      <Text style={{ color: textColor, fontSize: size * 0.032, fontWeight: '900' }}>
+                        {r.grade}
+                      </Text>
+                      <Text style={{ color: textMutedColor, fontSize: size * 0.028, fontWeight: '700' }}>
+                        ×{r.sends}
+                      </Text>
+                    </View>
+                  ))}
+                </View>
+              )}
+            </View>
+          )}
+
+          {layoutType === 'stats' && !isLead && (
             <View style={{ alignItems: 'center', justifyContent: 'center', gap: size * 0.05 }}>
               <View
                 style={{
