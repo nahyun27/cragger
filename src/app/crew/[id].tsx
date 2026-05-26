@@ -20,6 +20,7 @@ import {
   useLeaveCrew,
   type CrewMember,
 } from '@/hooks/use-crews';
+import { useCrewFeed, useMyLikes, useToggleLike, type PostRow } from '@/hooks/use-community';
 
 function getAvatarBg(name: string) {
   const colors = ['#e0f2fe', '#fef3c7', '#dcfce7', '#f3e8ff', '#fee2e2', '#e0e7ff'];
@@ -214,11 +215,14 @@ export default function CrewDetailScreen() {
           </View>
         </View>
 
-        {/* 다음 단계 placeholder */}
+        {/* 크루 피드 */}
+        {isMember && <CrewFeedSection crewId={data.id} />}
+
+        {/* 모임/대결 placeholder */}
         <View className="bg-background-secondary border border-border-subtle rounded-2xl p-4 items-center gap-1">
           <Feather name="info" size={14} color="#94a3b8" />
           <Text className="text-text-tertiary text-xs font-semibold text-center">
-            크루 피드·모임·대결 기능은 곧 추가될 예정입니다
+            크루 모임·대결 기능은 곧 추가될 예정입니다
           </Text>
         </View>
 
@@ -233,6 +237,185 @@ export default function CrewDetailScreen() {
         )}
       </ScrollView>
     </SafeAreaView>
+  );
+}
+
+function CrewFeedSection({ crewId }: { crewId: string }) {
+  const router = useRouter();
+  const feed = useCrewFeed(crewId);
+  const { data: likedSet } = useMyLikes();
+  const posts = feed.data?.pages.flat() ?? [];
+
+  return (
+    <View className="gap-3">
+      <View className="flex-row items-baseline justify-between px-1">
+        <Text className="text-text-primary text-base font-extrabold">
+          크루 피드
+        </Text>
+        <Pressable
+          onPress={() =>
+            router.push({ pathname: '/community/new', params: { crewId } } as never)
+          }
+          hitSlop={6}
+        >
+          {({ pressed }) => (
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 4,
+                paddingHorizontal: 12,
+                paddingVertical: 7,
+                borderRadius: 10,
+                backgroundColor: '#06b6d4',
+                opacity: pressed ? 0.85 : 1,
+                shadowColor: '#06b6d4',
+                shadowOpacity: 0.25,
+                shadowRadius: 6,
+                shadowOffset: { width: 0, height: 2 },
+                elevation: 2,
+              }}
+            >
+              <Feather name="edit-3" size={12} color="#ffffff" />
+              <Text style={{ color: '#ffffff', fontSize: 12, fontWeight: '800' }}>
+                글쓰기
+              </Text>
+            </View>
+          )}
+        </Pressable>
+      </View>
+
+      {feed.isLoading && (
+        <View className="py-6 items-center">
+          <ActivityIndicator color="#06b6d4" />
+        </View>
+      )}
+
+      {feed.error && (
+        <View className="p-4 rounded-2xl bg-status-danger/10 border border-status-danger/20">
+          <Text className="text-status-danger text-xs font-semibold">
+            {feed.error.message}
+          </Text>
+        </View>
+      )}
+
+      {!feed.isLoading && posts.length === 0 && (
+        <View className="p-6 items-center gap-2 bg-background-secondary border border-border-subtle rounded-2xl">
+          <Feather name="message-square" size={20} color="#94a3b8" />
+          <Text className="text-text-tertiary text-sm font-semibold">
+            크루 첫 글을 남겨보세요
+          </Text>
+        </View>
+      )}
+
+      {posts.length > 0 && (
+        <View className="gap-2">
+          {posts.map((p) => (
+            <CrewPostCard
+              key={p.id}
+              post={p}
+              liked={likedSet?.has(p.id) ?? false}
+              onPress={() =>
+                router.push({ pathname: '/community/[id]', params: { id: p.id } })
+              }
+            />
+          ))}
+        </View>
+      )}
+    </View>
+  );
+}
+
+function CrewPostCard({
+  post,
+  liked,
+  onPress,
+}: {
+  post: PostRow;
+  liked: boolean;
+  onPress: () => void;
+}) {
+  const toggle = useToggleLike();
+  const author = post.author?.display_name || post.author?.username || '익명';
+  const initial = (author[0] ?? '?').toUpperCase();
+
+  return (
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [{ opacity: pressed ? 0.95 : 1 }]}
+    >
+      <View
+        style={{
+          backgroundColor: '#ffffff',
+          borderWidth: 1,
+          borderColor: '#e2e8f0',
+          borderRadius: 16,
+          padding: 14,
+          gap: 8,
+        }}
+      >
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <View
+            style={{
+              width: 28,
+              height: 28,
+              borderRadius: 14,
+              backgroundColor: '#e0f2fe',
+              alignItems: 'center',
+              justifyContent: 'center',
+              overflow: 'hidden',
+            }}
+          >
+            {post.author?.avatar_url ? (
+              <Image
+                source={{ uri: post.author.avatar_url }}
+                style={{ width: '100%', height: '100%' }}
+                resizeMode="cover"
+              />
+            ) : (
+              <Text style={{ fontSize: 11, fontWeight: '800', color: '#0369a1' }}>
+                {initial}
+              </Text>
+            )}
+          </View>
+          <Text style={{ flex: 1, fontSize: 12, fontWeight: '700', color: '#0f172a' }}>
+            {author}
+          </Text>
+        </View>
+        {post.title && (
+          <Text style={{ fontSize: 14, fontWeight: '800', color: '#0f172a' }} numberOfLines={1}>
+            {post.title}
+          </Text>
+        )}
+        <Text style={{ fontSize: 13, color: '#475569', lineHeight: 18 }} numberOfLines={3}>
+          {post.body}
+        </Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16, marginTop: 2 }}>
+          <Pressable
+            onPress={(e) => {
+              e.stopPropagation();
+              if (toggle.isPending) return;
+              toggle.mutate({ postId: post.id, currentlyLiked: liked });
+            }}
+            hitSlop={6}
+            style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+              <Feather name="heart" size={14} color={liked ? '#ef4444' : '#94a3b8'} />
+              <Text style={{ fontSize: 12, fontWeight: '700', color: liked ? '#ef4444' : '#64748b' }}>
+                {post.like_count}
+              </Text>
+            </View>
+          </Pressable>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+            <Feather name="message-circle" size={14} color="#94a3b8" />
+            <Text style={{ fontSize: 12, fontWeight: '700', color: '#64748b' }}>
+              {post.comment_count}
+            </Text>
+          </View>
+        </View>
+      </View>
+    </Pressable>
   );
 }
 

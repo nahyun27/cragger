@@ -1,6 +1,6 @@
 import DateTimePicker from '@react-native-community/datetimepicker';
 import * as ImagePicker from 'expo-image-picker';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
@@ -50,6 +50,7 @@ function formatMeetupAt(d: Date): string {
 
 export default function NewPostScreen() {
   const router = useRouter();
+  const { crewId } = useLocalSearchParams<{ crewId?: string }>();
   const createPost = useCreatePost();
   const { data: allGyms } = useGyms();
   const { data: recentGyms } = useRecentGyms();
@@ -133,6 +134,7 @@ export default function NewPostScreen() {
         body: body.trim(),
         gymId,
         imageUrls: uploadedUrls,
+        crewId: crewId ?? null,
         meetupAt: isMeetup && meetupAt ? meetupAt.toISOString() : null,
         meetupCapacity: isMeetup && Number.isFinite(cap) && cap > 0 ? cap : null,
         meetupLocation:

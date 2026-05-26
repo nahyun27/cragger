@@ -66,6 +66,7 @@ function sanitizeSearch(term: string): string {
 }
 
 // ── Feed (infinite, optional type filter + free-text search) ────
+// 전체 커뮤니티 탭 — crew_id IS NULL (전체공개) 만.
 export function useCommunityFeed(
   postType: PostType | 'all',
   searchTerm = '',
@@ -80,6 +81,7 @@ export function useCommunityFeed(
       let q = supabase
         .from('posts')
         .select(POST_SELECT_COLS)
+        .is('crew_id', null)
         .range(from, to);
       // 모임 필터일 때만 meetup_at 빠른 순. 그 외엔 최신순.
       if (postType === 'meetup') {
@@ -90,6 +92,30 @@ export function useCommunityFeed(
       if (postType !== 'all') q = q.eq('post_type', postType);
       if (cleaned) q = q.or(`title.ilike.*${cleaned}*,body.ilike.*${cleaned}*`);
       const { data, error } = await q;
+      if (error) throw new Error(error.message);
+      return (data ?? []) as unknown as PostRow[];
+    },
+    getNextPageParam: (lastPage, allPages) =>
+      lastPage.length < PAGE_SIZE ? undefined : allPages.length,
+  });
+}
+
+// ── Crew Feed ─────────────────────────────────────────────────
+// 특정 크루의 글만. RLS 가 비멤버 가로채니 caller 는 그냥 호출.
+export function useCrewFeed(crewId: string | undefined) {
+  return useInfiniteQuery({
+    queryKey: ['community', 'crew-feed', crewId] as const,
+    enabled: !!crewId,
+    initialPageParam: 0,
+    queryFn: async ({ pageParam }): Promise<PostRow[]> => {
+      const from = pageParam * PAGE_SIZE;
+      const to = from + PAGE_SIZE - 1;
+      const { data, error } = await supabase
+        .from('posts')
+        .select(POST_SELECT_COLS)
+        .eq('crew_id', crewId!)
+        .order('created_at', { ascending: false })
+        .range(from, to);
       if (error) throw new Error(error.message);
       return (data ?? []) as unknown as PostRow[];
     },
@@ -303,6 +329,8 @@ export type CreatePostArgs = {
   body: string;
   gymId: string | null;
   imageUrls?: string[];
+  // 크루 전용 — 값 있으면 그 크루 멤버만 조회 가능.
+  crewId?: string | null;
   // 모임 전용 — postType==='meetup' 일 때만 의미.
   meetupAt?: string | null;          // ISO timestamptz
   meetupCapacity?: number | null;
@@ -328,6 +356,7 @@ export function useCreatePost() {
           body,
           gym_id: args.gymId,
           image_urls: args.imageUrls ?? [],
+          crew_id: args.crewId ?? null,
           meetup_at: isMeetup ? (args.meetupAt ?? null) : null,
           meetup_capacity: isMeetup ? (args.meetupCapacity ?? null) : null,
           meetup_location: isMeetup ? (args.meetupLocation ?? null) : null,
@@ -339,6 +368,7 @@ export function useCreatePost() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['community', 'feed'] });
+      queryClient.invalidateQueries({ queryKey: ['community', 'crew-feed'] });
     },
   });
 }
