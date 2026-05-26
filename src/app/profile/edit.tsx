@@ -440,19 +440,19 @@ export default function ProfileEditScreen() {
                   >
                     <View
                       className={`w-5 h-5 rounded border items-center justify-center ${
-                        weightVisible
+                        !weightVisible
                           ? 'bg-brand-primary border-brand-primary'
                           : 'bg-background-primary border-border-default'
                       }`}
                     >
-                      {weightVisible && <Feather name="check" size={12} color="white" />}
+                      {!weightVisible && <Feather name="check" size={12} color="white" />}
                     </View>
                     <Text className="text-text-secondary text-sm">
-                      마이페이지에 표시
+                      몸무게 숨기기
                     </Text>
                   </Pressable>
                   <Text className="text-text-tertiary text-xs mt-1">
-                    숨기면 본인 페이지에도 노출되지 않아요
+                    체크하면 마이페이지에도 표시되지 않아요
                   </Text>
                 </View>
               )}
