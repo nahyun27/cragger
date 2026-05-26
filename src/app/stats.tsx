@@ -11,7 +11,10 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 
+import { BarChart } from 'react-native-gifted-charts';
+
 import { GymStatsCard } from '@/components/stats/gym-stats-card';
+import { useMonthlyStats } from '@/hooks/use-monthly-stats';
 import { useUserStats } from '@/hooks/use-user-stats';
 import {
   currentMonth,
@@ -39,6 +42,7 @@ export default function StatsScreen() {
   }, [scope, monthAnchor, yearAnchor]);
 
   const { data: stats, isLoading, error } = useUserStats(range);
+  const { data: deep } = useMonthlyStats(6);
 
   function shiftMonth(delta: number) {
     setMonthAnchor((cur) => {
@@ -115,6 +119,14 @@ export default function StatsScreen() {
           </View>
         )}
 
+        {deep && deep.monthly.some((m) => m.sessionCount > 0 || m.sendCount > 0) && (
+          <MonthlyTrendCard deep={deep} />
+        )}
+
+        {deep && deep.gradeDistribution.length > 0 && (
+          <GradeDistributionCard deep={deep} />
+        )}
+
         {stats && (
           <>
             <View style={s.summaryCard}>
@@ -154,6 +166,109 @@ export default function StatsScreen() {
         )}
       </ScrollView>
     </SafeAreaView>
+  );
+}
+
+function MonthlyTrendCard({ deep }: { deep: { monthly: { monthLabel: string; sessionCount: number; sendCount: number }[] } }) {
+  // grouped bars: 세션 + 완등
+  const sessionMax = Math.max(...deep.monthly.map((m) => m.sessionCount), 1);
+  const sendMax = Math.max(...deep.monthly.map((m) => m.sendCount), 1);
+  const maxVal = Math.max(sessionMax, sendMax);
+
+  const barData: Array<{
+    value: number;
+    label?: string;
+    spacing?: number;
+    frontColor: string;
+  }> = [];
+  for (const m of deep.monthly) {
+    barData.push({
+      value: m.sessionCount,
+      label: m.monthLabel,
+      spacing: 4,
+      frontColor: '#2563eb',
+    });
+    barData.push({
+      value: m.sendCount,
+      frontColor: '#16a34a',
+    });
+  }
+
+  return (
+    <View style={s.chartCard}>
+      <View style={s.chartHeader}>
+        <Text style={s.chartTitle}>최근 6개월 추이</Text>
+        <View style={s.chartLegendRow}>
+          <View style={s.chartLegendItem}>
+            <View style={[s.chartLegendDot, { backgroundColor: '#2563eb' }]} />
+            <Text style={s.chartLegendText}>세션</Text>
+          </View>
+          <View style={s.chartLegendItem}>
+            <View style={[s.chartLegendDot, { backgroundColor: '#16a34a' }]} />
+            <Text style={s.chartLegendText}>완등</Text>
+          </View>
+        </View>
+      </View>
+      <BarChart
+        data={barData}
+        height={140}
+        barWidth={14}
+        spacing={18}
+        initialSpacing={8}
+        barBorderRadius={3}
+        yAxisThickness={0}
+        xAxisThickness={0}
+        xAxisLabelTextStyle={{ color: '#94a3b8', fontSize: 10 }}
+        yAxisTextStyle={{ color: '#94a3b8', fontSize: 10 }}
+        noOfSections={Math.min(4, maxVal)}
+        maxValue={maxVal}
+        hideRules
+        disableScroll
+      />
+    </View>
+  );
+}
+
+function GradeDistributionCard({
+  deep,
+}: {
+  deep: { gradeDistribution: { vGrade: string; sendCount: number }[]; maxVGrade: string | null };
+}) {
+  const barData = deep.gradeDistribution.map((g) => ({
+    value: g.sendCount,
+    label: g.vGrade,
+    frontColor: '#06b6d4',
+  }));
+  const maxVal = Math.max(...barData.map((b) => b.value), 1);
+
+  return (
+    <View style={s.chartCard}>
+      <View style={s.chartHeader}>
+        <Text style={s.chartTitle}>V그레이드 분포</Text>
+        {deep.maxVGrade && (
+          <View style={s.maxVPill}>
+            <Feather name="award" size={11} color="#d97706" />
+            <Text style={s.maxVPillText}>최고 {deep.maxVGrade}</Text>
+          </View>
+        )}
+      </View>
+      <BarChart
+        data={barData}
+        height={120}
+        barWidth={22}
+        spacing={14}
+        initialSpacing={8}
+        barBorderRadius={3}
+        yAxisThickness={0}
+        xAxisThickness={0}
+        xAxisLabelTextStyle={{ color: '#94a3b8', fontSize: 10 }}
+        yAxisTextStyle={{ color: '#94a3b8', fontSize: 10 }}
+        noOfSections={Math.min(4, maxVal)}
+        maxValue={maxVal}
+        hideRules
+        disableScroll
+      />
+    </View>
   );
 }
 
@@ -370,4 +485,66 @@ const s = StyleSheet.create({
   errorText: { color: '#ef4444', fontSize: 13, fontWeight: '600' },
 
   gymList: { gap: 10, marginTop: 4 },
+
+  // Chart cards
+  chartCard: {
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    borderRadius: 18,
+    padding: 16,
+    paddingBottom: 6,
+    shadowColor: '#0f172a',
+    shadowOpacity: 0.05,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 2,
+  },
+  chartHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+    paddingHorizontal: 2,
+  },
+  chartTitle: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#0f172a',
+  },
+  chartLegendRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  chartLegendItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  chartLegendDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  chartLegendText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#475569',
+  },
+  maxVPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#fffbeb',
+    borderWidth: 1,
+    borderColor: '#fde68a',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 999,
+  },
+  maxVPillText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#b45309',
+  },
 });
