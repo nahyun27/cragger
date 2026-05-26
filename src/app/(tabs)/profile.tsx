@@ -234,6 +234,12 @@ export default function ProfileScreen() {
   );
 }
 
+const METRIC_ACCENT: Record<string, string> = {
+  calendar: '#2563eb',       // 세션 — 파랑
+  'check-circle': '#16a34a', // 완등 — 초록
+  award: '#d97706',          // 활동 일수 — 앰버
+};
+
 function SummaryMetric({
   label,
   value,
@@ -243,9 +249,12 @@ function SummaryMetric({
   value: number;
   icon: 'calendar' | 'check-circle' | 'award';
 }) {
+  const accent = METRIC_ACCENT[icon] ?? '#475569';
   return (
     <View style={s.metricCard}>
-      <Feather name={icon} size={14} color="#475569" />
+      <View style={[s.metricIconBox, { backgroundColor: `${accent}15` }]}>
+        <Feather name={icon} size={16} color={accent} />
+      </View>
       <Text style={s.metricVal}>{value}</Text>
       <Text style={s.metricLabel}>{label}</Text>
     </View>
@@ -1036,17 +1045,18 @@ const s = StyleSheet.create({
     fontWeight: '600',
   },
   summaryCard: {
-    backgroundColor: '#f8fafc',
+    backgroundColor: '#ffffff',
     borderWidth: 1,
     borderColor: '#e2e8f0',
-    borderRadius: 22,
-    padding: 18,
+    borderRadius: 18,
+    paddingVertical: 18,
+    paddingHorizontal: 14,
     marginBottom: 16,
     shadowColor: '#0f172a',
-    shadowOpacity: 0.03,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 1,
+    shadowOpacity: 0.05,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 2,
   },
   summaryMetricsRow: {
     flexDirection: 'row',
@@ -1056,7 +1066,14 @@ const s = StyleSheet.create({
   metricCard: {
     flex: 1,
     alignItems: 'center',
-    gap: 4,
+    gap: 6,
+  },
+  metricIconBox: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   metricDivider: {
     width: 1,
