@@ -1192,6 +1192,11 @@ const s = StyleSheet.create({
     borderColor: '#e2e8f0',
     borderRadius: 16,
     overflow: 'hidden',
+    shadowColor: '#0f172a',
+    shadowOpacity: 0.04,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 1,
   },
   mCardRow: {
     flexDirection: 'row',
@@ -1202,9 +1207,13 @@ const s = StyleSheet.create({
   mCardExpired: {
     backgroundColor: '#f8fafc',
     opacity: 0.7,
+    shadowOpacity: 0,
+    elevation: 0,
   },
   mCardUrgent: {
     borderColor: '#fecaca',
+    borderLeftWidth: 4,
+    borderLeftColor: '#ef4444',
   },
   mCardContent: {
     flex: 1,
@@ -1375,7 +1384,7 @@ const s = StyleSheet.create({
     fontSize: 12,
     fontWeight: '800',
   },
-  shoeList: { gap: 8 },
+  shoeList: { gap: 10 },
   shoeCard: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1385,6 +1394,11 @@ const s = StyleSheet.create({
     borderRadius: 16,
     padding: 14,
     backgroundColor: '#ffffff',
+    shadowColor: '#0f172a',
+    shadowOpacity: 0.04,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 1,
   },
   shoeIcon: {
     width: 40,
