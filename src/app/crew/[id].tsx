@@ -38,6 +38,7 @@ import {
   useDeleteAnnouncement,
   type CrewAnnouncement,
 } from '@/hooks/use-crew-announcements';
+import { useCrewHomeStats, useCrewGradeDistribution } from '@/hooks/use-crew-stats';
 import { effectiveStatus, useBattles, type Battle } from '@/hooks/use-battles';
 
 function getAvatarBg(name: string) {
@@ -190,7 +191,7 @@ export default function CrewDetailScreen() {
         )}
       </View>
 
-      <ScrollView contentContainerStyle={s.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView style={{ flex: 1, backgroundColor: '#f8fafc' }} contentContainerStyle={s.scrollContent} showsVerticalScrollIndicator={false}>
         {/* Hero Area */}
         <View style={s.heroContainer}>
           <View style={[s.emblemRing, { borderColor: colors.border }]}>
@@ -253,6 +254,12 @@ export default function CrewDetailScreen() {
             </Pressable>
           </View>
         )}
+
+        {/* Crew stats strip */}
+        {isMember && <CrewStatsStrip crewId={data.id} />}
+
+        {/* Grade distribution chart */}
+        {isMember && <CrewGradeChart crewId={data.id} />}
 
         {/* Announcements */}
         {isMember && (
@@ -1008,6 +1015,78 @@ function MemberRow({
   );
 }
 
+function CrewStatsStrip({ crewId }: { crewId: string }) {
+  const { data, isLoading } = useCrewHomeStats(crewId);
+  if (isLoading || !data) return null;
+  return (
+    <View style={s.statsStripCard}>
+      <View style={s.statsStripItem}>
+        <Text style={s.statsStripValue}>
+          {data.activityRate}<Text style={s.statsStripUnit}>%</Text>
+        </Text>
+        <Text style={s.statsStripLabel}>활동률</Text>
+      </View>
+      <View style={s.statsStripDivider} />
+      <View style={s.statsStripItem}>
+        <Text style={s.statsStripValue}>
+          {data.avgVGrade ?? '-'}
+        </Text>
+        <Text style={s.statsStripLabel}>평균 실력</Text>
+      </View>
+      <View style={s.statsStripDivider} />
+      <View style={s.statsStripItem}>
+        <Text style={s.statsStripValue}>
+          {data.meetupCountLastMonth}<Text style={s.statsStripUnit}>회</Text>
+        </Text>
+        <Text style={s.statsStripLabel}>지난달 모임</Text>
+      </View>
+    </View>
+  );
+}
+
+function CrewGradeChart({ crewId }: { crewId: string }) {
+  const { data, isLoading } = useCrewGradeDistribution(crewId);
+  if (isLoading || !data || data.buckets.length === 0) return null;
+  const maxCount = Math.max(...data.buckets.map((b) => b.count), 1);
+  return (
+    <View style={s.sectionGap}>
+      <View style={s.sectionHeaderRow}>
+        <Text style={s.sectionTitle}>실력 분포</Text>
+      </View>
+      <View style={s.gradeChartCard}>
+        <View style={s.gradeChartRow}>
+          {data.buckets.map((b) => {
+            const pct = (b.count / maxCount) * 100;
+            const isMe = data.myVNum === b.vNum;
+            return (
+              <View key={b.vGrade} style={s.gradeBarCol}>
+                <Text style={s.gradeBarCount}>{b.count}</Text>
+                <View style={s.gradeBarTrack}>
+                  <View
+                    style={[
+                      s.gradeBarFill,
+                      isMe && s.gradeBarFillMe,
+                      { height: `${Math.max(pct, 8)}%` },
+                    ]}
+                  />
+                </View>
+                <Text style={[s.gradeBarLabel, isMe && s.gradeBarLabelMe]}>
+                  {b.vGrade}
+                </Text>
+                {isMe && (
+                  <View style={s.gradeMyMarker}>
+                    <Text style={s.gradeMyMarkerText}>나</Text>
+                  </View>
+                )}
+              </View>
+            );
+          })}
+        </View>
+      </View>
+    </View>
+  );
+}
+
 function AnnouncementsSection({
   crewId,
   meId,
@@ -1266,7 +1345,7 @@ function AnnouncementComposer({
 const s = StyleSheet.create({
   safeContainer: {
     flex: 1,
-    backgroundColor: '#f8fafc', // Trendy light slate bg
+    backgroundColor: '#ffffff', // Trendy light slate bg
   },
   safeCenter: {
     flex: 1,
@@ -2040,6 +2119,77 @@ const s = StyleSheet.create({
     fontSize: 14,
     fontWeight: '800',
   },
+  // Crew stats strip
+  statsStripCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    padding: 16,
+    marginBottom: 24,
+    shadowColor: '#0f172a',
+    shadowOpacity: 0.03,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 6,
+    elevation: 1,
+  },
+  statsStripItem: { flex: 1, alignItems: 'center', gap: 4 },
+  statsStripValue: { fontSize: 22, fontWeight: '900', color: '#0f172a' },
+  statsStripUnit: { fontSize: 14, fontWeight: '700', color: '#64748b' },
+  statsStripLabel: { fontSize: 11, fontWeight: '700', color: '#94a3b8' },
+  statsStripDivider: {
+    width: 1,
+    height: 36,
+    backgroundColor: '#e2e8f0',
+  },
+
+  // Grade distribution chart
+  gradeChartCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    padding: 16,
+    paddingBottom: 12,
+  },
+  gradeChartRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    gap: 6,
+    height: 140,
+  },
+  gradeBarCol: { flex: 1, alignItems: 'center', gap: 4 },
+  gradeBarCount: { fontSize: 10, fontWeight: '800', color: '#64748b' },
+  gradeBarTrack: {
+    width: '100%',
+    flex: 1,
+    justifyContent: 'flex-end',
+  },
+  gradeBarFill: {
+    width: '100%',
+    backgroundColor: '#94a3b8',
+    borderRadius: 4,
+    minHeight: 4,
+  },
+  gradeBarFillMe: { backgroundColor: '#06b6d4' },
+  gradeBarLabel: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#64748b',
+  },
+  gradeBarLabelMe: { color: '#06b6d4', fontWeight: '900' },
+  gradeMyMarker: {
+    backgroundColor: '#06b6d4',
+    borderRadius: 4,
+    paddingHorizontal: 4,
+    paddingVertical: 1,
+    position: 'absolute',
+    bottom: -14,
+  },
+  gradeMyMarkerText: { fontSize: 8, fontWeight: '800', color: '#ffffff' },
+
   announceCard: {
     backgroundColor: '#ffffff',
     borderRadius: 14,
