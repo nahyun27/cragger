@@ -1,7 +1,9 @@
 import { useRouter } from 'expo-router';
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
+
+import { useThemeColors, type ThemeColors } from '@/lib/theme';
 
 function formatDuration(min: number): string {
   if (min < 60) return `${min}분`;
@@ -22,11 +24,12 @@ export type SessionSummary = {
 
 export function SessionRow({ session }: { session: SessionSummary }) {
   const router = useRouter();
+  const c = useThemeColors();
+  const s = useMemo(() => makeStyles(c), [c]);
   const gymName = session.gym?.name || '암장 미선택';
   const branchName = session.gym?.branch ? ` ${session.gym.branch}` : '';
   const hasSends = session.send_count > 0;
 
-  // Date parsing
   const dateObj = new Date(`${session.session_date}T00:00:00`);
   const day = dateObj.getDate();
   const month = dateObj.getMonth() + 1;
@@ -47,13 +50,12 @@ export function SessionRow({ session }: { session: SessionSummary }) {
             {branchName}
           </Text>
           <View style={s.sessionMetaRow}>
-            <Feather name="clock" size={10} color="#94a3b8" />
+            <Feather name="clock" size={10} color={c.text.muted} />
             <Text style={s.sessionMetaText}>
               {session.duration_min != null ? formatDuration(session.duration_min) : '기록 없음'}
             </Text>
           </View>
         </View>
-        {/* 리드/mixed 면 최고 등급 + 완등, 볼더면 기존 완등 표시 */}
         {session.discipline === 'lead' && session.max_lead_grade ? (
           <View style={[s.sessionBadge, s.sessionBadgeLead]}>
             <Text style={[s.sessionBadgeText, s.sessionBadgeTextLead]}>
@@ -67,101 +69,103 @@ export function SessionRow({ session }: { session: SessionSummary }) {
             </Text>
           </View>
         )}
-        <Feather name="chevron-right" size={16} color="#cbd5e1" style={s.chevronRight} />
+        <Feather name="chevron-right" size={16} color={c.border.strong} style={s.chevronRight} />
       </View>
     </Pressable>
   );
 }
 
-const s = StyleSheet.create({
-  sessionCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#ffffff',
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-    borderRadius: 20,
-    padding: 14,
-    shadowColor: '#0f172a',
-    shadowOpacity: 0.02,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 1,
-  },
-  sessionDateBadge: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
-    backgroundColor: '#f1f5f9',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 12,
-  },
-  sessionDateMonth: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: '#64748b',
-  },
-  sessionDateDay: {
-    fontSize: 16,
-    fontWeight: '900',
-    color: '#0f172a',
-    marginTop: 1,
-  },
-  sessionInfo: {
-    flex: 1,
-    minWidth: 0,
-    marginRight: 8,
-  },
-  sessionGymName: {
-    fontSize: 14,
-    fontWeight: '800',
-    color: '#0f172a',
-  },
-  sessionMetaRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    marginTop: 4,
-  },
-  sessionMetaText: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: '#64748b',
-  },
-  sessionBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 999,
-    borderWidth: 1,
-    marginRight: 4,
-  },
-  sessionBadgeActive: {
-    backgroundColor: '#ecfeff',
-    borderColor: '#a5f3fc',
-  },
-  sessionBadgeMuted: {
-    backgroundColor: '#f8fafc',
-    borderColor: '#e2e8f0',
-  },
-  sessionBadgeText: {
-    fontSize: 11,
-    fontWeight: '800',
-  },
-  sessionBadgeTextActive: {
-    color: '#0e7490',
-  },
-  sessionBadgeTextMuted: {
-    color: '#94a3b8',
-  },
-  sessionBadgeLead: {
-    backgroundColor: '#fff7ed',
-    borderColor: '#fed7aa',
-  },
-  sessionBadgeTextLead: {
-    color: '#c2410c',
-  },
-  chevronRight: {
-    marginLeft: 2,
-  },
-});
+function makeStyles(c: ThemeColors) {
+  return StyleSheet.create({
+    sessionCard: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: c.bg.card,
+      borderWidth: 1,
+      borderColor: c.border.subtle,
+      borderRadius: 20,
+      padding: 14,
+      shadowColor: c.shadow.color,
+      shadowOpacity: c.shadow.opacity,
+      shadowRadius: 8,
+      shadowOffset: { width: 0, height: 4 },
+      elevation: 1,
+    },
+    sessionDateBadge: {
+      width: 44,
+      height: 44,
+      borderRadius: 12,
+      backgroundColor: c.bg.subtle,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginRight: 12,
+    },
+    sessionDateMonth: {
+      fontSize: 10,
+      fontWeight: '700',
+      color: c.text.tertiary,
+    },
+    sessionDateDay: {
+      fontSize: 16,
+      fontWeight: '900',
+      color: c.text.primary,
+      marginTop: 1,
+    },
+    sessionInfo: {
+      flex: 1,
+      minWidth: 0,
+      marginRight: 8,
+    },
+    sessionGymName: {
+      fontSize: 14,
+      fontWeight: '800',
+      color: c.text.primary,
+    },
+    sessionMetaRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      marginTop: 4,
+    },
+    sessionMetaText: {
+      fontSize: 11,
+      fontWeight: '600',
+      color: c.text.tertiary,
+    },
+    sessionBadge: {
+      paddingHorizontal: 10,
+      paddingVertical: 5,
+      borderRadius: 999,
+      borderWidth: 1,
+      marginRight: 4,
+    },
+    sessionBadgeActive: {
+      backgroundColor: c.bg.accent,
+      borderColor: c.brand.primaryLight,
+    },
+    sessionBadgeMuted: {
+      backgroundColor: c.bg.subtle,
+      borderColor: c.border.subtle,
+    },
+    sessionBadgeText: {
+      fontSize: 11,
+      fontWeight: '800',
+    },
+    sessionBadgeTextActive: {
+      color: c.brand.primaryDeep,
+    },
+    sessionBadgeTextMuted: {
+      color: c.text.muted,
+    },
+    sessionBadgeLead: {
+      backgroundColor: c.status.warningBg,
+      borderColor: c.status.warning,
+    },
+    sessionBadgeTextLead: {
+      color: c.status.warning,
+    },
+    chevronRight: {
+      marginLeft: 2,
+    },
+  });
+}
