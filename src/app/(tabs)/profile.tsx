@@ -43,6 +43,7 @@ import {
 } from '@/hooks/use-memberships';
 import { currentMonth, monthRange } from '@/lib/date-ranges';
 import { supabase } from '@/lib/supabase';
+import { useThemePref, type ThemePref } from '@/lib/theme';
 
 
 export default function ProfileScreen() {
@@ -1011,10 +1012,10 @@ const MINI_BAR_KEYS: Array<{
 }> = [
   { field: 'rating_edging', label: '에징' },
   { field: 'rating_smearing', label: '스미어링' },
-  { field: 'rating_toehook', label: '토훅' },
-  { field: 'rating_heelhook', label: '힐훅' },
   { field: 'rating_sensitivity', label: '감도' },
+  { field: 'rating_toehook', label: '토훅' },
   { field: 'rating_comfort', label: '편안함' },
+  { field: 'rating_heelhook', label: '힐훅' },
 ];
 
 const WANTED_FIT_SHORT: Record<string, string> = {
@@ -1129,12 +1130,10 @@ function ShoeCard({ shoe }: { shoe: ClimbingShoe }) {
             <View style={s.miniBarRow}>
               <MiniBar item={MINI_BAR_KEYS[0]} shoe={shoe} />
               <MiniBar item={MINI_BAR_KEYS[1]} shoe={shoe} />
-            </View>
-            <View style={s.miniBarRow}>
               <MiniBar item={MINI_BAR_KEYS[2]} shoe={shoe} />
-              <MiniBar item={MINI_BAR_KEYS[3]} shoe={shoe} />
             </View>
             <View style={s.miniBarRow}>
+              <MiniBar item={MINI_BAR_KEYS[3]} shoe={shoe} />
               <MiniBar item={MINI_BAR_KEYS[4]} shoe={shoe} />
               <MiniBar item={MINI_BAR_KEYS[5]} shoe={shoe} />
             </View>
@@ -1168,6 +1167,12 @@ const STATUS_PALETTE: Record<
   retired: { bg: '#f1f5f9', border: '#e2e8f0', text: '#64748b' },
 };
 
+const THEME_PREF_LABEL: Record<ThemePref, string> = {
+  auto: '시스템 따라가기',
+  light: '라이트',
+  dark: '다크',
+};
+
 function ProfileMenuModal({
   visible,
   onClose,
@@ -1179,6 +1184,18 @@ function ProfileMenuModal({
   onLogout: () => void;
   onEditProfile: () => void;
 }) {
+  const themePref = useThemePref((s) => s.pref);
+  const setThemePref = useThemePref((s) => s.setPref);
+
+  function handleTheme() {
+    Alert.alert('테마', '화면 색깔 모드를 선택하세요', [
+      { text: '시스템 따라가기', onPress: () => setThemePref('auto') },
+      { text: '라이트', onPress: () => setThemePref('light') },
+      { text: '다크', onPress: () => setThemePref('dark') },
+      { text: '취소', style: 'cancel' },
+    ]);
+  }
+
   return (
     <Modal
       transparent
@@ -1190,13 +1207,18 @@ function ProfileMenuModal({
         <Pressable style={s.modalBackdrop} onPress={onClose} />
         <View style={s.modalContent}>
           <View style={s.modalDragHandle} />
-          
+
           <Text style={s.modalTitle}>설정 및 메뉴</Text>
 
           <MenuButton
             icon="edit-3"
             label="프로필 편집"
             onPress={() => { onClose(); onEditProfile(); }}
+          />
+          <MenuButton
+            icon="moon"
+            label={`테마 · ${THEME_PREF_LABEL[themePref]}`}
+            onPress={() => { onClose(); handleTheme(); }}
           />
           <MenuButton
             icon="bell"
@@ -1213,9 +1235,9 @@ function ProfileMenuModal({
             label="고객센터 / 문의하기"
             onPress={() => { onClose(); Alert.alert('고객센터', '준비 중인 기능입니다.'); }}
           />
-          
+
           <View style={s.modalDivider} />
-          
+
           <MenuButton
             icon="log-out"
             label="로그아웃"
@@ -2000,7 +2022,6 @@ const s = StyleSheet.create({
     fontWeight: '800',
   },
   shoeRackContainer: {
-    paddingHorizontal: 16,
     paddingVertical: 12,
     gap: 16,
   },
@@ -2113,24 +2134,24 @@ const s = StyleSheet.create({
   },
   miniBarGrid: {
     flexDirection: 'column',
-    gap: 6,
+    gap: 8,
   },
   miniBarRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 8,
   },
   miniBarCol: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 4,
   },
   miniBarLabel: {
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: '700',
     color: '#475569',
-    width: 36,
+    width: 32,
   },
   miniBarTrack: {
     flex: 1,
@@ -2140,7 +2161,7 @@ const s = StyleSheet.create({
     overflow: 'hidden',
   },
   miniBarFill: { height: '100%', backgroundColor: '#10b981', borderRadius: 3 },
-  miniBarValue: { fontSize: 10, fontWeight: '800', color: '#0f172a', minWidth: 12, textAlign: 'right' },
+  miniBarValue: { fontSize: 9, fontWeight: '800', color: '#0f172a', minWidth: 10, textAlign: 'right' },
   shoeIcon: {
     width: 40,
     height: 40,

@@ -4,24 +4,32 @@ import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, useColorScheme, View } from 'react-native';
+import { ActivityIndicator, View } from 'react-native';
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
 import { AuthProvider, useAuth } from '@/lib/auth-context';
+import { useEffectiveScheme, useHydrateThemePref } from '@/lib/theme';
 
 export default function RootLayout() {
-  const colorScheme = useColorScheme();
   const [queryClient] = useState(() => new QueryClient());
+  useHydrateThemePref();
 
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-          <AnimatedSplashOverlay />
-          <RootStack />
-        </ThemeProvider>
+        <ThemedRoot />
       </AuthProvider>
     </QueryClientProvider>
+  );
+}
+
+function ThemedRoot() {
+  const scheme = useEffectiveScheme();
+  return (
+    <ThemeProvider value={scheme === 'dark' ? DarkTheme : DefaultTheme}>
+      <AnimatedSplashOverlay />
+      <RootStack />
+    </ThemeProvider>
   );
 }
 
