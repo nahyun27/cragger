@@ -17,6 +17,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { GymThumbnail } from '@/components/gym/gym-thumbnail';
 import { useFavoriteGymIds, useToggleFavorite } from '@/hooks/use-favorites';
 import { useGyms, type GymListItem } from '@/hooks/use-gyms';
+import { useThemeColors, type ThemeColors } from '@/lib/theme';
 
 // City → coarse region mapping for the filter chips.
 // The gyms.city column was populated inconsistently — sometimes "서울",
@@ -83,6 +84,8 @@ function regionOf(rawCity: string): string {
 
 export default function GymsScreen() {
   const router = useRouter();
+  const c = useThemeColors();
+  const s = useMemo(() => makeStyles(c), [c]);
   const { data, isLoading, error } = useGyms();
   const { data: favoriteIds } = useFavoriteGymIds();
   const [query, setQuery] = useState('');
@@ -189,10 +192,10 @@ export default function GymsScreen() {
             isFocused && s.searchBarFocused
           ]}
         >
-          <Feather name="search" size={18} color={isFocused ? '#06b6d4' : '#64748b'} />
+          <Feather name="search" size={18} color={isFocused ? c.brand.primary : c.text.tertiary} />
           <TextInput
             placeholder="이름·지점·지역 검색"
-            placeholderTextColor="#94a3b8"
+            placeholderTextColor={c.text.muted}
             value={query}
             onChangeText={setQuery}
             autoCapitalize="none"
@@ -203,7 +206,7 @@ export default function GymsScreen() {
           />
           {query.length > 0 && (
             <Pressable onPress={() => setQuery('')} hitSlop={6}>
-              <Feather name="x-circle" size={16} color="#64748b" />
+              <Feather name="x-circle" size={16} color={c.text.tertiary} />
             </Pressable>
           )}
         </View>
@@ -226,7 +229,7 @@ export default function GymsScreen() {
               <Feather
                 name="map"
                 size={14}
-                color={selectedRegion !== '전체' ? '#06b6d4' : '#475569'}
+                color={selectedRegion !== '전체' ? c.brand.primary : c.text.secondary}
               />
               <Text
                 style={[
@@ -239,7 +242,7 @@ export default function GymsScreen() {
               <Feather
                 name="chevron-down"
                 size={14}
-                color={selectedRegion !== '전체' ? '#06b6d4' : '#64748b'}
+                color={selectedRegion !== '전체' ? c.brand.primary : c.text.tertiary}
               />
             </View>
           </Pressable>
@@ -257,7 +260,7 @@ export default function GymsScreen() {
               <Feather
                 name="star"
                 size={12}
-                color={favoritesOnly ? '#06b6d4' : '#64748b'}
+                color={favoritesOnly ? c.brand.primary : c.text.tertiary}
               />
               <Text
                 style={[
@@ -295,7 +298,7 @@ export default function GymsScreen() {
                     <Feather
                       name={opt.icon}
                       size={12}
-                      color={isSelected ? '#06b6d4' : '#64748b'}
+                      color={isSelected ? c.brand.primary : c.text.tertiary}
                     />
                     <Text
                       style={[
@@ -312,64 +315,64 @@ export default function GymsScreen() {
           </ScrollView>
         </View>
       </View>
+      <View style={{ flex: 1, backgroundColor: c.bg.primary }}>
+        {isLoading && (
+          <View style={s.loaderWrap}>
+            <ActivityIndicator size="large" color={c.brand.primary} />
+          </View>
+        )}
 
-      {isLoading && (
-        <View style={s.loaderWrap}>
-          <ActivityIndicator size="large" color="#06b6d4" />
-        </View>
-      )}
+        {error && (
+          <View style={s.errorCard}>
+            <Text style={s.errorCardText}>{error.message}</Text>
+          </View>
+        )}
 
-      {error && (
-        <View style={s.errorCard}>
-          <Text style={s.errorCardText}>{error.message}</Text>
-        </View>
-      )}
-
-      {!isLoading && (
-        <FlatList
-          data={filtered}
-          keyExtractor={(item) => item.id}
-          renderItem={({ item }) => (
-            <GymCard
-              gym={item}
-              isFavorite={favoriteIds?.has(item.id) ?? false}
-            />
-          )}
-          contentContainerStyle={s.listContent}
-          ListEmptyComponent={
-            data && !isLoading ? (
-              <View style={s.emptyWrap}>
-                <View style={s.emptyIconWrap}>
-                  <Feather name="map-pin" size={32} color="#94a3b8" />
+        {!isLoading && (
+          <FlatList
+            data={filtered}
+            keyExtractor={(item) => item.id}
+            renderItem={({ item }) => (
+              <GymCard
+                gym={item}
+                isFavorite={favoriteIds?.has(item.id) ?? false}
+              />
+            )}
+            contentContainerStyle={s.listContent}
+            ListEmptyComponent={
+              data && !isLoading ? (
+                <View style={s.emptyWrap}>
+                  <View style={s.emptyIconWrap}>
+                    <Feather name="map-pin" size={32} color={c.text.muted} />
+                  </View>
+                  <Text style={s.emptyTitle}>검색 결과가 없어요</Text>
+                  <Text style={s.emptySubtitle}>필터를 변경하거나 다른 검색어를 입력해 보세요.</Text>
+                  <Pressable
+                    onPress={() => router.push('/gyms/request')}
+                    style={({ pressed }) => [s.requestBtn, pressed && { opacity: 0.8 }]}
+                  >
+                    <Text style={s.requestBtnText}>
+                      + 찾는 암장 추가 요청
+                    </Text>
+                  </Pressable>
                 </View>
-                <Text style={s.emptyTitle}>검색 결과가 없어요</Text>
-                <Text style={s.emptySubtitle}>필터를 변경하거나 다른 검색어를 입력해 보세요.</Text>
+              ) : null
+            }
+            ListFooterComponent={
+              data && filtered.length > 0 ? (
                 <Pressable
                   onPress={() => router.push('/gyms/request')}
-                  style={({ pressed }) => [s.requestBtn, pressed && { opacity: 0.8 }]}
+                  style={({ pressed }) => [s.footerBtn, pressed && { opacity: 0.8 }]}
                 >
-                  <Text style={s.requestBtnText}>
-                    + 찾는 암장 추가 요청
+                  <Text style={s.footerBtnText}>
+                    + 찾는 암장이 없으면 추가 요청
                   </Text>
                 </Pressable>
-              </View>
-            ) : null
-          }
-          ListFooterComponent={
-            data && filtered.length > 0 ? (
-              <Pressable
-                onPress={() => router.push('/gyms/request')}
-                style={({ pressed }) => [s.footerBtn, pressed && { opacity: 0.8 }]}
-              >
-                <Text style={s.footerBtnText}>
-                  + 찾는 암장이 없으면 추가 요청
-                </Text>
-              </Pressable>
-            ) : null
-          }
-        />
-      )}
-
+              ) : null
+            }
+          />
+        )}
+      </View>
       {/* Region select modal */}
       <Modal
         visible={regionModalOpen}
@@ -402,7 +405,7 @@ export default function GymsScreen() {
                         style={[
                           s.modalRow,
                           active && s.modalRowActive,
-                          pressed && { backgroundColor: '#f1f5f9' },
+                          pressed && { backgroundColor: c.bg.subtle },
                         ]}
                       >
                         <Text
@@ -413,7 +416,7 @@ export default function GymsScreen() {
                         >
                           {region === '전체' ? '전체 지역' : region}
                         </Text>
-                        {active && <Feather name="check" size={18} color="#06b6d4" />}
+                        {active && <Feather name="check" size={18} color={c.brand.primary} />}
                       </View>
                     )}
                   </Pressable>
@@ -429,6 +432,8 @@ export default function GymsScreen() {
 
 function GymCard({ gym, isFavorite }: { gym: GymListItem; isFavorite: boolean }) {
   const router = useRouter();
+  const c = useThemeColors();
+  const s = useMemo(() => makeStyles(c), [c]);
   const toggleFavorite = useToggleFavorite();
 
   const location = [gym.city, gym.district].filter(Boolean).join(' · ');
@@ -457,14 +462,14 @@ function GymCard({ gym, isFavorite }: { gym: GymListItem; isFavorite: boolean })
           {/* Location & Size Info */}
           <View style={s.gymMetaRow}>
             <View style={s.gymMetaItem}>
-              <Feather name="map-pin" size={11} color="#64748b" />
+              <Feather name="map-pin" size={11} color={c.text.tertiary} />
               <Text style={s.gymMetaText} numberOfLines={1}>
                 {location}
               </Text>
             </View>
             {sizeBit && (
               <View style={s.gymMetaItem}>
-                <Feather name="grid" size={11} color="#64748b" />
+                <Feather name="grid" size={11} color={c.text.tertiary} />
                 <Text style={s.gymMetaText}>
                   {sizeBit}
                 </Text>
@@ -525,485 +530,318 @@ function GymCard({ gym, isFavorite }: { gym: GymListItem; isFavorite: boolean })
                 <Feather
                   name="star"
                   size={20}
-                  color={isFavorite ? '#f59e0b' : '#cbd5e1'}
-                  fill={isFavorite ? '#f59e0b' : 'transparent'}
+                  color={isFavorite ? c.status.warning : c.border.strong}
+                  fill={isFavorite ? c.status.warning : 'transparent'}
                 />
               </View>
             )}
           </Pressable>
-          <Feather name="chevron-right" size={18} color="#cbd5e1" />
+          <Feather name="chevron-right" size={18} color={c.border.strong} />
         </View>
       </View>
     </Pressable>
   );
 }
 
-const s = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f8fafc',
-  },
-  header: {
-    paddingHorizontal: 24,
-    paddingTop: 16,
-    paddingBottom: 10,
-    backgroundColor: '#ffffff',
-  },
-  headerTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: '800',
-    color: '#0f172a',
-    letterSpacing: -0.5,
-  },
-  countBadge: {
-    backgroundColor: '#ecfeff',
-    paddingHorizontal: 10,
-    paddingVertical: 2,
-    borderRadius: 12,
-    marginLeft: 8,
-  },
-  countBadgeText: {
-    color: '#06b6d4',
-    fontSize: 13,
-    fontWeight: '700',
-  },
-  headerSubtitle: {
-    fontSize: 12,
-    color: '#64748b',
-    marginTop: 4,
-    fontWeight: '500',
-  },
+function makeStyles(c: ThemeColors) {
+  return StyleSheet.create({
+    container: { flex: 1, backgroundColor: c.bg.card },
+    header: {
+      paddingHorizontal: 24,
+      paddingTop: 16,
+      paddingBottom: 10,
+      backgroundColor: c.bg.card,
+    },
+    headerTitleRow: { flexDirection: 'row', alignItems: 'center' },
+    headerTitle: {
+      fontSize: 24,
+      fontWeight: '800',
+      color: c.text.primary,
+      letterSpacing: -0.5,
+    },
+    countBadge: {
+      backgroundColor: c.bg.accent,
+      paddingHorizontal: 10,
+      paddingVertical: 2,
+      borderRadius: 12,
+      marginLeft: 8,
+    },
+    countBadgeText: {
+      color: c.brand.primary,
+      fontSize: 13,
+      fontWeight: '700',
+    },
+    headerSubtitle: {
+      fontSize: 12,
+      color: c.text.tertiary,
+      marginTop: 4,
+      fontWeight: '500',
+    },
 
-  searchContainer: {
-    paddingHorizontal: 20,
-    paddingBottom: 12,
-    backgroundColor: '#ffffff',
-  },
-  searchBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#f1f5f9',
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-  },
-  searchBarFocused: {
-    borderColor: '#06b6d4',
-    backgroundColor: '#ffffff',
-  },
-  searchInput: {
-    flex: 1,
-    color: '#0f172a',
-    fontSize: 15,
-    paddingVertical: 4,
-    marginLeft: 8,
-  },
+    searchContainer: {
+      paddingHorizontal: 20,
+      paddingBottom: 12,
+      backgroundColor: c.bg.card,
+    },
+    searchBar: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: c.bg.subtle,
+      borderWidth: 1,
+      borderColor: c.border.subtle,
+      borderRadius: 12,
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+    },
+    searchBarFocused: {
+      borderColor: c.brand.primary,
+      backgroundColor: c.bg.card,
+    },
+    searchInput: {
+      flex: 1,
+      color: c.text.primary,
+      fontSize: 15,
+      paddingVertical: 4,
+      marginLeft: 8,
+    },
 
-  filterBlock: {
-    backgroundColor: '#ffffff',
-    borderBottomWidth: 1,
-    borderColor: '#e2e8f0',
-    paddingBottom: 8,
-  },
-  scrollFilterWrap: {
-    paddingBottom: 4,
-  },
-  scrollFilterContent: {
-    paddingHorizontal: 20,
-    gap: 8,
-    flexDirection: 'row',
-  },
+    filterBlock: {
+      backgroundColor: c.bg.card,
+      borderBottomWidth: 1,
+      borderColor: c.border.subtle,
+      paddingBottom: 8,
+    },
+    scrollFilterWrap: { paddingBottom: 4 },
+    scrollFilterContent: { paddingHorizontal: 20, gap: 8, flexDirection: 'row' },
 
-  // New top row: region select + favorites-only toggle
-  topFilterRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    paddingHorizontal: 20,
-    paddingTop: 10,
-    paddingBottom: 4,
-  },
-  regionSelect: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingLeft: 12,
-    paddingRight: 10,
-    paddingVertical: 8,
-    borderRadius: 10,
-    borderWidth: 1,
-  },
-  regionSelectActive: {
-    backgroundColor: '#ecfeff',
-    borderColor: '#06b6d4',
-  },
-  regionSelectInactive: {
-    backgroundColor: '#ffffff',
-    borderColor: '#e2e8f0',
-  },
-  regionSelectText: {
-    fontSize: 13,
-    fontWeight: '700',
-    minWidth: 60,
-  },
-  regionSelectTextActive: {
-    color: '#0e7490',
-  },
-  regionSelectTextInactive: {
-    color: '#0f172a',
-  },
-  favOnlyChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 10,
-    borderWidth: 1,
-  },
-  favOnlyChipActive: {
-    backgroundColor: '#ecfeff',
-    borderColor: '#06b6d4',
-  },
-  favOnlyChipInactive: {
-    backgroundColor: '#ffffff',
-    borderColor: '#e2e8f0',
-  },
-  favOnlyText: {
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  favOnlyTextActive: { color: '#0e7490' },
-  favOnlyTextInactive: { color: '#64748b' },
+    topFilterRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      paddingHorizontal: 20,
+      paddingTop: 10,
+      paddingBottom: 4,
+    },
+    regionSelect: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      paddingLeft: 12,
+      paddingRight: 10,
+      paddingVertical: 8,
+      borderRadius: 10,
+      borderWidth: 1,
+    },
+    regionSelectActive: { backgroundColor: c.bg.accent, borderColor: c.brand.primary },
+    regionSelectInactive: { backgroundColor: c.bg.card, borderColor: c.border.subtle },
+    regionSelectText: { fontSize: 13, fontWeight: '700', minWidth: 60 },
+    regionSelectTextActive: { color: c.brand.primaryDeep },
+    regionSelectTextInactive: { color: c.text.primary },
+    favOnlyChip: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 5,
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      borderRadius: 10,
+      borderWidth: 1,
+    },
+    favOnlyChipActive: { backgroundColor: c.bg.accent, borderColor: c.brand.primary },
+    favOnlyChipInactive: { backgroundColor: c.bg.card, borderColor: c.border.subtle },
+    favOnlyText: { fontSize: 12, fontWeight: '700' },
+    favOnlyTextActive: { color: c.brand.primaryDeep },
+    favOnlyTextInactive: { color: c.text.tertiary },
 
-  // Region picker modal
-  modalBackdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(15,23,42,0.4)',
-    justifyContent: 'center',
-    paddingHorizontal: 24,
-  },
-  modalSheet: {
-    backgroundColor: '#ffffff',
-    borderRadius: 24,
-    padding: 20,
-    shadowColor: '#000',
-    shadowOpacity: 0.15,
-    shadowRadius: 20,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 8,
-  },
-  modalHeader: {
-    paddingBottom: 12,
-    marginBottom: 8,
-    borderBottomWidth: 1,
-    borderColor: '#e2e8f0',
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: '#0f172a',
-  },
-  modalSubtitle: {
-    fontSize: 12,
-    color: '#64748b',
-    marginTop: 4,
-    fontWeight: '500',
-  },
-  modalRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    borderRadius: 12,
-    marginVertical: 1,
-  },
-  modalRowActive: {
-    backgroundColor: '#f8fafc',
-  },
-  modalRowText: {
-    fontSize: 16,
-    color: '#334155',
-    fontWeight: '600',
-  },
-  modalRowTextActive: {
-    color: '#06b6d4',
-    fontWeight: '800',
-  },
+    modalBackdrop: {
+      flex: 1,
+      backgroundColor: c.bg.overlay,
+      justifyContent: 'center',
+      paddingHorizontal: 24,
+    },
+    modalSheet: {
+      backgroundColor: c.bg.card,
+      borderRadius: 24,
+      padding: 20,
+      shadowColor: c.shadow.color,
+      shadowOpacity: 0.15,
+      shadowRadius: 20,
+      shadowOffset: { width: 0, height: 8 },
+      elevation: 8,
+    },
+    modalHeader: {
+      paddingBottom: 12,
+      marginBottom: 8,
+      borderBottomWidth: 1,
+      borderColor: c.border.subtle,
+    },
+    modalTitle: { fontSize: 18, fontWeight: '800', color: c.text.primary },
+    modalSubtitle: { fontSize: 12, color: c.text.tertiary, marginTop: 4, fontWeight: '500' },
+    modalRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: 16,
+      paddingVertical: 14,
+      borderRadius: 12,
+      marginVertical: 1,
+    },
+    modalRowActive: { backgroundColor: c.bg.subtle },
+    modalRowText: { fontSize: 16, color: c.text.secondary, fontWeight: '600' },
+    modalRowTextActive: { color: c.brand.primary, fontWeight: '800' },
 
-  regionChip: {
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: 999,
-    borderWidth: 1,
-  },
-  regionChipActive: {
-    backgroundColor: '#06b6d4',
-    borderColor: '#06b6d4',
-  },
-  regionChipInactive: {
-    backgroundColor: '#ffffff',
-    borderColor: '#e2e8f0',
-  },
-  regionChipText: {
-    fontSize: 13,
-  },
-  regionChipTextActive: {
-    color: '#ffffff',
-    fontWeight: '800',
-  },
-  regionChipTextInactive: {
-    color: '#475569',
-    fontWeight: '600',
-  },
+    regionChip: {
+      paddingHorizontal: 14,
+      paddingVertical: 6,
+      borderRadius: 999,
+      borderWidth: 1,
+    },
+    regionChipActive: { backgroundColor: c.brand.primary, borderColor: c.brand.primary },
+    regionChipInactive: { backgroundColor: c.bg.card, borderColor: c.border.subtle },
+    regionChipText: { fontSize: 13 },
+    regionChipTextActive: { color: c.brand.onPrimary, fontWeight: '800' },
+    regionChipTextInactive: { color: c.text.secondary, fontWeight: '600' },
 
-  facilityChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 10,
-    borderWidth: 1,
-  },
-  facilityChipActive: {
-    backgroundColor: '#ecfeff',
-    borderColor: '#06b6d4',
-  },
-  facilityChipInactive: {
-    backgroundColor: '#ffffff',
-    borderColor: '#e2e8f0',
-  },
-  facilityChipText: {
-    fontSize: 12,
-  },
-  facilityChipTextActive: {
-    color: '#06b6d4',
-    fontWeight: '700',
-  },
-  facilityChipTextInactive: {
-    color: '#64748b',
-    fontWeight: '600',
-  },
+    facilityChip: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: 10,
+      borderWidth: 1,
+    },
+    facilityChipActive: { backgroundColor: c.bg.accent, borderColor: c.brand.primary },
+    facilityChipInactive: { backgroundColor: c.bg.card, borderColor: c.border.subtle },
+    facilityChipText: { fontSize: 12 },
+    facilityChipTextActive: { color: c.brand.primary, fontWeight: '700' },
+    facilityChipTextInactive: { color: c.text.tertiary, fontWeight: '600' },
 
-  loaderWrap: {
-    padding: 48,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  errorCard: {
-    marginHorizontal: 20,
-    marginVertical: 12,
-    borderWidth: 1,
-    borderColor: '#fecaca',
-    borderRadius: 12,
-    padding: 16,
-    backgroundColor: '#fff5f5',
-  },
-  errorCardText: {
-    color: '#ef4444',
-    fontWeight: '600',
-  },
+    loaderWrap: { padding: 48, alignItems: 'center', justifyContent: 'center' },
+    errorCard: {
+      marginHorizontal: 20,
+      marginVertical: 12,
+      borderWidth: 1,
+      borderColor: c.status.danger,
+      borderRadius: 12,
+      padding: 16,
+      backgroundColor: c.status.dangerBg,
+    },
+    errorCardText: { color: c.status.danger, fontWeight: '600' },
 
-  listContent: {
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 60,
-  },
+    listContent: { paddingHorizontal: 16, paddingTop: 16, paddingBottom: 60 },
 
-  emptyWrap: {
-    padding: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 4,
-  },
-  emptyIconWrap: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: '#f1f5f9',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 8,
-  },
-  emptyTitle: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: '#0f172a',
-    marginTop: 4,
-  },
-  emptySubtitle: {
-    fontSize: 12,
-    color: '#64748b',
-    textAlign: 'center',
-    marginTop: 4,
-    lineHeight: 18,
-  },
-  requestBtn: {
-    marginTop: 16,
-    borderWidth: 1,
-    borderStyle: 'dashed',
-    borderColor: '#cbd5e1',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    backgroundColor: '#ffffff',
-  },
-  requestBtnText: {
-    color: '#475569',
-    fontSize: 13,
-    fontWeight: '700',
-  },
+    emptyWrap: { padding: 40, alignItems: 'center', justifyContent: 'center', gap: 4 },
+    emptyIconWrap: {
+      width: 60,
+      height: 60,
+      borderRadius: 30,
+      backgroundColor: c.bg.subtle,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginBottom: 8,
+    },
+    emptyTitle: { fontSize: 16, fontWeight: '800', color: c.text.primary, marginTop: 4 },
+    emptySubtitle: {
+      fontSize: 12,
+      color: c.text.tertiary,
+      textAlign: 'center',
+      marginTop: 4,
+      lineHeight: 18,
+    },
+    requestBtn: {
+      marginTop: 16,
+      borderWidth: 1,
+      borderStyle: 'dashed',
+      borderColor: c.border.strong,
+      borderRadius: 12,
+      paddingHorizontal: 16,
+      paddingVertical: 10,
+      backgroundColor: c.bg.card,
+    },
+    requestBtnText: { color: c.text.secondary, fontSize: 13, fontWeight: '700' },
 
-  footerBtn: {
-    marginTop: 12,
-    borderWidth: 1,
-    borderStyle: 'dashed',
-    borderColor: '#cbd5e1',
-    borderRadius: 12,
-    paddingVertical: 14,
-    alignItems: 'center',
-    backgroundColor: '#ffffff',
-  },
-  footerBtnText: {
-    color: '#64748b',
-    fontSize: 13,
-    fontWeight: '600',
-  },
+    footerBtn: {
+      marginTop: 12,
+      borderWidth: 1,
+      borderStyle: 'dashed',
+      borderColor: c.border.strong,
+      borderRadius: 12,
+      paddingVertical: 14,
+      alignItems: 'center',
+      backgroundColor: c.bg.card,
+    },
+    footerBtnText: { color: c.text.tertiary, fontSize: 13, fontWeight: '600' },
 
-  // Gym Card styles
-  gymCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#ffffff',
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-    borderRadius: 20,
-    padding: 14,
-    marginBottom: 12,
-    shadowColor: '#0f172a',
-    shadowOpacity: 0.02,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 1,
-  },
-  gymCardInfo: {
-    flex: 1,
-    marginLeft: 12,
-    gap: 4,
-  },
-  gymTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-  },
-  gymName: {
-    fontSize: 15,
-    fontWeight: '800',
-    color: '#0f172a',
-  },
-  gymBranch: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#64748b',
-    marginLeft: 6,
-  },
-  gymMetaRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    marginTop: 2,
-  },
-  gymMetaItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  gymMetaText: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: '#64748b',
-  },
-  badgeWrap: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 6,
-    marginTop: 6,
-  },
-  badgeRegular: {
-    backgroundColor: '#f1f5f9',
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 6,
-  },
-  badgeRegularText: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: '#475569',
-  },
-  badgeMoonboard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 2,
-    backgroundColor: '#faf5ff',
-    borderWidth: 1,
-    borderColor: '#e9d5ff',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 6,
-  },
-  badgeMoonboardText: {
-    fontSize: 10,
-    fontWeight: '800',
-    color: '#7e22ce',
-  },
-  badgeKilter: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 2,
-    backgroundColor: '#eff6ff',
-    borderWidth: 1,
-    borderColor: '#bfdbfe',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 6,
-  },
-  badgeKilterText: {
-    fontSize: 10,
-    fontWeight: '800',
-    color: '#1d4ed8',
-  },
-  badgeTension: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 2,
-    backgroundColor: '#fff7ed',
-    borderWidth: 1,
-    borderColor: '#ffedd5',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 6,
-  },
-  badgeTensionText: {
-    fontSize: 10,
-    fontWeight: '800',
-    color: '#c2410c',
-  },
-  gymCardRight: {
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingLeft: 8,
-    gap: 8,
-  },
-  favoriteBtn: {
-    padding: 4,
-  },
-});
+    gymCard: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: c.bg.card,
+      borderWidth: 1,
+      borderColor: c.border.subtle,
+      borderRadius: 20,
+      padding: 14,
+      marginBottom: 12,
+      shadowColor: c.shadow.color,
+      shadowOpacity: c.shadow.opacity,
+      shadowRadius: 8,
+      shadowOffset: { width: 0, height: 4 },
+      elevation: 1,
+    },
+    gymCardInfo: { flex: 1, marginLeft: 12, gap: 4 },
+    gymTitleRow: { flexDirection: 'row', alignItems: 'baseline' },
+    gymName: { fontSize: 15, fontWeight: '800', color: c.text.primary },
+    gymBranch: { fontSize: 12, fontWeight: '600', color: c.text.tertiary, marginLeft: 6 },
+    gymMetaRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 2 },
+    gymMetaItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+    gymMetaText: { fontSize: 11, fontWeight: '600', color: c.text.tertiary },
+    badgeWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 6 },
+    badgeRegular: {
+      backgroundColor: c.bg.subtle,
+      borderWidth: 1,
+      borderColor: c.border.subtle,
+      paddingHorizontal: 6,
+      paddingVertical: 2,
+      borderRadius: 6,
+    },
+    badgeRegularText: { fontSize: 10, fontWeight: '700', color: c.text.secondary },
+    // 보드 뱃지는 카테고리 색깔(보드 종류 식별용) — 의도적으로 라이트/다크 동일 유지
+    badgeMoonboard: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 2,
+      backgroundColor: '#faf5ff',
+      borderWidth: 1,
+      borderColor: '#e9d5ff',
+      paddingHorizontal: 6,
+      paddingVertical: 2,
+      borderRadius: 6,
+    },
+    badgeMoonboardText: { fontSize: 10, fontWeight: '800', color: '#7e22ce' },
+    badgeKilter: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 2,
+      backgroundColor: '#eff6ff',
+      borderWidth: 1,
+      borderColor: '#bfdbfe',
+      paddingHorizontal: 6,
+      paddingVertical: 2,
+      borderRadius: 6,
+    },
+    badgeKilterText: { fontSize: 10, fontWeight: '800', color: '#1d4ed8' },
+    badgeTension: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 2,
+      backgroundColor: '#fff7ed',
+      borderWidth: 1,
+      borderColor: '#ffedd5',
+      paddingHorizontal: 6,
+      paddingVertical: 2,
+      borderRadius: 6,
+    },
+    badgeTensionText: { fontSize: 10, fontWeight: '800', color: '#c2410c' },
+    gymCardRight: { justifyContent: 'center', alignItems: 'center', paddingLeft: 8, gap: 8 },
+    favoriteBtn: { padding: 4 },
+  });
+}
