@@ -16,7 +16,7 @@ import {
   resolveColorLabel,
 } from '@/constants/climb-colors';
 import { useFavoriteGymIds, useToggleFavorite } from '@/hooks/use-favorites';
-import { useGymDetail, type ColorStat } from '@/hooks/use-gym-detail';
+import { useGymDetail, type ColorScheme, type ColorStat } from '@/hooks/use-gym-detail';
 
 export default function GymDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -182,6 +182,25 @@ export default function GymDetailScreen() {
           </View>
         )}
 
+        {/* Official color scheme (이 암장 난이도 안내) */}
+        {data.color_schemes.length > 0 && (
+          <View className="gap-3.5">
+            <Text className="text-text-primary text-lg font-bold">
+              난이도 안내
+            </Text>
+            <View className="bg-background-secondary border border-border-subtle rounded-2xl p-3 gap-1.5">
+              {data.color_schemes.map((scheme, idx) => (
+                <ColorSchemeRow
+                  key={scheme.id}
+                  scheme={scheme}
+                  position={idx}
+                  total={data.color_schemes.length}
+                />
+              ))}
+            </View>
+          </View>
+        )}
+
         {/* Color stats (Difficulty levels) */}
         <View className="gap-3.5">
           <Text className="text-text-primary text-lg font-bold">
@@ -217,6 +236,51 @@ export default function GymDetailScreen() {
         </Pressable>
       </View>
     </SafeAreaView>
+  );
+}
+
+function ColorSchemeRow({
+  scheme,
+  position,
+  total,
+}: {
+  scheme: ColorScheme;
+  position: number;
+  total: number;
+}) {
+  const hex = scheme.color_hex ?? resolveColorHex(scheme.color);
+  const label = resolveColorLabel(scheme.color);
+  const needsBorder = ['white', 'yellow', 'lime'].includes(scheme.color.toLowerCase());
+  // 위치 (가장 쉬움 ~ 가장 어려움)
+  const isEasiest = position === 0;
+  const isHardest = position === total - 1;
+
+  return (
+    <View className="flex-row items-center gap-3 px-3 py-2 rounded-xl bg-background-primary">
+      <View
+        className="w-7 h-7 rounded-full"
+        style={[
+          { backgroundColor: hex },
+          needsBorder ? { borderWidth: 1, borderColor: '#D4D4D8' } : null,
+        ]}
+      />
+      <View className="flex-1">
+        <Text className="text-text-primary text-sm font-bold">{label}</Text>
+        {scheme.official_label && (
+          <Text className="text-text-secondary text-xs">{scheme.official_label}</Text>
+        )}
+      </View>
+      {isEasiest && (
+        <View className="px-2 py-0.5 rounded-full bg-green-100">
+          <Text className="text-green-700 text-[10px] font-bold">easy</Text>
+        </View>
+      )}
+      {isHardest && (
+        <View className="px-2 py-0.5 rounded-full bg-red-100">
+          <Text className="text-red-700 text-[10px] font-bold">hard</Text>
+        </View>
+      )}
+    </View>
   );
 }
 
