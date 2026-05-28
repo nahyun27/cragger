@@ -1032,6 +1032,7 @@ function MemberRow({
   crewId: string;
   isLast: boolean;
 }) {
+  const router = useRouter();
   const kick = useKickMember();
   const name = member.user?.display_name || member.user?.username || '익명';
   const avatarBg = getAvatarBg(name);
@@ -1058,36 +1059,48 @@ function MemberRow({
     );
   }
 
+  function goToProfile() {
+    if (isMe) {
+      router.push('/(tabs)/profile' as never);
+    } else {
+      router.push({ pathname: '/u/[id]', params: { id: member.user_id } } as never);
+    }
+  }
+
   return (
-    <View style={[s.memberRow, !isLast && s.memberRowBorder]}>
-      <View style={[s.memberAvatar, { backgroundColor: avatarBg }]}>
-        {avatarUrl ? (
-          <Image source={{ uri: avatarUrl }} style={s.emblemImage} resizeMode="cover" />
-        ) : (
-          <Text style={[s.memberAvatarText, { color: avatarFg }]}>
-            {(name[0] ?? '?').toUpperCase()}
+    <Pressable onPress={goToProfile}>
+      {({ pressed }) => (
+        <View style={[s.memberRow, !isLast && s.memberRowBorder, pressed && { opacity: 0.6 }]}>
+          <View style={[s.memberAvatar, { backgroundColor: avatarBg }]}>
+            {avatarUrl ? (
+              <Image source={{ uri: avatarUrl }} style={s.emblemImage} resizeMode="cover" />
+            ) : (
+              <Text style={[s.memberAvatarText, { color: avatarFg }]}>
+                {(name[0] ?? '?').toUpperCase()}
+              </Text>
+            )}
+          </View>
+          <Text style={s.memberNameText} numberOfLines={1}>
+            {name}
+            {isMe && <Text style={s.memberMeTag}> (나)</Text>}
           </Text>
-        )}
-      </View>
-      <Text style={s.memberNameText} numberOfLines={1}>
-        {name}
-        {isMe && <Text style={s.memberMeTag}> (나)</Text>}
-      </Text>
-      {member.role === 'owner' && (
-        <View style={s.memberOwnerBadge}>
-          <Text style={s.memberOwnerText}>크루장</Text>
-        </View>
-      )}
-      {showKick && (
-        <Pressable onPress={handleKick} hitSlop={6}>
-          {({ pressed }) => (
-            <View style={[s.kickBtn, pressed && s.btnPressed]}>
-              <Feather name="user-x" size={15} color="#ef4444" />
+          {member.role === 'owner' && (
+            <View style={s.memberOwnerBadge}>
+              <Text style={s.memberOwnerText}>크루장</Text>
             </View>
           )}
-        </Pressable>
+          {showKick && (
+            <Pressable onPress={handleKick} hitSlop={6}>
+              {({ pressed: kpressed }) => (
+                <View style={[s.kickBtn, kpressed && s.btnPressed]}>
+                  <Feather name="user-x" size={15} color="#ef4444" />
+                </View>
+              )}
+            </Pressable>
+          )}
+        </View>
       )}
-    </View>
+    </Pressable>
   );
 }
 

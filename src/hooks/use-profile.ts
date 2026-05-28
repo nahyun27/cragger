@@ -49,6 +49,23 @@ export function useProfile() {
   });
 }
 
+// 다른 사용자의 공개 프로필 — RLS 가 profiles_select_all 이라 누구나 조회 가능.
+export function usePublicProfile(userId: string | undefined) {
+  return useQuery({
+    queryKey: ['profiles', 'public', userId] as const,
+    enabled: !!userId,
+    queryFn: async (): Promise<Profile> => {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select(PROFILE_COLUMNS)
+        .eq('id', userId!)
+        .single();
+      if (error) throw new Error(error.message);
+      return data as Profile;
+    },
+  });
+}
+
 export type UpdateProfileArgs = {
   username?: string;
   instagramHandle?: string | null;
