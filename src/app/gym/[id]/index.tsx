@@ -182,39 +182,26 @@ export default function GymDetailScreen() {
           </View>
         )}
 
-        {/* Official color scheme (이 암장 난이도 안내) */}
-        {data.color_schemes.length > 0 && (
-          <View className="gap-3.5">
-            <Text className="text-text-primary text-lg font-bold">
-              난이도 안내
-            </Text>
-            <View className="bg-background-secondary border border-border-subtle rounded-2xl p-3 gap-1.5">
-              {data.color_schemes.map((scheme, idx) => (
-                <ColorSchemeRow
-                  key={scheme.id}
-                  scheme={scheme}
-                  position={idx}
-                  total={data.color_schemes.length}
-                />
-              ))}
-            </View>
-          </View>
-        )}
-
-        {/* Color stats (Difficulty levels) */}
+        {/* Difficulty — official + crowd vote merged */}
         <View className="gap-3.5">
-          <Text className="text-text-primary text-lg font-bold">
-            색깔별 체감 난이도
-          </Text>
-          {data.color_stats.length === 0 ? (
+          <View className="flex-row items-end justify-between">
+            <Text className="text-text-primary text-lg font-bold">난이도</Text>
+            <Text className="text-text-tertiary text-xs">공식 / 체감 평균</Text>
+          </View>
+          {data.color_schemes.length === 0 && data.color_stats.length === 0 ? (
             <View className="p-8 items-center justify-center bg-background-secondary rounded-2xl border border-border-subtle">
               <Feather name="bar-chart-2" size={24} color="#94a3b8" className="mb-2" />
-              <Text className="text-text-secondary text-sm">아직 투표가 없습니다</Text>
+              <Text className="text-text-secondary text-sm">아직 난이도 데이터가 없습니다</Text>
             </View>
           ) : (
-            <View className="gap-2.5">
-              {data.color_stats.map((stat) => (
-                <ColorStatRow key={stat.color} stat={stat} />
+            <View className="bg-background-secondary border border-border-subtle rounded-2xl p-3 gap-1.5">
+              {mergeColorRows(data.color_schemes, data.color_stats).map((row, idx, arr) => (
+                <ColorRow
+                  key={row.color}
+                  row={row}
+                  position={idx}
+                  total={arr.length}
+                />
               ))}
             </View>
           )}
@@ -239,153 +226,134 @@ export default function GymDetailScreen() {
   );
 }
 
-function ColorSchemeRow({
-  scheme,
+type MergedColorRow = {
+  color: string;
+  hex: string;
+  scheme: ColorScheme | null;
+  stat: ColorStat | null;
+};
+
+function mergeColorRows(
+  schemes: ColorScheme[],
+  stats: ColorStat[],
+): MergedColorRow[] {
+  const statMap = new Map(stats.map((s) => [s.color.toLowerCase(), s]));
+  const schemeMap = new Map(schemes.map((s) => [s.color.toLowerCase(), s]));
+  const seen = new Set<string>();
+  const out: MergedColorRow[] = [];
+
+  // 1) 공식 색깔 체계 순서대로 (order_index)
+  for (const sch of schemes) {
+    const key = sch.color.toLowerCase();
+    seen.add(key);
+    out.push({
+      color: sch.color,
+      hex: sch.color_hex ?? resolveColorHex(sch.color),
+      scheme: sch,
+      stat: statMap.get(key) ?? null,
+    });
+  }
+
+  // 2) 공식엔 없지만 투표만 있는 색깔 (체감만 모인 케이스) — 평균 V 오름차순
+  const orphanStats = stats
+    .filter((s) => !seen.has(s.color.toLowerCase()))
+    .slice()
+    .sort((a, b) => (a.avg_v_grade ?? -1) - (b.avg_v_grade ?? -1));
+  for (const st of orphanStats) {
+    out.push({
+      color: st.color,
+      hex: resolveColorHex(st.color),
+      scheme: null,
+      stat: st,
+    });
+  }
+
+  return out;
+}
+
+function ColorRow({
+  row,
   position,
   total,
 }: {
-  scheme: ColorScheme;
+  row: MergedColorRow;
   position: number;
   total: number;
 }) {
-  const hex = scheme.color_hex ?? resolveColorHex(scheme.color);
-  const label = resolveColorLabel(scheme.color);
-  const needsBorder = ['white', 'yellow', 'lime'].includes(scheme.color.toLowerCase());
-  // 위치 (가장 쉬움 ~ 가장 어려움)
-  const isEasiest = position === 0;
-  const isHardest = position === total - 1;
+  const label = resolveColorLabel(row.color);
+  const needsBorder = ['white', 'yellow', 'lime'].includes(row.color.toLowerCase());
+  const isEasiest = row.scheme != null && position === 0;
+  const isHardest = row.scheme != null && position === total - 1;
+  const stat = row.stat;
+  const hasEnoughVotes = stat != null && stat.vote_count >= COLOR_VOTE_THRESHOLD;
+  const fillPct =
+    hasEnoughVotes && stat?.avg_v_grade != null
+      ? Math.min(100, Math.max(2, (stat.avg_v_grade / 8.5) * 100))
+      : 0;
 
   return (
-    <View className="flex-row items-center gap-3 px-3 py-2 rounded-xl bg-background-primary">
+    <View className="flex-row items-center gap-3 px-3 py-2.5 rounded-xl bg-background-primary">
+      {/* Color circle */}
       <View
-        className="w-7 h-7 rounded-full"
+        className="w-8 h-8 rounded-full"
         style={[
-          { backgroundColor: hex },
+          { backgroundColor: row.hex },
           needsBorder ? { borderWidth: 1, borderColor: '#D4D4D8' } : null,
         ]}
       />
-      <View className="flex-1">
+
+      {/* Name + official badge */}
+      <View style={{ width: 88 }}>
         <Text className="text-text-primary text-sm font-bold">{label}</Text>
-        {scheme.official_label && (
-          <Text className="text-text-secondary text-xs">{scheme.official_label}</Text>
+        {row.scheme?.official_label && (
+          <Text className="text-text-secondary text-xs">{row.scheme.official_label}</Text>
         )}
       </View>
-      {isEasiest && (
-        <View className="px-2 py-0.5 rounded-full bg-green-100">
-          <Text className="text-green-700 text-[10px] font-bold">easy</Text>
-        </View>
-      )}
-      {isHardest && (
-        <View className="px-2 py-0.5 rounded-full bg-red-100">
-          <Text className="text-red-700 text-[10px] font-bold">hard</Text>
-        </View>
-      )}
-    </View>
-  );
-}
 
-function ColorStatRow({ stat }: { stat: ColorStat }) {
-  const hex = resolveColorHex(stat.color);
-  const label = resolveColorLabel(stat.color);
-  const hasEnoughVotes = stat.vote_count >= COLOR_VOTE_THRESHOLD;
-  const needsBorder = stat.color.toLowerCase() === 'white';
-  // V0..V8+ → 0..8.5 numeric scale. Spec uses V8+ as the right edge of the track.
-  const fillPct =
-    stat.avg_v_grade != null ? Math.min(100, Math.max(2, (stat.avg_v_grade / 8.5) * 100)) : 0;
-
-  return (
-    <View
-      className="flex-row items-center gap-3 p-3 rounded-2xl bg-background-secondary border border-border-subtle"
-      style={!hasEnoughVotes && { opacity: 0.65 }}
-    >
-      {/* Color pill (left) */}
-      <View
-        className="flex-row items-center gap-1.5 px-3 py-1.5 rounded-full border"
-        style={{
-          backgroundColor: hex + '15',
-          borderColor: hex,
-          flexShrink: 0,
-        }}
-      >
-        <View
-          className="w-2.5 h-2.5 rounded-full"
-          style={{
-            backgroundColor: hex,
-            ...(needsBorder ? { borderWidth: 1, borderColor: '#D4D4D8' } : null),
-          }}
-        />
-        <Text
-          className="text-xs font-bold"
-          style={{ color: needsBorder ? '#1e293b' : hex }}
-        >
-          {label}
-        </Text>
-      </View>
-
-      {/* Track with scale labels + knob (middle, grows) */}
-      <View className="flex-1 gap-1.5">
-        <View className="flex-row justify-between">
-          {['V0', 'V2', 'V4', 'V6', 'V8+'].map((g) => (
-            <Text
-              key={g}
-              className="text-text-muted"
-              style={{ fontSize: 9, fontWeight: '500', fontFamily: 'Menlo' }}
-            >
-              {g}
-            </Text>
-          ))}
-        </View>
+      {/* Crowd vote bar (middle) */}
+      <View className="flex-1">
         <View className="h-1.5 bg-background-tertiary rounded-full relative">
-          {hasEnoughVotes && stat.avg_v_grade != null && (
+          {hasEnoughVotes && (
             <>
               <View
                 className="absolute left-0 top-0 h-full bg-brand-primary rounded-full"
                 style={{ width: `${fillPct}%` }}
               />
               <View
-                className="absolute w-3.5 h-3.5 rounded-full bg-brand-primary border-2 border-white"
-                style={{
-                  left: `${fillPct}%`,
-                  top: -4,
-                  marginLeft: -7,
-                  shadowColor: '#000',
-                  shadowOpacity: 0.2,
-                  shadowRadius: 3,
-                  shadowOffset: { width: 0, height: 1 },
-                  elevation: 2,
-                }}
+                className="absolute w-3 h-3 rounded-full bg-brand-primary border-2 border-white"
+                style={{ left: `${fillPct}%`, top: -3, marginLeft: -6 }}
               />
             </>
           )}
         </View>
       </View>
 
-      {/* Average + vote count (right) */}
-      <View className="items-end" style={{ minWidth: 70, flexShrink: 0 }}>
-        {hasEnoughVotes && stat.avg_v_grade_label ? (
+      {/* Right side — avg or status */}
+      <View className="items-end" style={{ minWidth: 58 }}>
+        {hasEnoughVotes && stat?.avg_v_grade_label ? (
           <>
             <Text className="text-text-primary text-xs font-extrabold">
-              평균 {stat.avg_v_grade_label}
+              {stat.avg_v_grade_label}
             </Text>
-            <Text
-              className="text-text-tertiary mt-0.5"
-              style={{ fontSize: 10, fontWeight: '600' }}
-            >
+            <Text className="text-text-tertiary" style={{ fontSize: 10, fontWeight: '600' }}>
               {stat.vote_count}표
             </Text>
           </>
+        ) : isEasiest ? (
+          <View className="px-2 py-0.5 rounded-full bg-green-100">
+            <Text className="text-green-700 text-[10px] font-bold">easy</Text>
+          </View>
+        ) : isHardest ? (
+          <View className="px-2 py-0.5 rounded-full bg-red-100">
+            <Text className="text-red-700 text-[10px] font-bold">hard</Text>
+          </View>
         ) : (
-          <>
-            <Text className="text-text-muted text-xs font-semibold">데이터</Text>
-            <Text
-              className="text-text-muted mt-0.5"
-              style={{ fontSize: 10, fontWeight: '600' }}
-            >
-              {stat.vote_count}표 · {COLOR_VOTE_THRESHOLD}표 필요
-            </Text>
-          </>
+          <Text className="text-text-muted text-[10px] font-semibold">
+            {stat ? `${stat.vote_count}/${COLOR_VOTE_THRESHOLD}표` : '집계중'}
+          </Text>
         )}
       </View>
     </View>
   );
 }
+
