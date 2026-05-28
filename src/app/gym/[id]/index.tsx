@@ -195,13 +195,8 @@ export default function GymDetailScreen() {
             </View>
           ) : (
             <View className="bg-background-secondary border border-border-subtle rounded-2xl p-3 gap-1.5">
-              {mergeColorRows(data.color_schemes, data.color_stats).map((row, idx, arr) => (
-                <ColorRow
-                  key={row.color}
-                  row={row}
-                  position={idx}
-                  total={arr.length}
-                />
+              {mergeColorRows(data.color_schemes, data.color_stats).map((row) => (
+                <ColorRow key={row.color} row={row} />
               ))}
             </View>
           )}
@@ -271,25 +266,49 @@ function mergeColorRows(
   return out;
 }
 
-function ColorRow({
-  row,
-  position,
-  total,
-}: {
-  row: MergedColorRow;
-  position: number;
-  total: number;
-}) {
+// 'V3-V4', 'Vb-V0-', 'V0+', 'V-4', 'Vb' 등 → 슬라이더용 숫자 (0~8.5 범위).
+// 못 읽으면 null.
+function parseOfficialV(label: string | null): number | null {
+  if (!label) return null;
+  const tokens = label.split(/[-~]/).map((s) => s.trim()).filter(Boolean);
+  if (tokens.length === 0) return null;
+  const nums = tokens.map(tokenToNum).filter((n): n is number => n != null);
+  if (nums.length === 0) return null;
+  // 범위 표기 (V3-V4) 는 평균, 단일 (V3) 은 그대로
+  return nums.reduce((a, b) => a + b, 0) / nums.length;
+}
+
+function tokenToNum(tok: string): number | null {
+  // 'Vb' → 0 (베이스), 'V0+' → 0.5, 'V0-' → -0.5, 'V3' → 3, 'V-4' 는 미해석 → null
+  const m = /^V(b|B|\d+)([+\-])?$/.exec(tok);
+  if (!m) return null;
+  const body = m[1];
+  const suffix = m[2];
+  const base = body.toLowerCase() === 'b' ? 0 : parseInt(body, 10);
+  if (Number.isNaN(base)) return null;
+  if (suffix === '+') return base + 0.5;
+  if (suffix === '-') return base - 0.5;
+  return base;
+}
+
+function ColorRow({ row }: { row: MergedColorRow }) {
   const label = resolveColorLabel(row.color);
   const needsBorder = ['white', 'yellow', 'lime'].includes(row.color.toLowerCase());
-  const isEasiest = row.scheme != null && position === 0;
-  const isHardest = row.scheme != null && position === total - 1;
   const stat = row.stat;
   const hasEnoughVotes = stat != null && stat.vote_count >= COLOR_VOTE_THRESHOLD;
+
+  // 효과 V: 투표 충분하면 voted, 아니면 공식 라벨에서 파싱
+  const officialV = parseOfficialV(row.scheme?.official_label ?? null);
+  const effectiveV = hasEnoughVotes ? (stat?.avg_v_grade ?? null) : officialV;
   const fillPct =
-    hasEnoughVotes && stat?.avg_v_grade != null
-      ? Math.min(100, Math.max(2, (stat.avg_v_grade / 8.5) * 100))
-      : 0;
+    effectiveV != null
+      ? Math.min(100, Math.max(0, (effectiveV / 8.5) * 100))
+      : null;
+
+  const rightLabel = hasEnoughVotes
+    ? stat?.avg_v_grade_label ?? null
+    : row.scheme?.official_label ?? null;
+  const subText = hasEnoughVotes && stat ? `${stat.vote_count}표` : null;
 
   return (
     <View className="flex-row items-center gap-3 px-3 py-2.5 rounded-xl bg-background-primary">
@@ -302,54 +321,49 @@ function ColorRow({
         ]}
       />
 
-      {/* Name + official badge */}
-      <View style={{ width: 88 }}>
+      {/* Name */}
+      <View style={{ width: 60 }}>
         <Text className="text-text-primary text-sm font-bold">{label}</Text>
-        {row.scheme?.official_label && (
-          <Text className="text-text-secondary text-xs">{row.scheme.official_label}</Text>
-        )}
       </View>
 
-      {/* Crowd vote bar (middle) */}
+      {/* Slider */}
       <View className="flex-1">
         <View className="h-1.5 bg-background-tertiary rounded-full relative">
-          {hasEnoughVotes && (
+          {fillPct != null && (
             <>
               <View
                 className="absolute left-0 top-0 h-full bg-brand-primary rounded-full"
-                style={{ width: `${fillPct}%` }}
+                style={{ width: `${fillPct}%`, opacity: hasEnoughVotes ? 1 : 0.45 }}
               />
               <View
                 className="absolute w-3 h-3 rounded-full bg-brand-primary border-2 border-white"
-                style={{ left: `${fillPct}%`, top: -3, marginLeft: -6 }}
+                style={{
+                  left: `${fillPct}%`,
+                  top: -3,
+                  marginLeft: -6,
+                  opacity: hasEnoughVotes ? 1 : 0.6,
+                }}
               />
             </>
           )}
         </View>
       </View>
 
-      {/* Right side — avg or status */}
-      <View className="items-end" style={{ minWidth: 58 }}>
-        {hasEnoughVotes && stat?.avg_v_grade_label ? (
-          <>
-            <Text className="text-text-primary text-xs font-extrabold">
-              {stat.avg_v_grade_label}
-            </Text>
-            <Text className="text-text-tertiary" style={{ fontSize: 10, fontWeight: '600' }}>
-              {stat.vote_count}표
-            </Text>
-          </>
-        ) : isEasiest ? (
-          <View className="px-2 py-0.5 rounded-full bg-green-100">
-            <Text className="text-green-700 text-[10px] font-bold">easy</Text>
-          </View>
-        ) : isHardest ? (
-          <View className="px-2 py-0.5 rounded-full bg-red-100">
-            <Text className="text-red-700 text-[10px] font-bold">hard</Text>
-          </View>
+      {/* Right — V label + vote count if any */}
+      <View className="items-end" style={{ minWidth: 64 }}>
+        {rightLabel ? (
+          <Text
+            className="text-text-primary text-xs font-extrabold"
+            style={!hasEnoughVotes ? { opacity: 0.55 } : undefined}
+          >
+            {rightLabel}
+          </Text>
         ) : (
-          <Text className="text-text-muted text-[10px] font-semibold">
-            {stat ? `${stat.vote_count}/${COLOR_VOTE_THRESHOLD}표` : '집계중'}
+          <Text className="text-text-muted text-[10px] font-semibold">—</Text>
+        )}
+        {subText && (
+          <Text className="text-text-tertiary" style={{ fontSize: 10, fontWeight: '600' }}>
+            {subText}
           </Text>
         )}
       </View>
