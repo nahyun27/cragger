@@ -694,7 +694,7 @@ function RatingBar({
         <Text style={s.ratingRangeLabel}>좋음</Text>
       </View>
       <View style={s.ratingBarRow}>
-        {Array.from({ length: 10 }).map((_, i) => {
+        {Array.from({ length: 5 }).map((_, i) => {
           const n = i + 1;
           const active = n <= filled;
           return (
@@ -718,7 +718,7 @@ function RatingBar({
         })}
         <Text style={s.ratingValueText}>
           <Text style={s.ratingValueNum}>{filled}</Text>
-          <Text style={s.ratingValueDenom}> / 10</Text>
+          <Text style={s.ratingValueDenom}> / 5</Text>
         </Text>
       </View>
     </View>

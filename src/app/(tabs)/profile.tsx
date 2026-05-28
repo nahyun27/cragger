@@ -582,13 +582,13 @@ function CrewCard({ crew }: { crew: CrewSummary }) {
             </Text>
             
             <View style={s.crewMetaRow}>
-              <View style={s.crewMemberBadge}>
-                <Feather name="users" size={10} color="#7c3aed" />
-                <Text style={s.crewMemberText}>멤버 {crew.member_count}명</Text>
+              <View style={[s.crewMemberBadge, { backgroundColor: colors.bg, borderColor: colors.border }]}>
+                <Feather name="users" size={10} color={colors.text} />
+                <Text style={[s.crewMemberText, { color: colors.text }]}>멤버 {crew.member_count}명</Text>
               </View>
               {crew.home_gym && (
                 <View style={s.crewGymBadge}>
-                  <Feather name="map-pin" size={10} color="#475569" />
+                  <Feather name="map-pin" size={10} color="#64748b" />
                   <Text style={s.crewGymText} numberOfLines={1}>
                     {crew.home_gym.name}
                   </Text>
@@ -969,26 +969,25 @@ function ShoesSection() {
       )}
 
       {data && data.length === 0 && (
-        <Pressable onPress={() => router.push('/shoes/new')}>
-          {({ pressed }) => (
-            <View style={[s.shoeEmptyCard, pressed && { opacity: 0.85 }]}>
-              <View style={s.shoeEmptyIconBox}>
-                <Feather name="plus" size={20} color="#06b6d4" />
-              </View>
-              <View style={s.flex1}>
-                <Text style={s.shoeEmptyTitle}>첫 암벽화 등록하기</Text>
-                <Text style={s.shoeEmptySub}>
-                  핏·평점을 남기면 비슷한 발형 사용자와 비교돼요
-                </Text>
-              </View>
-              <Feather name="chevron-right" size={18} color="#cbd5e1" />
-            </View>
-          )}
-        </Pressable>
+        <View style={s.shoeRackContainer}>
+          <View style={s.emptyShelfSlot}>
+            <Feather name="package" size={28} color="#cbd5e1" />
+            <Text style={s.emptyShelfText}>첫 암벽화 등록하기</Text>
+            <Text style={s.emptyShelfSub}>핏·평점을 남기면 비슷한 발형 사용자와 비교돼요</Text>
+            <Pressable onPress={() => router.push('/shoes/new')}>
+              {({ pressed }) => (
+                <View style={[s.addBtn, { marginTop: 12 }, pressed && { opacity: 0.8 }]}>
+                  <Feather name="plus" size={14} color="#ffffff" />
+                  <Text style={s.addBtnText}>추가</Text>
+                </View>
+              )}
+            </Pressable>
+          </View>
+        </View>
       )}
 
       {data && data.length > 0 && (
-        <View style={s.shoeListGap}>
+        <View style={s.shoeRackContainer}>
           {data.map((shoe) => (
             <ShoeCard key={shoe.id} shoe={shoe} />
           ))}
@@ -1063,39 +1062,31 @@ function ShoeCard({ shoe }: { shoe: ClimbingShoe }) {
               )}
             </View>
             <View style={s.shoeMetaRow}>
-              <View
-                style={[
-                  s.shoeStatusBadge,
-                  {
-                    backgroundColor: STATUS_PALETTE[shoe.status].bg,
-                    borderColor: STATUS_PALETTE[shoe.status].border,
-                  },
-                ]}
-              >
-                <Text
+              {shoe.status !== 'active' && (
+                <View
                   style={[
-                    s.shoeStatusText,
+                    s.shoeStatusBadge,
                     {
-                      color: STATUS_PALETTE[shoe.status].text,
+                      backgroundColor: STATUS_PALETTE[shoe.status].bg,
+                      borderColor: STATUS_PALETTE[shoe.status].border,
                     },
                   ]}
                 >
-                  {STATUS_LABEL_LOCAL[shoe.status]}
-                </Text>
-              </View>
+                  <Text
+                    style={[
+                      s.shoeStatusText,
+                      { color: STATUS_PALETTE[shoe.status].text },
+                    ]}
+                  >
+                    {STATUS_LABEL_LOCAL[shoe.status]}
+                  </Text>
+                </View>
+              )}
               {shoe.size && (
                 <View style={s.sizePill}>
                   <Text style={s.sizePillText}>{shoe.size.replace(/^EU\s*/i, '')} EU</Text>
                 </View>
               )}
-              {shoe.rating_overall != null && (
-                <View style={s.overallRow}>
-                  <Text style={s.overallStar}>★</Text>
-                  <Text style={s.overallNum}>{shoe.rating_overall}</Text>
-                </View>
-              )}
-            </View>
-            <View style={s.shoeChipsRow}>
               {shoe.wanted_fit && (
                 <View style={s.tagChipActive}>
                   <Text style={s.tagChipActiveText}>{WANTED_FIT_SHORT[shoe.wanted_fit]}</Text>
@@ -1108,7 +1099,14 @@ function ShoeCard({ shoe }: { shoe: ClimbingShoe }) {
                   </Text>
                 </View>
               )}
+              {shoe.rating_overall != null && (
+                <View style={s.overallRow}>
+                  <Text style={s.overallStar}>★</Text>
+                  <Text style={s.overallNum}>{shoe.rating_overall}</Text>
+                </View>
+              )}
             </View>
+
           </View>
           <View style={s.shoeActionsCol}>
             <Pressable
@@ -1128,23 +1126,36 @@ function ShoeCard({ shoe }: { shoe: ClimbingShoe }) {
 
         {hasRatings && (
           <View style={s.miniBarGrid}>
-            {MINI_BAR_KEYS.map((k) => {
-              const v = shoe[k.field];
-              if (v == null) return null;
-              return (
-                <View key={k.field} style={s.miniBarCol}>
-                  <Text style={s.miniBarLabel}>{k.label}</Text>
-                  <View style={s.miniBarTrack}>
-                    <View style={[s.miniBarFill, { width: `${(v / 10) * 100}%` }]} />
-                  </View>
-                  <Text style={s.miniBarValue}>{v}</Text>
-                </View>
-              );
-            })}
+            <View style={s.miniBarRow}>
+              <MiniBar item={MINI_BAR_KEYS[0]} shoe={shoe} />
+              <MiniBar item={MINI_BAR_KEYS[1]} shoe={shoe} />
+            </View>
+            <View style={s.miniBarRow}>
+              <MiniBar item={MINI_BAR_KEYS[2]} shoe={shoe} />
+              <MiniBar item={MINI_BAR_KEYS[3]} shoe={shoe} />
+            </View>
+            <View style={s.miniBarRow}>
+              <MiniBar item={MINI_BAR_KEYS[4]} shoe={shoe} />
+              <MiniBar item={MINI_BAR_KEYS[5]} shoe={shoe} />
+            </View>
           </View>
         )}
       </View>
     </Pressable>
+  );
+}
+
+function MiniBar({ item, shoe }: { item: typeof MINI_BAR_KEYS[0]; shoe: ClimbingShoe }) {
+  const v = shoe[item.field];
+  if (v == null) return <View style={s.miniBarCol} />; // empty placeholder to keep layout
+  return (
+    <View style={s.miniBarCol}>
+      <Text style={s.miniBarLabel}>{item.label}</Text>
+      <View style={s.miniBarTrack}>
+        <View style={[s.miniBarFill, { width: `${(v / 5) * 100}%` }]} />
+      </View>
+      <Text style={s.miniBarValue}>{v}</Text>
+    </View>
   );
 }
 
@@ -1988,14 +1999,49 @@ const s = StyleSheet.create({
     fontSize: 12,
     fontWeight: '800',
   },
-  shoeList: { gap: 0 },
-
-  shoeCard: {
-    padding: 14,
+  shoeRackContainer: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    gap: 16,
+  },
+  emptyShelfSlot: {
     backgroundColor: '#ffffff',
-    borderRadius: 14,
     borderWidth: 1,
     borderColor: '#e2e8f0',
+    borderRadius: 24,
+    padding: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#0f172a',
+    shadowOpacity: 0.03,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 2,
+    gap: 4,
+  },
+  emptyShelfText: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#0f172a',
+    marginTop: 8,
+  },
+  emptyShelfSub: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#94a3b8',
+    textAlign: 'center',
+  },
+  shoeCard: {
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#f1f5f9',
+    borderRadius: 24,
+    padding: 16,
+    shadowColor: '#0f172a',
+    shadowOpacity: 0.04,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 3,
     gap: 12,
   },
   shoeCardTop: { flexDirection: 'row', gap: 12 },
@@ -2066,15 +2112,19 @@ const s = StyleSheet.create({
     backgroundColor: '#f1f5f9',
   },
   miniBarGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
+    flexDirection: 'column',
+    gap: 6,
   },
-  miniBarCol: {
-    width: '31%',
+  miniBarRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: 12,
+  },
+  miniBarCol: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
   miniBarLabel: {
     fontSize: 10,
@@ -2106,28 +2156,20 @@ const s = StyleSheet.create({
     color: '#0f172a',
     letterSpacing: -0.2,
   },
-  shoeMetaRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginTop: 4,
-  },
+  shoeMetaRow: { flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' },
   shoeMetaText: {
     fontSize: 11,
     fontWeight: '600',
     color: '#94a3b8',
   },
   shoeStatusBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 999,
     borderWidth: 1,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 8,
   },
-  shoeStatusText: {
-    fontSize: 10,
-    fontWeight: '800',
-  },
-  
+  shoeStatusText: { fontSize: 10, fontWeight: '800' },
+
   // Menu Modal Styles
   modalOverlay: {
     flex: 1,
@@ -2174,7 +2216,7 @@ const s = StyleSheet.create({
     backgroundColor: '#e2e8f0',
     marginVertical: 8,
   },
-  
+
   // Crew Section Styles
   crewList: {
     gap: 12,
@@ -2184,36 +2226,37 @@ const s = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#ffffff',
     borderWidth: 1,
-    borderColor: '#e2e8f0',
-    borderRadius: 20,
+    borderColor: '#f1f5f9',
+    borderRadius: 24,
     padding: 16,
     shadowColor: '#0f172a',
-    shadowOpacity: 0.02,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 1,
+    shadowOpacity: 0.04,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 3,
   },
   crewEmblem: {
-    width: 46,
-    height: 46,
-    borderRadius: 23,
-    borderWidth: 1.5,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
   },
   crewEmblemText: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '900',
   },
   crewContent: {
     flex: 1,
     minWidth: 0,
     gap: 6,
+    paddingLeft: 12,
   },
   crewTitle: {
-    fontSize: 15,
-    fontWeight: '800',
+    fontSize: 16,
+    fontWeight: '900',
     color: '#0f172a',
     letterSpacing: -0.3,
   },
@@ -2226,32 +2269,29 @@ const s = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: '#faf5ff',
     borderWidth: 1,
-    borderColor: '#e9d5ff',
     paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 8,
+    paddingVertical: 4,
+    borderRadius: 10,
   },
   crewMemberText: {
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: '800',
-    color: '#7c3aed',
   },
   crewGymBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: '#f1f5f9',
+    backgroundColor: '#f8fafc',
     borderWidth: 1,
     borderColor: '#e2e8f0',
     paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 8,
+    paddingVertical: 4,
+    borderRadius: 10,
   },
   crewGymText: {
-    fontSize: 10,
-    fontWeight: '800',
-    color: '#475569',
-  },
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#64748b',
+  }
 });
