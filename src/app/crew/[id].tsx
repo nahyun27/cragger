@@ -79,6 +79,7 @@ export default function CrewDetailScreen() {
   const deleteCrew = useDeleteCrew();
   const [transferOpen, setTransferOpen] = useState(false);
   const [composerOpen, setComposerOpen] = useState(false);
+  const [showInviteCode, setShowInviteCode] = useState(false);
 
   if (isLoading) {
     return (
@@ -193,6 +194,7 @@ export default function CrewDetailScreen() {
 
       <ScrollView style={{ flex: 1, backgroundColor: '#f8fafc' }} contentContainerStyle={s.scrollContent} showsVerticalScrollIndicator={false}>
         {/* Hero Area */}
+        {/* Hero Area */}
         <View style={s.heroContainer}>
           <View style={[s.emblemRing, { borderColor: colors.border }]}>
             <View style={[s.emblemInner, { backgroundColor: colors.bg }]}>
@@ -211,9 +213,9 @@ export default function CrewDetailScreen() {
           </Text>
 
           {data.home_gym && (
-            <View style={s.gymPill}>
-              <Feather name="map-pin" size={10} color="#1d4ed8" />
-              <Text style={s.gymPillText}>
+            <View style={[s.gymPill, { backgroundColor: colors.bg, borderColor: colors.border }]}>
+              <Feather name="map-pin" size={10} color={colors.text} />
+              <Text style={[s.gymPillText, { color: colors.text }]}>
                 {data.home_gym.name}
                 {data.home_gym.branch ? ` ${data.home_gym.branch}` : ''}
               </Text>
@@ -230,28 +232,50 @@ export default function CrewDetailScreen() {
         </View>
 
         {/* Invitation key pass (Members only) */}
+        {/* Invitation key pass (Members only) */}
         {isMember && (
-          <View style={s.inviteCard}>
-            {/* Ambient Background decoration */}
-            <View style={s.inviteBgDeco} />
-            <View style={s.inviteCardHeader}>
-              <Text style={s.inviteCardLabel}>MEMBERSHIP KEY</Text>
-              <Text style={s.inviteCardSublabel}>초대코드를 탭하여 공유해보세요</Text>
-            </View>
-            <View style={s.inviteDivider} />
-            <Pressable onPress={handleCopyCode}>
-              {({ pressed }) => (
-                <View style={[s.inviteCodeBox, pressed && s.btnPressed]}>
-                  <Text style={s.inviteCodeText}>
-                    {data.invite_code}
-                  </Text>
-                  <View style={s.copyBadge}>
-                    <Feather name="copy" size={12} color="#ffffff" />
-                    <Text style={s.copyBadgeText}>복사</Text>
-                  </View>
-                </View>
-              )}
+          <View style={s.inviteContainer}>
+            <Pressable
+              onPress={() => setShowInviteCode((prev) => !prev)}
+              style={({ pressed }) => [
+                s.inviteToggleBtn,
+                pressed && { opacity: 0.7 },
+              ]}
+            >
+              <Feather name="key" size={16} color="#06b6d4" />
+              <Text style={s.inviteToggleBtnText}>
+                {showInviteCode ? '초대코드 숨기기' : '초대코드 보기'}
+              </Text>
+              <Feather
+                name={showInviteCode ? 'chevron-up' : 'chevron-down'}
+                size={16}
+                color="#06b6d4"
+              />
             </Pressable>
+
+            {showInviteCode && (
+              <View style={[s.inviteCard, { borderColor: colors.border }]}>
+                <View style={[s.inviteBgDeco, { backgroundColor: colors.bg }]} />
+                <View style={s.inviteCardHeader}>
+                  <Text style={[s.inviteCardLabel, { color: colors.text }]}>MEMBERSHIP KEY</Text>
+                  <Text style={s.inviteCardSublabel}>초대코드를 탭하여 공유해보세요</Text>
+                </View>
+                <View style={s.inviteDivider} />
+                <Pressable onPress={handleCopyCode}>
+                  {({ pressed }) => (
+                    <View style={[s.inviteCodeBox, pressed && s.btnPressed]}>
+                      <Text style={[s.inviteCodeText, { color: colors.text }]}>
+                        {data.invite_code}
+                      </Text>
+                      <View style={[s.copyBadge, { backgroundColor: colors.text, shadowColor: colors.text }]}>
+                        <Feather name="copy" size={12} color="#ffffff" />
+                        <Text style={s.copyBadgeText}>복사</Text>
+                      </View>
+                    </View>
+                  )}
+                </Pressable>
+              </View>
+            )}
           </View>
         )}
 
@@ -1044,10 +1068,18 @@ function CrewStatsStrip({ crewId }: { crewId: string }) {
   );
 }
 
+const GRADE_AXIS = Array.from({ length: 11 }, (_, i) => ({ vGrade: `V${i}`, vNum: i }));
+
 function CrewGradeChart({ crewId }: { crewId: string }) {
   const { data, isLoading } = useCrewGradeDistribution(crewId);
-  if (isLoading || !data || data.buckets.length === 0) return null;
+  if (isLoading || !data) return null;
+
+  const countMap = new Map(data.buckets.map((b) => [b.vNum, b.count]));
   const maxCount = Math.max(...data.buckets.map((b) => b.count), 1);
+  const hasAny = data.buckets.length > 0;
+
+  if (!hasAny) return null;
+
   return (
     <View style={s.sectionGap}>
       <View style={s.sectionHeaderRow}>
@@ -1055,23 +1087,26 @@ function CrewGradeChart({ crewId }: { crewId: string }) {
       </View>
       <View style={s.gradeChartCard}>
         <View style={s.gradeChartRow}>
-          {data.buckets.map((b) => {
-            const pct = (b.count / maxCount) * 100;
-            const isMe = data.myVNum === b.vNum;
+          {GRADE_AXIS.map((g) => {
+            const count = countMap.get(g.vNum) ?? 0;
+            const pct = count > 0 ? (count / maxCount) * 100 : 0;
+            const isMe = data.myVNum === g.vNum;
             return (
-              <View key={b.vGrade} style={s.gradeBarCol}>
-                <Text style={s.gradeBarCount}>{b.count}</Text>
+              <View key={g.vGrade} style={s.gradeBarCol}>
+                <Text style={s.gradeBarCount}>{count > 0 ? count : ''}</Text>
                 <View style={s.gradeBarTrack}>
-                  <View
-                    style={[
-                      s.gradeBarFill,
-                      isMe && s.gradeBarFillMe,
-                      { height: `${Math.max(pct, 8)}%` },
-                    ]}
-                  />
+                  {count > 0 && (
+                    <View
+                      style={[
+                        s.gradeBarFill,
+                        isMe && s.gradeBarFillMe,
+                        { height: `${Math.max(pct, 10)}%` },
+                      ]}
+                    />
+                  )}
                 </View>
                 <Text style={[s.gradeBarLabel, isMe && s.gradeBarLabelMe]}>
-                  {b.vGrade}
+                  {g.vGrade}
                 </Text>
                 {isMe && (
                   <View style={s.gradeMyMarker}>
@@ -1412,28 +1447,34 @@ const s = StyleSheet.create({
   },
   heroContainer: {
     alignItems: 'center',
-    marginTop: 10,
+    marginTop: 16,
     marginBottom: 24,
+    backgroundColor: '#ffffff',
+    borderRadius: 28,
+    marginHorizontal: 16,
+    paddingVertical: 28,
+    borderWidth: 1,
+    borderColor: '#f1f5f9',
+    shadowColor: '#0f172a',
+    shadowOpacity: 0.04,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 3,
   },
   emblemRing: {
     width: 98,
     height: 98,
     borderRadius: 49,
-    borderWidth: 2.5,
+    borderWidth: 1.5,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#ffffff',
-    shadowColor: '#0f172a',
-    shadowOpacity: 0.06,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 3,
     padding: 3,
   },
   emblemInner: {
-    width: 84,
-    height: 84,
-    borderRadius: 42,
+    width: 86,
+    height: 86,
+    borderRadius: 43,
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
@@ -1448,9 +1489,9 @@ const s = StyleSheet.create({
   },
   heroName: {
     color: '#0f172a',
-    fontSize: 22,
+    fontSize: 24,
     fontWeight: '900',
-    marginTop: 16,
+    marginTop: 18,
     textAlign: 'center',
     letterSpacing: -0.5,
   },
@@ -1458,56 +1499,67 @@ const s = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
-    backgroundColor: '#eff6ff',
-    borderWidth: 1,
-    borderColor: '#dbeafe',
-    borderRadius: 9999,
+    borderRadius: 12,
     paddingHorizontal: 12,
-    paddingVertical: 5,
-    marginTop: 10,
+    paddingVertical: 6,
+    marginTop: 12,
+    borderWidth: 1,
   },
   gymPillText: {
-    color: '#1d4ed8',
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '800',
   },
   descriptionBox: {
-    backgroundColor: '#ffffff',
+    backgroundColor: '#f8fafc',
     borderWidth: 1,
-    borderColor: '#e2e8f0',
-    borderLeftWidth: 4,
-    borderLeftColor: '#06b6d4',
+    borderColor: '#f1f5f9',
     borderRadius: 16,
-    paddingHorizontal: 18,
-    paddingVertical: 12,
+    paddingHorizontal: 20,
+    paddingVertical: 14,
     marginTop: 16,
     maxWidth: '90%',
-    shadowColor: '#0f172a',
-    shadowOpacity: 0.02,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 1,
   },
   descriptionText: {
-    color: '#475569',
+    color: '#64748b',
     fontSize: 13,
-    lineHeight: 19,
+    lineHeight: 20,
     fontStyle: 'italic',
     fontWeight: '600',
     textAlign: 'center',
   },
+  inviteContainer: {
+    marginHorizontal: 16,
+    marginBottom: 26,
+  },
+  inviteToggleBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: '#ecfeff',
+    borderWidth: 1,
+    borderColor: '#cffafe',
+    borderRadius: 16,
+    paddingVertical: 14,
+    marginBottom: 10,
+  },
+  inviteToggleBtnText: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#0891b2',
+  },
   inviteCard: {
-    backgroundColor: '#0f172a',
+    backgroundColor: '#ffffff',
     borderRadius: 24,
     padding: 20,
-    marginBottom: 26,
     overflow: 'hidden',
     position: 'relative',
     shadowColor: '#0f172a',
-    shadowOpacity: 0.12,
-    shadowRadius: 12,
+    shadowOpacity: 0.05,
+    shadowRadius: 16,
     shadowOffset: { width: 0, height: 6 },
-    elevation: 4,
+    elevation: 3,
+    borderWidth: 1,
   },
   inviteBgDeco: {
     position: 'absolute',
@@ -1516,7 +1568,6 @@ const s = StyleSheet.create({
     width: 140,
     height: 140,
     borderRadius: 70,
-    backgroundColor: 'rgba(6, 182, 212, 0.07)',
   },
   inviteCardHeader: {
     flexDirection: 'row',
@@ -1524,13 +1575,12 @@ const s = StyleSheet.create({
     justifyContent: 'space-between',
   },
   inviteCardLabel: {
-    color: '#22d3ee',
     fontSize: 10,
     fontWeight: '900',
     letterSpacing: 2,
   },
   inviteCardSublabel: {
-    color: '#64748b',
+    color: '#94a3b8',
     fontSize: 10,
     fontWeight: '700',
   },
@@ -1538,22 +1588,19 @@ const s = StyleSheet.create({
     height: 1,
     borderStyle: 'dashed',
     borderWidth: 0.5,
-    borderColor: '#334155',
+    borderColor: '#e2e8f0',
     marginVertical: 12,
   },
   inviteCodeBox: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: 'rgba(9, 13, 22, 0.4)',
-    borderWidth: 1,
-    borderColor: '#1e293b',
+    backgroundColor: '#f8fafc',
     borderRadius: 16,
     paddingHorizontal: 16,
     paddingVertical: 12,
   },
   inviteCodeText: {
-    color: '#ffffff',
     fontSize: 22,
     fontWeight: '900',
     letterSpacing: 6,
@@ -1584,16 +1631,19 @@ const s = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 12,
-    paddingHorizontal: 4,
+    marginBottom: 16,
+    paddingHorizontal: 20,
   },
   sectionTitle: {
-    fontSize: 15,
+    fontSize: 18,
     fontWeight: '900',
     color: '#0f172a',
+    letterSpacing: -0.5,
   },
   sectionTitleCount: {
     color: '#06b6d4',
+    fontSize: 14,
+    marginLeft: 4,
   },
   actionBtn: {
     flexDirection: 'row',
@@ -1626,21 +1676,22 @@ const s = StyleSheet.create({
   memberListCard: {
     backgroundColor: '#ffffff',
     borderWidth: 1,
-    borderColor: '#f1f5f9',
+    borderColor: '#e2e8f0',
     borderRadius: 24,
     overflow: 'hidden',
     shadowColor: '#0f172a',
-    shadowOpacity: 0.03,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 1,
+    shadowOpacity: 0.04,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 2,
+    marginHorizontal: 16,
   },
   memberRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
+    paddingHorizontal: 18,
+    paddingVertical: 16,
     backgroundColor: '#ffffff',
   },
   memberRowBorder: {
@@ -1648,32 +1699,37 @@ const s = StyleSheet.create({
     borderBottomColor: '#f1f5f9',
   },
   memberAvatar: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
   },
   memberAvatarText: {
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: '900',
   },
   memberNameText: {
     flex: 1,
-    fontSize: 14,
-    fontWeight: '700',
+    fontSize: 15,
+    fontWeight: '800',
     color: '#0f172a',
   },
   memberMeTag: {
     fontSize: 11,
-    fontWeight: '600',
-    color: '#94a3b8',
+    fontWeight: '700',
+    color: '#64748b',
+    backgroundColor: '#f1f5f9',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+    marginLeft: 4,
   },
   memberOwnerBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
     backgroundColor: '#fffbeb',
     borderWidth: 1,
     borderColor: '#fde68a',
@@ -1681,7 +1737,7 @@ const s = StyleSheet.create({
   memberOwnerText: {
     fontSize: 10,
     fontWeight: '800',
-    color: '#b45309',
+    color: '#d97706',
   },
   kickBtn: {
     width: 28,
@@ -1956,33 +2012,35 @@ const s = StyleSheet.create({
     color: '#ef4444',
   },
   leaveBtn: {
+    backgroundColor: '#fef2f2',
     borderWidth: 1,
     borderColor: '#fee2e2',
-    backgroundColor: '#fff5f5',
-    borderRadius: 16,
-    paddingVertical: 14,
+    borderRadius: 20,
+    paddingVertical: 16,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 12,
+    marginTop: 16,
+    marginHorizontal: 16,
   },
   leaveBtnText: {
     color: '#ef4444',
-    fontSize: 13,
+    fontSize: 15,
     fontWeight: '800',
   },
   transferBtn: {
+    backgroundColor: '#faf5ff',
     borderWidth: 1,
-    borderColor: '#fde68a',
-    backgroundColor: '#fffbeb',
-    borderRadius: 16,
-    paddingVertical: 14,
+    borderColor: '#e9d5ff',
+    borderRadius: 20,
+    paddingVertical: 16,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 12,
+    marginTop: 16,
+    marginHorizontal: 16,
   },
   transferBtnText: {
-    color: '#d97706',
-    fontSize: 13,
+    color: '#7c3aed',
+    fontSize: 15,
     fontWeight: '800',
   },
   modalHeader: {
