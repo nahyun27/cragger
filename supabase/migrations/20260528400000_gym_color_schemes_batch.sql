@@ -29,7 +29,7 @@ begin
       (gid, 'red',     '#E24B4A',  4, 'V1'),
       (gid, 'purple',  '#8E44AD',  5, 'V2'),
       (gid, 'brown',   '#7B4B2A',  6, 'V3-V4'),
-      (gid, 'grey',    '#94A3B8',  7, 'V5-V6'),
+      (gid, 'gray',    '#94A3B8',  7, 'V5-V6'),
       (gid, 'black',   '#0F172A',  8, 'V7'),
       (gid, 'white',   '#F8FAFC',  9, 'V8');
   end loop;
@@ -73,7 +73,7 @@ begin
     (gid, 'green',  '#27AE60',  4, 'V0+'),
     (gid, 'blue',   '#3498DB',  5, 'V1'),
     (gid, 'red',    '#E24B4A',  6, 'V2'),
-    (gid, 'grey',   '#94A3B8',  7, 'V3-V4'),
+    (gid, 'gray',   '#94A3B8',  7, 'V3-V4'),
     (gid, 'brown',  '#7B4B2A',  8, 'V5'),
     (gid, 'pink',   '#EC407A',  9, 'V6'),
     (gid, 'black',  '#0F172A', 10, 'V7');
@@ -95,7 +95,7 @@ begin
     (gid, 'green',  '#27AE60',  4, 'V0+'),
     (gid, 'blue',   '#3498DB',  5, 'V1'),
     (gid, 'red',    '#E24B4A',  6, 'V2'),
-    (gid, 'grey',   '#94A3B8',  7, 'V3-V4'),
+    (gid, 'gray',   '#94A3B8',  7, 'V3-V4'),
     (gid, 'brown',  '#7B4B2A',  8, 'V5'),
     (gid, 'pink',   '#EC407A',  9, 'V6');
 end $$;
@@ -138,7 +138,7 @@ begin
     (gid, 'green',  '#27AE60',  4, 'V1'),
     (gid, 'blue',   '#3498DB',  5, 'V2'),
     (gid, 'red',    '#E24B4A',  6, 'V3'),
-    (gid, 'grey',   '#94A3B8',  7, 'V4'),
+    (gid, 'gray',   '#94A3B8',  7, 'V4'),
     (gid, 'brown',  '#7B4B2A',  8, 'V5'),
     (gid, 'pink',   '#EC407A',  9, 'V6-V7');
 end $$;
@@ -160,7 +160,7 @@ begin
       (gid, 'red',    '#E24B4A',  6, 'V3-V4'),
       (gid, 'pink',   '#EC407A',  7, 'V5'),
       (gid, 'purple', '#8E44AD',  8, 'V6'),
-      (gid, 'grey',   '#94A3B8',  9, 'V7'),
+      (gid, 'gray',   '#94A3B8',  9, 'V7'),
       (gid, 'brown',  '#7B4B2A', 10, 'V8'),
       (gid, 'black',  '#0F172A', 11, 'V9-V10');
   end loop;
@@ -183,7 +183,7 @@ begin
     (gid, 'blue',   '#3498DB',  5, 'V1-V2'),
     (gid, 'navy',   '#1E3A8A',  6, 'V3'),
     (gid, 'purple', '#8E44AD',  7, 'V4'),
-    (gid, 'grey',   '#94A3B8',  8, 'V5'),
+    (gid, 'gray',   '#94A3B8',  8, 'V5'),
     (gid, 'black',  '#0F172A',  9, 'V6-V7'),
     (gid, 'white',  '#F8FAFC', 10, 'V8');
 end $$;

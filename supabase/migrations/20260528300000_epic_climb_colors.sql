@@ -32,7 +32,7 @@ begin
     (gym_uuid, 'brown',  '#7B4B2A', 7, 'brown'),
     (gym_uuid, 'black',  '#0F172A', 8, 'black'),
     (gym_uuid, 'white',  '#F8FAFC', 9, 'white'),
-    (gym_uuid, 'grey',   '#94A3B8', 10, 'grey');
+    (gym_uuid, 'gray',   '#94A3B8', 10, 'gray');
 
   raise notice '에픽클라임 색깔 시드 완료 (10색)';
 end $$;
