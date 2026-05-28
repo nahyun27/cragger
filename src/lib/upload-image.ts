@@ -49,6 +49,16 @@ export async function uploadAvatarImage(
   return publicUrl;
 }
 
+export async function uploadCrewLogo(
+  asset: ImagePicker.ImagePickerAsset,
+  userId: string,
+): Promise<string> {
+  // 크루 로고도 avatars 버킷 사용 (별도 버킷 안 만들고 재활용).
+  // 업로더 user_id 폴더 아래 저장 → RLS 정책 그대로 사용.
+  const { publicUrl } = await uploadImage(asset, 'avatars', userId);
+  return publicUrl;
+}
+
 // Best-effort delete of an avatar by its public URL.
 // Errors are swallowed — orphaned files are harmless and we never block the UX.
 export async function deleteAvatarByUrl(publicUrl: string | null): Promise<void> {

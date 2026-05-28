@@ -81,6 +81,9 @@ export default function CrewDetailScreen() {
   const [composerOpen, setComposerOpen] = useState(false);
   const [showInviteCode, setShowInviteCode] = useState(false);
 
+  type TabState = 'home' | 'news' | 'activity' | 'members';
+  const [activeTab, setActiveTab] = useState<TabState>('home');
+
   if (isLoading) {
     return (
       <SafeAreaView style={s.safeCenter} edges={['top']}>
@@ -158,6 +161,11 @@ export default function CrewDetailScreen() {
       options.push({ text: '공지 작성', onPress: () => setComposerOpen(true) });
     }
     if (isOwner) {
+      options.push({
+        text: '크루 정보 수정',
+        onPress: () =>
+          router.push({ pathname: '/crew/[id]/edit', params: { id: data.id } } as never),
+      });
       options.push({ text: '크루 삭제', style: 'destructive', onPress: handleDelete });
     }
     options.push({ text: '취소', style: 'cancel' });
@@ -195,167 +203,211 @@ export default function CrewDetailScreen() {
       <ScrollView style={{ flex: 1, backgroundColor: '#f8fafc' }} contentContainerStyle={s.scrollContent} showsVerticalScrollIndicator={false}>
         {/* Hero Area */}
         {/* Hero Area */}
-        <View style={s.heroContainer}>
-          <View style={[s.emblemRing, { borderColor: colors.border }]}>
-            <View style={[s.emblemInner, { backgroundColor: colors.bg }]}>
+        {/* Horizontal Header (Reference Style) */}
+        <View style={s.profileHeaderRow}>
+          <View style={[s.profileAvatarRing, { borderColor: colors.border }]}>
+            <View style={[s.profileAvatarInner, { backgroundColor: colors.bg }]}>
               {data.image_url ? (
-                <Image source={{ uri: data.image_url }} style={s.emblemImage} resizeMode="cover" />
+                <Image source={{ uri: data.image_url }} style={s.profileAvatarImage} resizeMode="cover" />
               ) : (
-                <Text style={[s.emblemText, { color: colors.text }]}>
+                <Text style={[s.profileAvatarText, { color: colors.text }]}>
                   {firstChar}
                 </Text>
               )}
             </View>
           </View>
           
-          <Text style={s.heroName} numberOfLines={2}>
-            {data.name}
-          </Text>
-
-          {data.home_gym && (
-            <View style={[s.gymPill, { backgroundColor: colors.bg, borderColor: colors.border }]}>
-              <Feather name="map-pin" size={10} color={colors.text} />
-              <Text style={[s.gymPillText, { color: colors.text }]}>
-                {data.home_gym.name}
-                {data.home_gym.branch ? ` ${data.home_gym.branch}` : ''}
+          <View style={s.profileHeaderInfo}>
+            <View style={s.profileTitleRow}>
+              <Text style={s.profileName} numberOfLines={1}>
+                {data.name}
               </Text>
-            </View>
-          )}
-          
-          {data.description && (
-            <View style={s.descriptionBox}>
-              <Text style={s.descriptionText}>
-                "{data.description}"
-              </Text>
-            </View>
-          )}
-        </View>
-
-        {/* Invitation key pass (Members only) */}
-        {/* Invitation key pass (Members only) */}
-        {isMember && (
-          <View style={s.inviteContainer}>
-            <Pressable
-              onPress={() => setShowInviteCode((prev) => !prev)}
-              style={({ pressed }) => [
-                s.inviteToggleBtn,
-                pressed && { opacity: 0.7 },
-              ]}
-            >
-              <Feather name="key" size={16} color="#06b6d4" />
-              <Text style={s.inviteToggleBtnText}>
-                {showInviteCode ? '초대코드 숨기기' : '초대코드 보기'}
-              </Text>
-              <Feather
-                name={showInviteCode ? 'chevron-up' : 'chevron-down'}
-                size={16}
-                color="#06b6d4"
-              />
-            </Pressable>
-
-            {showInviteCode && (
-              <View style={[s.inviteCard, { borderColor: colors.border }]}>
-                <View style={[s.inviteBgDeco, { backgroundColor: colors.bg }]} />
-                <View style={s.inviteCardHeader}>
-                  <Text style={[s.inviteCardLabel, { color: colors.text }]}>MEMBERSHIP KEY</Text>
-                  <Text style={s.inviteCardSublabel}>초대코드를 탭하여 공유해보세요</Text>
-                </View>
-                <View style={s.inviteDivider} />
-                <Pressable onPress={handleCopyCode}>
+              {isMember && (
+                <Pressable onPress={() => setShowInviteCode(true)} hitSlop={8}>
                   {({ pressed }) => (
-                    <View style={[s.inviteCodeBox, pressed && s.btnPressed]}>
-                      <Text style={[s.inviteCodeText, { color: colors.text }]}>
-                        {data.invite_code}
-                      </Text>
-                      <View style={[s.copyBadge, { backgroundColor: colors.text, shadowColor: colors.text }]}>
-                        <Feather name="copy" size={12} color="#ffffff" />
-                        <Text style={s.copyBadgeText}>복사</Text>
-                      </View>
+                    <View style={[s.headerKeyBtn, pressed && { opacity: 0.6 }]}>
+                      <Feather name="key" size={16} color="#06b6d4" />
                     </View>
                   )}
                 </Pressable>
+              )}
+            </View>
+            <View style={s.profileSubRow}>
+              <Text style={s.profileMemberCount}>회원 {data.member_count}명</Text>
+              <View style={s.recruitingBadge}>
+                <Text style={s.recruitingBadgeText}>
+                  {isOwner ? '운영자' : '회원 모집중'}
+                </Text>
               </View>
-            )}
-          </View>
-        )}
-
-        {/* Crew stats strip */}
-        {isMember && <CrewStatsStrip crewId={data.id} />}
-
-        {/* Grade distribution chart */}
-        {isMember && <CrewGradeChart crewId={data.id} />}
-
-        {/* Announcements */}
-        {isMember && (
-          <AnnouncementsSection
-            crewId={data.id}
-            meId={meId}
-            onCompose={() => setComposerOpen(true)}
-          />
-        )}
-
-        {/* Members List */}
-        <View style={s.sectionGap}>
-          <View style={s.sectionHeaderRow}>
-            <Text style={s.sectionTitle}>
-              멤버 <Text style={s.sectionTitleCount}>{data.member_count}</Text>
-            </Text>
-          </View>
-          <View style={s.memberListCard}>
-            {data.members.map((m, i) => (
-              <MemberRow
-                key={m.user_id}
-                member={m}
-                isOwnerView={isOwner}
-                isMe={m.user_id === meId}
-                crewId={data.id}
-                isLast={i === data.members.length - 1}
-              />
-            ))}
+            </View>
           </View>
         </View>
 
-        {/* Crew Battles */}
-        {isMember && <CrewBattlesSection crewId={data.id} />}
-
-        {/* Crew Gatherings */}
-        {isMember && <CrewMeetupsSection crewId={data.id} />}
-
-        {/* Crew Feed */}
-        {isMember && <CrewFeedSection crewId={data.id} />}
-
-        {/* Leave/Transfer buttons */}
-        {isMember && !isOwner && (
-          <Pressable onPress={handleLeave}>
-            {({ pressed }) => (
-              <View style={[s.leaveBtn, pressed && s.btnPressed]}>
-                <Text style={s.leaveBtnText}>크루 나가기</Text>
-              </View>
+        {data.description && (
+          <View style={s.profileDescriptionBox}>
+            <Text style={s.profileDescriptionText}>
+              {data.description}
+            </Text>
+            {data.home_gym && (
+              <Text style={s.profileGymText}>
+                📍 {data.home_gym.name} {data.home_gym.branch || ''}
+              </Text>
             )}
-          </Pressable>
+          </View>
         )}
-        {isOwner && (
-          <Pressable
-            onPress={() => {
-              if (data.members.length <= 1) {
-                Alert.alert(
-                  '혼자 있는 크루',
-                  '본인뿐이라 위임할 멤버가 없어요. 크루를 삭제해주세요.',
-                );
-                return;
-              }
-              setTransferOpen(true);
-            }}
-          >
-            {({ pressed }) => (
-              <View style={[s.transferBtn, pressed && s.btnPressed]}>
-                <Text style={s.transferBtnText}>
-                  크루장 위임 후 나가기
-                </Text>
+
+        {/* Tab Bar */}
+        <View style={s.tabBarContainer}>
+          {(['home', 'news', 'activity', 'members'] as TabState[]).map((tab) => {
+             const labels: Record<TabState, string> = { home: '홈', news: '소식', activity: '활동', members: '멤버' };
+             const isActive = activeTab === tab;
+             return (
+               <Pressable key={tab} style={s.tabItem} onPress={() => setActiveTab(tab)}>
+                 <Text style={[s.tabText, isActive && s.tabTextActive]}>{labels[tab]}</Text>
+                 {isActive && <View style={s.tabIndicator} />}
+               </Pressable>
+             );
+          })}
+        </View>
+
+        {/* Tab Content Area */}
+        <View style={s.tabContentArea}>
+          
+          {/* ---- HOME TAB ---- */}
+          {activeTab === 'home' && (
+            <View style={s.tabPane}>
+              {/* Crew stats strip */}
+              {isMember && <CrewStatsStrip crewId={data.id} />}
+
+              {/* Grade distribution chart */}
+              {isMember && <CrewGradeChart crewId={data.id} />}
+            </View>
+          )}
+
+          {/* Invite code modal — header key icon triggers this */}
+          {isMember && (
+            <Modal visible={showInviteCode} transparent animationType="fade">
+              <View style={s.inviteModalOverlay}>
+                <View style={s.inviteModalContentWrapper}>
+                  <View style={s.inviteModalHeaderCloseRow}>
+                    <Text style={s.inviteModalTitle}>멤버십 초대코드</Text>
+                    <Pressable onPress={() => setShowInviteCode(false)} hitSlop={10}>
+                      <Feather name="x" size={24} color="#64748b" />
+                    </Pressable>
+                  </View>
+                  <View style={[s.inviteCard, { borderColor: colors.border, marginHorizontal: 0, marginBottom: 0 }]}>
+                    <View style={[s.inviteBgDeco, { backgroundColor: colors.bg }]} />
+                    <View style={s.inviteCardHeader}>
+                      <Text style={[s.inviteCardLabel, { color: colors.text }]}>MEMBERSHIP KEY</Text>
+                      <Text style={s.inviteCardSublabel}>초대코드를 탭하여 공유해보세요</Text>
+                    </View>
+                    <View style={s.inviteDivider} />
+                    <Pressable onPress={handleCopyCode}>
+                      {({ pressed }) => (
+                        <View style={[s.inviteCodeBox, pressed && s.btnPressed]}>
+                          <Text style={[s.inviteCodeText, { color: colors.text }]}>
+                            {data.invite_code}
+                          </Text>
+                          <View style={[s.copyBadge, { backgroundColor: colors.text, shadowColor: colors.text }]}>
+                            <Feather name="copy" size={12} color="#ffffff" />
+                            <Text style={s.copyBadgeText}>복사</Text>
+                          </View>
+                        </View>
+                      )}
+                    </Pressable>
+                  </View>
+                </View>
               </View>
-            )}
-          </Pressable>
-        )}
+            </Modal>
+          )}
+
+          {/* ---- NEWS TAB ---- */}
+          {activeTab === 'news' && (
+            <View style={s.tabPane}>
+              {isMember && (
+                <AnnouncementsSection
+                  crewId={data.id}
+                  meId={meId}
+                  onCompose={() => setComposerOpen(true)}
+                />
+              )}
+
+              {/* Crew Feed */}
+              {isMember && <CrewFeedSection crewId={data.id} />}
+            </View>
+          )}
+
+          {/* ---- ACTIVITY TAB ---- */}
+          {activeTab === 'activity' && (
+            <View style={s.tabPane}>
+              {/* Crew Battles */}
+              {isMember && <CrewBattlesSection crewId={data.id} />}
+
+              {/* Crew Gatherings */}
+              {isMember && <CrewMeetupsSection crewId={data.id} />}
+            </View>
+          )}
+
+          {/* ---- MEMBERS TAB ---- */}
+          {activeTab === 'members' && (
+            <View style={s.tabPane}>
+              {/* Members List */}
+              <View style={s.sectionGap}>
+                <View style={s.sectionHeaderRow}>
+                  <Text style={s.sectionTitle}>
+                    멤버 <Text style={s.sectionTitleCount}>{data.member_count}</Text>
+                  </Text>
+                </View>
+                <View style={s.memberListCard}>
+                  {data.members.map((m, i) => (
+                    <MemberRow
+                      key={m.user_id}
+                      member={m}
+                      isOwnerView={isOwner}
+                      isMe={m.user_id === meId}
+                      crewId={data.id}
+                      isLast={i === data.members.length - 1}
+                    />
+                  ))}
+                </View>
+              </View>
+
+              {/* Leave/Transfer buttons */}
+              {isMember && !isOwner && (
+                <Pressable onPress={handleLeave}>
+                  {({ pressed }) => (
+                    <View style={[s.leaveBtn, pressed && s.btnPressed]}>
+                      <Text style={s.leaveBtnText}>크루 나가기</Text>
+                    </View>
+                  )}
+                </Pressable>
+              )}
+              {isOwner && (
+                <Pressable
+                  onPress={() => {
+                    if (data.members.length <= 1) {
+                      Alert.alert(
+                        '혼자 있는 크루',
+                        '본인뿐이라 위임할 멤버가 없어요. 크루를 삭제해주세요.',
+                      );
+                      return;
+                    }
+                    setTransferOpen(true);
+                  }}
+                >
+                  {({ pressed }) => (
+                    <View style={[s.transferBtn, pressed && s.btnPressed]}>
+                      <Text style={s.transferBtnText}>
+                        크루장 위임 후 나가기
+                      </Text>
+                    </View>
+                  )}
+                </Pressable>
+              )}
+            </View>
+          )}
+
+        </View>
       </ScrollView>
 
       <TransferOwnerModal
@@ -1445,87 +1497,147 @@ const s = StyleSheet.create({
     fontSize: 13,
     fontWeight: '700',
   },
-  heroContainer: {
+  profileHeaderRow: {
+    flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 16,
-    marginBottom: 24,
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 16,
     backgroundColor: '#ffffff',
-    borderRadius: 28,
-    marginHorizontal: 16,
-    paddingVertical: 28,
-    borderWidth: 1,
-    borderColor: '#f1f5f9',
-    shadowColor: '#0f172a',
-    shadowOpacity: 0.04,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 3,
   },
-  emblemRing: {
-    width: 98,
-    height: 98,
-    borderRadius: 49,
+  profileAvatarRing: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
     borderWidth: 1.5,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#ffffff',
-    padding: 3,
+    padding: 2,
   },
-  emblemInner: {
-    width: 86,
-    height: 86,
-    borderRadius: 43,
+  profileAvatarInner: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
+  },
+  profileAvatarImage: {
+    width: '100%',
+    height: '100%',
+  },
+  profileAvatarText: {
+    fontSize: 24,
+    fontWeight: '900',
   },
   emblemImage: {
     width: '100%',
     height: '100%',
   },
-  emblemText: {
-    fontSize: 34,
-    fontWeight: '900',
+  profileHeaderInfo: {
+    flex: 1,
+    marginLeft: 16,
   },
-  heroName: {
-    color: '#0f172a',
-    fontSize: 24,
-    fontWeight: '900',
-    marginTop: 18,
-    textAlign: 'center',
-    letterSpacing: -0.5,
-  },
-  gymPill: {
+  profileTitleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    marginTop: 12,
-    borderWidth: 1,
+    justifyContent: 'space-between',
   },
-  gymPillText: {
-    fontSize: 12,
+  profileName: {
+    color: '#0f172a',
+    fontSize: 20,
+    fontWeight: '900',
+    flex: 1,
+    letterSpacing: -0.5,
+  },
+  headerKeyBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#ecfeff',
+    borderWidth: 1,
+    borderColor: '#a5f3fc',
+  },
+  profileSubRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 6,
+    gap: 8,
+  },
+  profileMemberCount: {
+    fontSize: 13,
+    color: '#64748b',
+    fontWeight: '700',
+  },
+  recruitingBadge: {
+    backgroundColor: '#f87171',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+  },
+  recruitingBadgeText: {
+    color: '#ffffff',
+    fontSize: 10,
     fontWeight: '800',
   },
-  descriptionBox: {
-    backgroundColor: '#f8fafc',
-    borderWidth: 1,
-    borderColor: '#f1f5f9',
-    borderRadius: 16,
+  profileDescriptionBox: {
+    backgroundColor: '#ffffff',
     paddingHorizontal: 20,
-    paddingVertical: 14,
-    marginTop: 16,
-    maxWidth: '90%',
+    paddingBottom: 16,
   },
-  descriptionText: {
-    color: '#64748b',
+  profileDescriptionText: {
+    color: '#0f172a',
     fontSize: 13,
     lineHeight: 20,
-    fontStyle: 'italic',
     fontWeight: '600',
-    textAlign: 'center',
+  },
+  profileGymText: {
+    color: '#64748b',
+    fontSize: 12,
+    marginTop: 6,
+    fontWeight: '700',
+  },
+
+  /* Tab Bar Styles */
+  tabBarContainer: {
+    flexDirection: 'row',
+    backgroundColor: '#ffffff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#f1f5f9',
+    paddingHorizontal: 8,
+  },
+  tabItem: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: 14,
+    position: 'relative',
+  },
+  tabText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#94a3b8',
+  },
+  tabTextActive: {
+    color: '#0f172a',
+    fontWeight: '800',
+  },
+  tabIndicator: {
+    position: 'absolute',
+    bottom: 0,
+    width: 24,
+    height: 3,
+    backgroundColor: '#06b6d4',
+    borderRadius: 2,
+  },
+  tabContentArea: {
+    flex: 1,
+    paddingTop: 16,
+  },
+  tabPane: {
+    flex: 1,
   },
   inviteContainer: {
     marginHorizontal: 16,
@@ -2265,6 +2377,35 @@ const s = StyleSheet.create({
     alignItems: 'center',
     gap: 6,
     marginBottom: 6,
+  },
+  inviteModalHeaderCloseRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
+  inviteModalTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#0f172a',
+  },
+  inviteModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(15, 23, 42, 0.4)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  inviteModalContentWrapper: {
+    backgroundColor: '#ffffff',
+    borderRadius: 28,
+    padding: 24,
+    width: '100%',
+    shadowColor: '#0f172a',
+    shadowOpacity: 0.1,
+    shadowRadius: 20,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 5,
   },
   pinBadge: {
     width: 20,

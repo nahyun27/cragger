@@ -245,6 +245,7 @@ export type UpdateCrewArgs = {
   name?: string;
   description?: string | null;
   homeGymId?: string | null;
+  imageUrl?: string | null;
 };
 
 export function useUpdateCrew() {
@@ -255,6 +256,7 @@ export function useUpdateCrew() {
       if (args.name !== undefined) patch.name = args.name.trim();
       if (args.description !== undefined) patch.description = args.description?.trim() || null;
       if (args.homeGymId !== undefined) patch.home_gym_id = args.homeGymId;
+      if (args.imageUrl !== undefined) patch.image_url = args.imageUrl;
       const { error } = await supabase.from('crews').update(patch).eq('id', args.crewId);
       if (error) throw new Error(error.message);
     },
