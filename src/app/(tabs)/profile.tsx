@@ -206,6 +206,8 @@ export default function ProfileScreen() {
           )}
         </View>
 
+        <BadgesSection />
+
         <CrewsSection />
 
         <MembershipsSection />
@@ -471,6 +473,86 @@ function BodyMetricPill({
         {unit ? <Text style={s.bodyPillUnit}>{unit}</Text> : null}
       </View>
       {sub ? <Text style={s.bodyPillSub}>{sub}</Text> : null}
+    </View>
+  );
+}
+
+const MOCK_BADGES = [
+  { id: '1', title: '완등 1000문제', type: 'icon', iconName: 'award', color: '#3b82f6', bg: '#eff6ff', unlocked: true, hint: '1000문제 완등 시 획득', unlockedDate: '2026.05.20' },
+  { id: '2', title: '원정 50회', type: 'icon', iconName: 'map-pin', color: '#10b981', bg: '#ecfdf5', unlocked: true, hint: '다른 암장 50회 방문 시 획득', unlockedDate: '2026.05.15' },
+  { id: '3', title: '게시판 첫 글', type: 'icon', iconName: 'edit-2', color: '#f59e0b', bg: '#fffbeb', unlocked: true, hint: '게시판에 첫 글 작성 시 획득', unlockedDate: '2026.05.01' },
+  { id: '4', title: 'V6 클라이머', type: 'text', text: 'V6', color: '#a855f7', bg: '#faf5ff', unlocked: true, hint: 'V6 난이도 완등 시 획득', unlockedDate: '2026.05.18' },
+  { id: '5', title: '완등 500문제', type: 'icon', iconName: 'star', color: '#f59e0b', bg: '#fffbeb', unlocked: true, hint: '500문제 완등 시 획득', unlockedDate: '2026.03.10' },
+  { id: '6', title: 'V5 클라이머', type: 'text', text: 'V5', color: '#4f46e5', bg: '#e0e7ff', unlocked: true, hint: 'V5 난이도 완등 시 획득', unlockedDate: '2026.02.05' },
+  { id: '7', title: 'V4 클라이머', type: 'text', text: 'V4', color: '#3b82f6', bg: '#eff6ff', unlocked: true, hint: 'V4 난이도 완등 시 획득', unlockedDate: '2026.01.12' },
+  { id: '8', title: 'V3 클라이머', type: 'text', text: 'V3', color: '#22c55e', bg: '#f0fdf4', unlocked: true, hint: 'V3 난이도 완등 시 획득', unlockedDate: '2025.11.20' },
+  { id: '9', title: 'V2 클라이머', type: 'text', text: 'V2', color: '#eab308', bg: '#fefce8', unlocked: true, hint: 'V2 난이도 완등 시 획득', unlockedDate: '2025.10.10' },
+  { id: '10', title: 'V1 클라이머', type: 'text', text: 'V1', color: '#f97316', bg: '#fff7ed', unlocked: true, hint: 'V1 난이도 완등 시 획득', unlockedDate: '2025.09.05' },
+  { id: '11', title: 'V0 클라이머', type: 'text', text: 'V0', color: '#ef4444', bg: '#fef2f2', unlocked: true, hint: 'V0 난이도 완등 시 획득', unlockedDate: '2025.08.01' },
+  { id: '12', title: 'V7 클라이머', type: 'text', text: 'V7', color: '#92400e', bg: '#fef3c7', unlocked: false, hint: 'V7 난이도 완등 시 획득' },
+  { id: '13', title: 'V8 클라이머', type: 'text', text: 'V8', color: '#64748b', bg: '#f8fafc', unlocked: false, hint: 'V8 난이도 완등 시 획득' },
+  { id: '14', title: 'V9 클라이머', type: 'text', text: 'V9', color: '#0f172a', bg: '#f1f5f9', unlocked: false, hint: 'V9 난이도 완등 시 획득' },
+];
+
+function BadgesSection() {
+  const unlockedCount = MOCK_BADGES.filter(b => b.unlocked).length;
+  const totalCount = MOCK_BADGES.length;
+
+  const handleBadgePress = (badge: typeof MOCK_BADGES[0]) => {
+    if (badge.unlocked) {
+      Alert.alert(badge.title, `달성일: ${badge.unlockedDate}\n\n${badge.hint}`);
+    } else {
+      Alert.alert('미획득 배지', `${badge.hint}\n\n(아직 획득하지 못했습니다)`);
+    }
+  };
+
+  return (
+    <View style={s.sectionContainer}>
+      <View style={s.sectionHeaderRow}>
+        <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 6 }}>
+          <Text style={s.sectionTitle}>배지 진열장</Text>
+          <Text style={s.sectionTitleCount}>
+            {unlockedCount} / {totalCount}
+          </Text>
+        </View>
+      </View>
+      <View style={s.badgesContainer}>
+        {MOCK_BADGES.map((badge) => {
+          const isLocked = !badge.unlocked;
+          const iconColor = isLocked ? '#94a3b8' : badge.color;
+          const bgColor = isLocked ? '#f1f5f9' : badge.bg;
+          const borderColor = isLocked ? '#e2e8f0' : badge.color;
+
+          return (
+            <Pressable key={badge.id} style={s.badgeItem} onPress={() => handleBadgePress(badge)}>
+              {({ pressed }) => (
+                <View style={[s.badgeItemInner, pressed && { opacity: 0.6 }]}>
+                  <View style={[
+                    s.badgeIconWrap,
+                    { backgroundColor: bgColor, borderColor: borderColor },
+                    isLocked && { opacity: 0.7 }
+                  ]}>
+                    {badge.type === 'text' ? (
+                      <Text style={[s.badgeTextIcon, { color: iconColor }]}>{badge.text}</Text>
+                    ) : badge.type === 'icon' ? (
+                      <Feather name={badge.iconName as any} size={20} color={iconColor} />
+                    ) : null}
+                    
+                    {isLocked && (
+                      <View style={s.badgeLockBadge}>
+                        <Feather name="lock" size={8} color="#ffffff" />
+                      </View>
+                    )}
+                  </View>
+                  <Text style={[s.badgeTitle, isLocked && { color: '#94a3b8' }]} numberOfLines={2}>
+                    {badge.title}
+                  </Text>
+                </View>
+              )}
+            </Pressable>
+          );
+        })}
+      </View>
     </View>
   );
 }
@@ -1645,6 +1727,73 @@ const s = StyleSheet.create({
   },
   gymListContainer: {
     gap: 10,
+  },
+
+  // Badges Section
+  badgesContainer: {
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    borderRadius: 16,
+    padding: 16,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 14,
+    shadowColor: '#0f172a',
+    shadowOpacity: 0.02,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 1,
+  },
+  badgeItem: {
+    width: '21%',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 6,
+  },
+  badgeItemInner: {
+    alignItems: 'center',
+    gap: 6,
+  },
+  badgeTextIcon: {
+    fontSize: 18,
+    fontWeight: '900',
+  },
+  badgeLockBadge: {
+    position: 'absolute',
+    bottom: -2,
+    right: -2,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: '#64748b',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1.5,
+    borderColor: '#ffffff',
+  },
+  badgeIconWrap: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    borderWidth: 1.5,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 3,
+  },
+  badgeEmoji: {
+    fontSize: 22,
+  },
+  badgeTitle: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#475569',
+    textAlign: 'center',
+    lineHeight: 12,
   },
 
   // Membership Section

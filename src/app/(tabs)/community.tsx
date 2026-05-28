@@ -21,6 +21,7 @@ import {
   type PostRow,
   type PostType,
 } from '@/hooks/use-community';
+import { useThemeColors, type ThemeColors } from '@/lib/theme';
 
 type FilterKey = 'all' | PostType;
 
@@ -129,6 +130,8 @@ function getAvatarTextColor(name: string) {
 
 export default function CommunityScreen() {
   const router = useRouter();
+  const c = useThemeColors();
+  const s = useMemo(() => makeStyles(c), [c]);
   const [filter, setFilter] = useState<FilterKey>('all');
   const feed = useCommunityFeed(filter);
   const { data: likedSet } = useMyLikes();
@@ -147,7 +150,7 @@ export default function CommunityScreen() {
           style={({ pressed }) => [s.headerBtn, { opacity: pressed ? 0.6 : 1 }]}
           hitSlop={6}
         >
-          <Feather name="search" size={18} color="#64748b" />
+          <Feather name="search" size={18} color={c.text.tertiary} />
         </Pressable>
       </View>
 
@@ -176,7 +179,7 @@ export default function CommunityScreen() {
                     <Feather
                       name={t.icon}
                       size={13}
-                      color={active ? '#06b6d4' : '#64748b'}
+                      color={active ? c.brand.primary : c.text.tertiary}
                     />
                     <Text
                       style={[
@@ -197,7 +200,7 @@ export default function CommunityScreen() {
       {/* List States */}
       {feed.isLoading && (
         <View style={s.loadingContainer}>
-          <ActivityIndicator size="large" color="#06b6d4" />
+          <ActivityIndicator size="large" color={c.brand.primary} />
         </View>
       )}
 
@@ -210,7 +213,7 @@ export default function CommunityScreen() {
       {!feed.isLoading && !feed.error && posts.length === 0 && (
         <View style={s.emptyContainer}>
           <View style={s.emptyIconWrapper}>
-            <Feather name="message-square" size={28} color="#94a3b8" />
+            <Feather name="message-square" size={28} color={c.text.muted} />
           </View>
           <Text style={s.emptyTitle}>게시글이 비어있어요</Text>
           <Text style={s.emptySubtitle}>
@@ -240,7 +243,7 @@ export default function CommunityScreen() {
           ListFooterComponent={
             feed.isFetchingNextPage ? (
               <View style={s.footerLoader}>
-                <ActivityIndicator color="#06b6d4" />
+                <ActivityIndicator color={c.brand.primary} />
               </View>
             ) : null
           }
@@ -268,7 +271,7 @@ export default function CommunityScreen() {
         >
           {({ pressed }) => (
             <View style={[s.fabContent, { opacity: pressed ? 0.85 : 1 }]}>
-              <Feather name="edit-3" size={22} color="#ffffff" />
+              <Feather name="edit-3" size={22} color={c.brand.onPrimary} />
             </View>
           )}
         </Pressable>
@@ -286,6 +289,8 @@ function PostCard({
   liked: boolean;
   onPress: () => void;
 }) {
+  const c = useThemeColors();
+  const s = useMemo(() => makeStyles(c), [c]);
   const toggle = useToggleLike();
   const authorName = post.author?.display_name ?? post.author?.username ?? '익명';
   const firstChar = authorName.length > 0 ? authorName.charAt(0).toUpperCase() : '?';
@@ -303,10 +308,10 @@ function PostCard({
       style={({ pressed }) => [
         s.card,
         {
-          backgroundColor: '#ffffff',
+          backgroundColor: c.bg.card,
           opacity: pressed ? 0.97 : 1,
-          shadowColor: '#0f172a',
-          shadowOpacity: 0.03,
+          shadowColor: c.shadow.color,
+          shadowOpacity: c.shadow.opacity,
           shadowRadius: 12,
           shadowOffset: { width: 0, height: 4 },
           elevation: 1,
@@ -338,7 +343,7 @@ function PostCard({
       {/* Location Badge (above title) */}
       {post.gym && (
         <View style={s.locationBadge}>
-          <Feather name="map-pin" size={11} color="#64748b" />
+          <Feather name="map-pin" size={11} color={c.text.tertiary} />
           <Text style={s.locationText} numberOfLines={1}>
             {post.gym.name}
             {post.gym.branch ? ` ${post.gym.branch}` : ''}
@@ -350,17 +355,17 @@ function PostCard({
       {meetup && (
         <View style={s.meetupInfoBox}>
           <View style={s.meetupInfoRow}>
-            <Feather name="calendar" size={12} color="#b45309" />
+            <Feather name="calendar" size={12} color={c.status.warning} />
             <Text style={s.meetupInfoText} numberOfLines={1}>{meetup.when}</Text>
           </View>
           {meetup.where && (
             <View style={s.meetupInfoRow}>
-              <Feather name="map-pin" size={12} color="#b45309" />
+              <Feather name="map-pin" size={12} color={c.status.warning} />
               <Text style={s.meetupInfoText} numberOfLines={1}>{meetup.where}</Text>
             </View>
           )}
           <View style={s.meetupInfoRow}>
-            <Feather name="users" size={12} color="#b45309" />
+            <Feather name="users" size={12} color={c.status.warning} />
             <Text style={s.meetupInfoText} numberOfLines={1}>{meetup.capacity}</Text>
             {meetup.statusLabel && (
               <View style={[s.meetupStatusPill, meetup.statusColor]}>
@@ -401,7 +406,7 @@ function PostCard({
             style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
           >
             <View style={s.metricBtn}>
-              <Feather name="heart" size={16} color={liked ? '#ef4444' : '#94a3b8'} />
+              <Feather name="heart" size={16} color={liked ? c.status.danger : c.text.muted} />
               <Text
                 style={[s.metricCountText, liked && s.metricCountTextLiked]}
                 numberOfLines={1}
@@ -410,333 +415,333 @@ function PostCard({
           </Pressable>
 
           <View style={s.metricBtn}>
-            <Feather name="message-circle" size={16} color="#94a3b8" />
+            <Feather name="message-circle" size={16} color={c.text.muted} />
             <Text style={s.metricCountText} numberOfLines={1}>{post.comment_count}</Text>
           </View>
         </View>
 
-        <Feather name="chevron-right" size={16} color="#cbd5e1" />
+        <Feather name="chevron-right" size={16} color={c.border.strong} />
       </View>
     </Pressable>
   );
 }
 
-const s = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#ffffff',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 24,
-    paddingTop: 16,
-    paddingBottom: 14,
-    backgroundColor: '#ffffff',
-  },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: '800',
-    color: '#0f172a',
-    letterSpacing: -0.5,
-  },
-  headerSubtitle: {
-    fontSize: 12,
-    color: '#64748b',
-    marginTop: 2,
-  },
-  headerBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  fabAnchor: {
-    position: 'absolute',
-    bottom: 16,
-    right: 16,
-    zIndex: 10,
-    elevation: 10,
-  },
-  fabContent: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: '#06b6d4',
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#06b6d4',
-    shadowOpacity: 0.4,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 6,
-  },
-  filterWrapper: {
-    backgroundColor: '#ffffff',
-    borderBottomWidth: 1,
-    borderColor: '#f1f5f9',
-  },
-  filterScroll: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    gap: 8,
-    flexDirection: 'row',
-  },
-  chip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 10,
-    borderWidth: 1,
-  },
-  chipActive: {
-    backgroundColor: '#ecfeff',
-    borderColor: '#06b6d4',
-  },
-  chipInactive: {
-    backgroundColor: '#f8fafc',
-    borderColor: '#e2e8f0',
-  },
-  chipText: {
-    fontSize: 13,
-    fontWeight: '700',
-    letterSpacing: -0.2,
-  },
-  chipTextActive: {
-    color: '#0e7490',
-    fontWeight: '800',
-  },
-  chipTextInactive: {
-    color: '#475569',
-    fontWeight: '600',
-  },
-  loadingContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  errorContainer: {
-    margin: 20,
-    padding: 16,
-    borderRadius: 16,
-    backgroundColor: '#fef2f2',
-    borderWidth: 1,
-    borderColor: '#fecaca',
-  },
-  errorText: {
-    color: '#ef4444',
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  emptyContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 32,
-    gap: 12,
-  },
-  emptyIconWrapper: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: '#ffffff',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-  },
-  emptyTitle: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: '#0f172a',
-  },
-  emptySubtitle: {
-    fontSize: 12,
-    color: '#64748b',
-    textAlign: 'center',
-    lineHeight: 18,
-  },
-  emptyBtn: {
-    marginTop: 8,
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 12,
-    backgroundColor: '#06b6d4',
-  },
-  emptyBtnText: {
-    color: '#ffffff',
-    fontSize: 13,
-    fontWeight: '700',
-  },
-  listContent: {
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 120,
-  },
-  footerLoader: {
-    paddingVertical: 16,
-  },
+function makeStyles(c: ThemeColors) {
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: c.bg.card,
+    },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: 24,
+      paddingTop: 16,
+      paddingBottom: 14,
+      backgroundColor: c.bg.card,
+    },
+    headerTitle: {
+      fontSize: 24,
+      fontWeight: '800',
+      color: c.text.primary,
+      letterSpacing: -0.5,
+    },
+    headerSubtitle: {
+      fontSize: 12,
+      color: c.text.tertiary,
+      marginTop: 2,
+    },
+    headerBtn: {
+      width: 38,
+      height: 38,
+      borderRadius: 10,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    fabAnchor: {
+      position: 'absolute',
+      bottom: 16,
+      right: 16,
+      zIndex: 10,
+      elevation: 10,
+    },
+    fabContent: {
+      width: 56,
+      height: 56,
+      borderRadius: 28,
+      backgroundColor: c.brand.primary,
+      alignItems: 'center',
+      justifyContent: 'center',
+      shadowColor: c.brand.primary,
+      shadowOpacity: 0.4,
+      shadowRadius: 10,
+      shadowOffset: { width: 0, height: 6 },
+      elevation: 6,
+    },
+    filterWrapper: {
+      backgroundColor: c.bg.card,
+      borderBottomWidth: 1,
+      borderColor: c.border.subtle,
+    },
+    filterScroll: {
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+      gap: 8,
+      flexDirection: 'row',
+    },
+    chip: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      paddingHorizontal: 14,
+      paddingVertical: 8,
+      borderRadius: 10,
+      borderWidth: 1,
+    },
+    chipActive: {
+      backgroundColor: c.bg.accent,
+      borderColor: c.brand.primary,
+    },
+    chipInactive: {
+      backgroundColor: c.bg.subtle,
+      borderColor: c.border.subtle,
+    },
+    chipText: {
+      fontSize: 13,
+      fontWeight: '700',
+      letterSpacing: -0.2,
+    },
+    chipTextActive: {
+      color: c.brand.primaryDeep,
+      fontWeight: '800',
+    },
+    chipTextInactive: {
+      color: c.text.secondary,
+      fontWeight: '600',
+    },
+    loadingContainer: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    errorContainer: {
+      margin: 20,
+      padding: 16,
+      borderRadius: 16,
+      backgroundColor: c.status.dangerBg,
+      borderWidth: 1,
+      borderColor: c.status.danger,
+    },
+    errorText: {
+      color: c.status.danger,
+      fontSize: 13,
+      fontWeight: '600',
+    },
+    emptyContainer: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: 32,
+      gap: 12,
+    },
+    emptyIconWrapper: {
+      width: 64,
+      height: 64,
+      borderRadius: 32,
+      backgroundColor: c.bg.card,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderWidth: 1,
+      borderColor: c.border.subtle,
+    },
+    emptyTitle: {
+      fontSize: 16,
+      fontWeight: '800',
+      color: c.text.primary,
+    },
+    emptySubtitle: {
+      fontSize: 12,
+      color: c.text.tertiary,
+      textAlign: 'center',
+      lineHeight: 18,
+    },
+    emptyBtn: {
+      marginTop: 8,
+      paddingHorizontal: 20,
+      paddingVertical: 10,
+      borderRadius: 12,
+      backgroundColor: c.brand.primary,
+    },
+    emptyBtnText: {
+      color: c.brand.onPrimary,
+      fontSize: 13,
+      fontWeight: '700',
+    },
+    listContent: {
+      paddingHorizontal: 16,
+      paddingTop: 16,
+      paddingBottom: 120,
+    },
+    footerLoader: {
+      paddingVertical: 16,
+    },
 
-  // Card styles
-  card: {
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-    borderRadius: 20,
-    padding: 18,
-  },
-  cardSeparator: {
-    height: 1,
-    backgroundColor: '#e2e8f0',
-    marginVertical: 12,
-    marginHorizontal: 4,
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 12,
-  },
-  userInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  avatar: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-    overflow: 'hidden',
-  },
-  avatarImage: { width: '100%', height: '100%' },
-  avatarTextVal: {
-    fontWeight: '800',
-    fontSize: 14,
-  },
-  userText: {
-    justifyContent: 'center',
-  },
-  userName: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#0f172a',
-  },
-  timeText: {
-    fontSize: 10,
-    color: '#94a3b8',
-    marginTop: 2,
-  },
-  badge: {
-    borderWidth: 1,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 10,
-  },
-  badgeText: {
-    fontSize: 10,
-    fontWeight: '800',
-    letterSpacing: 0.2,
-  },
-  cardTitle: {
-    fontSize: 15,
-    fontWeight: '800',
-    color: '#0f172a',
-    lineHeight: 20,
-    marginBottom: 6,
-  },
-  cardBody: {
-    fontSize: 13,
-    color: '#475569',
-    lineHeight: 18,
-    marginBottom: 12,
-  },
-  cardImageWrapper: {
-    borderRadius: 14,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: '#f1f5f9',
-    marginBottom: 12,
-  },
-  cardImage: {
-    width: '100%',
-    height: 180,
-  },
-  locationBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    alignSelf: 'flex-start',
-    backgroundColor: '#f1f5f9',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-    marginBottom: 8,
-  },
-  locationText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#475569',
-  },
-  cardFooter: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: 4,
-  },
-  metricsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 20,
-  },
-  metricBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    flexShrink: 0,
-  },
-  metricCountText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#64748b',
-  },
-  metricCountTextLiked: {
-    color: '#ef4444',
-  },
+    card: {
+      borderWidth: 1,
+      borderColor: c.border.subtle,
+      borderRadius: 20,
+      padding: 18,
+    },
+    cardSeparator: {
+      height: 1,
+      backgroundColor: c.border.subtle,
+      marginVertical: 12,
+      marginHorizontal: 4,
+    },
+    cardHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginBottom: 12,
+    },
+    userInfo: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+    },
+    avatar: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      alignItems: 'center',
+      justifyContent: 'center',
+      overflow: 'hidden',
+    },
+    avatarImage: { width: '100%', height: '100%' },
+    avatarTextVal: {
+      fontWeight: '800',
+      fontSize: 14,
+    },
+    userText: {
+      justifyContent: 'center',
+    },
+    userName: {
+      fontSize: 14,
+      fontWeight: '700',
+      color: c.text.primary,
+    },
+    timeText: {
+      fontSize: 10,
+      color: c.text.muted,
+      marginTop: 2,
+    },
+    badge: {
+      borderWidth: 1,
+      paddingHorizontal: 8,
+      paddingVertical: 3,
+      borderRadius: 10,
+    },
+    badgeText: {
+      fontSize: 10,
+      fontWeight: '800',
+      letterSpacing: 0.2,
+    },
+    cardTitle: {
+      fontSize: 15,
+      fontWeight: '800',
+      color: c.text.primary,
+      lineHeight: 20,
+      marginBottom: 6,
+    },
+    cardBody: {
+      fontSize: 13,
+      color: c.text.secondary,
+      lineHeight: 18,
+      marginBottom: 12,
+    },
+    cardImageWrapper: {
+      borderRadius: 14,
+      overflow: 'hidden',
+      borderWidth: 1,
+      borderColor: c.border.subtle,
+      marginBottom: 12,
+    },
+    cardImage: {
+      width: '100%',
+      height: 180,
+    },
+    locationBadge: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      alignSelf: 'flex-start',
+      backgroundColor: c.bg.subtle,
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      borderRadius: 8,
+      marginBottom: 8,
+    },
+    locationText: {
+      fontSize: 11,
+      fontWeight: '700',
+      color: c.text.secondary,
+    },
+    cardFooter: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginTop: 4,
+    },
+    metricsRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 20,
+    },
+    metricBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      flexShrink: 0,
+    },
+    metricCountText: {
+      fontSize: 12,
+      fontWeight: '700',
+      color: c.text.tertiary,
+    },
+    metricCountTextLiked: {
+      color: c.status.danger,
+    },
 
-  // Meetup info block (inside PostCard, post_type === 'meetup')
-  meetupInfoBox: {
-    backgroundColor: '#fffbeb',
-    borderWidth: 1,
-    borderColor: '#fde68a',
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    marginBottom: 10,
-    gap: 6,
-  },
-  meetupInfoRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  meetupInfoText: {
-    flex: 1,
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#92400e',
-  },
-  meetupStatusPill: {
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 6,
-  },
-  meetupStatusText: {
-    fontSize: 10,
-    fontWeight: '800',
-  },
-});
+    meetupInfoBox: {
+      backgroundColor: c.status.warningBg,
+      borderWidth: 1,
+      borderColor: c.status.warning,
+      borderRadius: 12,
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+      marginBottom: 10,
+      gap: 6,
+    },
+    meetupInfoRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+    },
+    meetupInfoText: {
+      flex: 1,
+      fontSize: 12,
+      fontWeight: '700',
+      color: c.status.warning,
+    },
+    meetupStatusPill: {
+      paddingHorizontal: 6,
+      paddingVertical: 2,
+      borderRadius: 6,
+    },
+    meetupStatusText: {
+      fontSize: 10,
+      fontWeight: '800',
+    },
+  });
+}
