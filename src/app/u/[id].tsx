@@ -1,4 +1,5 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useMemo } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -21,6 +22,7 @@ import {
   type FootWidth,
   type InstepHeight,
 } from '@/hooks/use-profile';
+import { useThemeColors, type ThemeColors } from '@/lib/theme';
 
 const FOOT_SHAPE_LABEL: Record<FootShape, string> = {
   egyptian: '이집트형',
@@ -63,6 +65,8 @@ export default function PublicProfileScreen() {
   const router = useRouter();
   const { session: authSession } = useAuth();
   const { data: profile, isLoading, error } = usePublicProfile(id);
+  const c = useThemeColors();
+  const s = useMemo(() => makeStyles(c), [c]);
 
   // 본인 프로필이면 마이페이지로
   if (authSession?.user.id === id) {
@@ -73,7 +77,7 @@ export default function PublicProfileScreen() {
   if (isLoading) {
     return (
       <SafeAreaView style={s.center} edges={['top']}>
-        <ActivityIndicator color="#06b6d4" />
+        <ActivityIndicator color={c.brand.primary} />
       </SafeAreaView>
     );
   }
@@ -105,7 +109,7 @@ export default function PublicProfileScreen() {
         <Pressable onPress={() => router.back()} hitSlop={8}>
           {({ pressed }) => (
             <View style={[s.headerBtn, pressed && { opacity: 0.6 }]}>
-              <Feather name="arrow-left" size={22} color="#0f172a" />
+              <Feather name="arrow-left" size={22} color={c.text.primary} />
             </View>
           )}
         </Pressable>
@@ -142,7 +146,7 @@ export default function PublicProfileScreen() {
               hitSlop={6}
             >
               <View style={s.instaTag}>
-                <Feather name="instagram" size={12} color="#06b6d4" />
+                <Feather name="instagram" size={12} color={c.brand.primary} />
                 <Text style={s.instaTagText}>@{profile.instagram_handle}</Text>
               </View>
             </Pressable>
@@ -209,19 +213,22 @@ function MetricItem({
   label: string;
   value: string;
 }) {
+  const c = useThemeColors();
+  const s = useMemo(() => makeStyles(c), [c]);
   return (
     <View style={s.metricRow}>
-      <MaterialCommunityIcons name={icon} size={16} color="#475569" />
+      <MaterialCommunityIcons name={icon} size={16} color={c.text.secondary} />
       <Text style={s.metricLabel}>{label}</Text>
       <Text style={s.metricValue}>{value}</Text>
     </View>
   );
 }
 
-const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f8fafc' },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#f8fafc' },
-  errorText: { color: '#ef4444', fontSize: 14 },
+function makeStyles(c: ThemeColors) {
+  return StyleSheet.create({
+  container: { flex: 1, backgroundColor: c.bg.primary },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: c.bg.primary },
+  errorText: { color: c.status.danger, fontSize: 14 },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -235,19 +242,19 @@ const s = StyleSheet.create({
     borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#f1f5f9',
+    backgroundColor: c.bg.subtle,
   },
-  headerTitle: { fontSize: 17, fontWeight: '700', color: '#0f172a' },
+  headerTitle: { fontSize: 17, fontWeight: '700', color: c.text.primary },
   scrollContent: { padding: 16, gap: 12, paddingBottom: 32 },
 
   heroCard: {
-    backgroundColor: '#ffffff',
+    backgroundColor: c.bg.card,
     borderRadius: 16,
     padding: 20,
     alignItems: 'center',
     gap: 8,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: c.border.subtle,
   },
   avatarContainer: {
     width: 88,
@@ -259,18 +266,18 @@ const s = StyleSheet.create({
   avatarFallback: {
     width: '100%',
     height: '100%',
-    backgroundColor: '#e0f2fe',
+    backgroundColor: c.brand.primaryLight,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  avatarFallbackText: { fontSize: 32, fontWeight: '900', color: '#0c4a6e' },
+  avatarFallbackText: { fontSize: 32, fontWeight: '900', color: c.brand.primaryDeep },
   profileName: {
     fontSize: 18,
     fontWeight: '900',
-    color: '#0f172a',
+    color: c.text.primary,
     letterSpacing: -0.3,
   },
-  username: { fontSize: 13, color: '#64748b', fontWeight: '600' },
+  username: { fontSize: 13, color: c.text.tertiary, fontWeight: '600' },
   instaTag: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -278,14 +285,14 @@ const s = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 999,
-    backgroundColor: '#ecfeff',
+    backgroundColor: c.bg.accent,
     borderWidth: 1,
-    borderColor: '#a5f3fc',
+    borderColor: c.brand.primaryLight,
   },
-  instaTagText: { fontSize: 11, fontWeight: '800', color: '#06b6d4' },
+  instaTagText: { fontSize: 11, fontWeight: '800', color: c.brand.primary },
   bioText: {
     fontSize: 13,
-    color: '#475569',
+    color: c.text.secondary,
     lineHeight: 19,
     textAlign: 'center',
     marginTop: 4,
@@ -293,36 +300,37 @@ const s = StyleSheet.create({
   },
 
   metricsCard: {
-    backgroundColor: '#ffffff',
+    backgroundColor: c.bg.card,
     borderRadius: 14,
     padding: 14,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: c.border.subtle,
     gap: 10,
   },
   metricRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  metricLabel: { fontSize: 12, color: '#64748b', fontWeight: '700', flex: 1 },
-  metricValue: { fontSize: 13, color: '#0f172a', fontWeight: '800' },
+  metricLabel: { fontSize: 12, color: c.text.tertiary, fontWeight: '700', flex: 1 },
+  metricValue: { fontSize: 13, color: c.text.primary, fontWeight: '800' },
 
   sectionCard: {
-    backgroundColor: '#f0f9ff',
+    backgroundColor: c.bg.accent,
     borderRadius: 14,
     padding: 14,
     borderWidth: 1,
-    borderColor: '#bae6fd',
+    borderColor: c.brand.primaryLight,
     gap: 8,
   },
   sectionTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   sectionEmoji: { fontSize: 16 },
-  sectionTitle: { fontSize: 14, fontWeight: '900', color: '#0c4a6e' },
+  sectionTitle: { fontSize: 14, fontWeight: '900', color: c.brand.primaryDeep },
   chipsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 4 },
   miniChip: {
-    backgroundColor: '#ffffff',
+    backgroundColor: c.bg.card,
     borderWidth: 1,
-    borderColor: '#bae6fd',
+    borderColor: c.brand.primaryLight,
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 6,
   },
-  miniChipText: { fontSize: 11, fontWeight: '700', color: '#0c4a6e' },
-});
+  miniChipText: { fontSize: 11, fontWeight: '700', color: c.brand.primaryDeep },
+  });
+}

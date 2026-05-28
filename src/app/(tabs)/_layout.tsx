@@ -1,24 +1,24 @@
 import { Feather } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
 import React from 'react';
-import { useColorScheme } from 'react-native';
+
+import { useThemeColors } from '@/lib/theme';
 
 export default function TabLayout() {
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === 'dark';
+  const c = useThemeColors();
 
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: isDark ? '#f8fafc' : '#0f172a', // active = strong text color, not brand
-        tabBarInactiveTintColor: isDark ? '#64748b' : '#94a3b8',
+        tabBarActiveTintColor: c.text.primary,
+        tabBarInactiveTintColor: c.text.muted,
         tabBarStyle: {
-          backgroundColor: isDark ? '#09090b' : '#ffffff', // background-primary
-          borderTopColor: isDark ? '#1e293b' : '#e2e8f0', // border-subtle
-          paddingBottom: 20, // Increased padding to prevent overlap with iOS home indicator
+          backgroundColor: c.bg.card,
+          borderTopColor: c.border.subtle,
+          paddingBottom: 20,
           paddingTop: 8,
-          height: 80, // Increased overall height
+          height: 80,
         },
         tabBarLabelStyle: {
           fontSize: 12,
