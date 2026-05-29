@@ -29,12 +29,14 @@ import {
 } from '@/hooks/use-crew-requests';
 import {
   useProfile,
+  useUpdateProfile,
   type ArchType,
   type FootShape,
   type FootWidth,
   type InstepHeight,
   type Profile,
 } from '@/hooks/use-profile';
+import { useFollowCounts } from '@/hooks/use-follows';
 import {
   SHOE_STATUS_LABEL,
   useShoes,
@@ -187,6 +189,8 @@ export default function ProfileScreen() {
             )}
           </View>
         </View>
+
+        <MyFollowStrip userId={profile?.id} />
 
         <BodyInfoStrip
           heightCm={profile?.height_cm ?? null}
@@ -1490,6 +1494,7 @@ function ProfileMenuModal({
         label="프로필 편집"
         onPress={() => { onClose(); onEditProfile(); }}
       />
+      <PrivacyMenuButton />
       <MenuButton
         icon="moon"
         label={`테마 · ${THEME_PREF_LABEL[themePref]}`}
@@ -1551,6 +1556,60 @@ function ProfileMenuModal({
       })}
     </Sheet>
     </>
+  );
+}
+
+function MyFollowStrip({ userId }: { userId: string | undefined }) {
+  const c = useThemeColors();
+  const s = React.useMemo(() => makeStyles(c), [c]);
+  const router = useRouter();
+  const { data: counts } = useFollowCounts(userId);
+  if (!userId) return null;
+  return (
+    <View style={s.followStrip}>
+      <Pressable
+        onPress={() =>
+          router.push({ pathname: '/u/[id]/followers', params: { id: userId } } as never)
+        }
+        style={({ pressed }) => [s.followStripBox, pressed && { opacity: 0.6 }]}
+      >
+        <Text style={s.followStripNum}>{counts?.followers ?? 0}</Text>
+        <Text style={s.followStripLabel}>팔로워</Text>
+      </Pressable>
+      <View style={s.followStripDivider} />
+      <Pressable
+        onPress={() =>
+          router.push({ pathname: '/u/[id]/following', params: { id: userId } } as never)
+        }
+        style={({ pressed }) => [s.followStripBox, pressed && { opacity: 0.6 }]}
+      >
+        <Text style={s.followStripNum}>{counts?.following ?? 0}</Text>
+        <Text style={s.followStripLabel}>팔로잉</Text>
+      </Pressable>
+    </View>
+  );
+}
+
+function PrivacyMenuButton() {
+  const c = useThemeColors();
+  const s = React.useMemo(() => makeStyles(c), [c]);
+  const { data: profile } = useProfile();
+  const updateProfile = useUpdateProfile();
+  const isPrivate = profile?.is_private ?? false;
+  return (
+    <Pressable
+      onPress={() => {
+        updateProfile.mutate({ isPrivate: !isPrivate });
+      }}
+      style={({ pressed }) => [s.menuBtn, pressed && { opacity: 0.6 }]}
+    >
+      <Feather name={isPrivate ? 'lock' : 'unlock'} size={18} color={c.text.primary} />
+      <Text style={s.menuBtnLabel}>{isPrivate ? '비공개 계정' : '공개 계정'}</Text>
+      <View style={{ flex: 1 }} />
+      <View style={[s.privacyToggleTrack, isPrivate && s.privacyToggleTrackOn]}>
+        <View style={[s.privacyToggleThumb, isPrivate && s.privacyToggleThumbOn]} />
+      </View>
+    </Pressable>
   );
 }
 
@@ -2696,6 +2755,65 @@ function makeStyles(c: ThemeColors) {
   menuBtnText: {
     fontSize: 16,
     fontWeight: '600',
+  },
+  followStrip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-around',
+    backgroundColor: c.bg.card,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: c.border.subtle,
+    borderRadius: 14,
+    marginHorizontal: 20,
+    paddingVertical: 12,
+    marginTop: 14,
+  },
+  followStripBox: {
+    flex: 1,
+    alignItems: 'center',
+    gap: 2,
+  },
+  followStripNum: {
+    fontSize: 18,
+    fontWeight: '900',
+    color: c.text.primary,
+    letterSpacing: -0.3,
+  },
+  followStripLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: c.text.tertiary,
+  },
+  followStripDivider: {
+    width: StyleSheet.hairlineWidth,
+    height: 26,
+    backgroundColor: c.border.subtle,
+  },
+  menuBtnLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: c.text.primary,
+  },
+  privacyToggleTrack: {
+    width: 36,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: c.border.strong,
+    padding: 2,
+    justifyContent: 'center',
+  },
+  privacyToggleTrackOn: {
+    backgroundColor: c.brand.primary,
+  },
+  privacyToggleThumb: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: c.bg.card,
+    alignSelf: 'flex-start',
+  },
+  privacyToggleThumbOn: {
+    alignSelf: 'flex-end',
   },
   modalDivider: {
     height: 1,

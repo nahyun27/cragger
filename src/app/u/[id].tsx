@@ -36,6 +36,12 @@ import {
 } from '@/hooks/use-shoes';
 import { useUnreadCount } from '@/hooks/use-notifications';
 import { useUserBadges } from '@/hooks/use-badges';
+import {
+  useFollow,
+  useFollowCounts,
+  useIsFollowing,
+  useUnfollow,
+} from '@/hooks/use-follows';
 import { useUserStats } from '@/hooks/use-user-stats';
 import {
   BADGES,
@@ -75,9 +81,26 @@ export default function PublicProfileScreen() {
     [monthAnchor],
   );
   const { data: stats, isLoading, error } = useUserStats(thisMonthRange, id);
+  const { data: counts } = useFollowCounts(id);
+  const { data: isFollowing } = useIsFollowing(id);
+  const followMut = useFollow();
+  const unfollowMut = useUnfollow();
+
+  const isPrivate = profile?.is_private ?? false;
+  // 비공개 + 비팔로워 + (본인 아님) → 콘텐츠 가림
+  const canSeeContent = !isPrivate || isFollowing === true;
 
   const username = profile?.username ?? '...';
   const firstChar = username && username.length > 0 ? username.charAt(0).toUpperCase() : '?';
+
+  function handleFollowToggle() {
+    if (!id) return;
+    if (isFollowing) {
+      unfollowMut.mutate(id);
+    } else {
+      followMut.mutate(id);
+    }
+  }
 
   return (
     <SafeAreaView style={s.container} edges={['top']}>
@@ -115,6 +138,12 @@ export default function PublicProfileScreen() {
               <Text style={s.profileName} numberOfLines={1}>
                 {username}
               </Text>
+              {isPrivate && (
+                <View style={s.privateChip}>
+                  <Feather name="lock" size={10} color={c.text.secondary} />
+                  <Text style={s.privateChipText}>비공개</Text>
+                </View>
+              )}
             </View>
             {profile?.instagram_handle && (
               <Pressable
@@ -139,14 +168,62 @@ export default function PublicProfileScreen() {
           </View>
         </View>
 
-        <BodyInfoStrip
-          heightCm={profile?.height_cm ?? null}
-          reachCm={profile?.reach_cm ?? null}
-          weightKg={profile?.weight_visible ? (profile?.weight_kg ?? null) : null}
-          climbingStartDate={profile?.climbing_start_date ?? null}
-        />
+        {/* Follow counts + button */}
+        <View style={s.followBar}>
+          <Pressable
+            onPress={() =>
+              router.push({ pathname: '/u/[id]/followers', params: { id: id! } } as never)
+            }
+            style={({ pressed }) => [s.followCountBox, pressed && { opacity: 0.6 }]}
+          >
+            <Text style={s.followCountNum}>{counts?.followers ?? 0}</Text>
+            <Text style={s.followCountLabel}>팔로워</Text>
+          </Pressable>
+          <View style={s.followCountDivider} />
+          <Pressable
+            onPress={() =>
+              router.push({ pathname: '/u/[id]/following', params: { id: id! } } as never)
+            }
+            style={({ pressed }) => [s.followCountBox, pressed && { opacity: 0.6 }]}
+          >
+            <Text style={s.followCountNum}>{counts?.following ?? 0}</Text>
+            <Text style={s.followCountLabel}>팔로잉</Text>
+          </Pressable>
+          <Pressable
+            onPress={handleFollowToggle}
+            disabled={followMut.isPending || unfollowMut.isPending}
+            style={({ pressed }) => [
+              isFollowing ? s.followBtnFollowing : s.followBtnFollow,
+              pressed && { opacity: 0.7 },
+            ]}
+          >
+            <Text style={isFollowing ? s.followBtnFollowingText : s.followBtnFollowText}>
+              {isFollowing ? '팔로잉' : '팔로우'}
+            </Text>
+          </Pressable>
+        </View>
+
+        {canSeeContent && (
+          <BodyInfoStrip
+            heightCm={profile?.height_cm ?? null}
+            reachCm={profile?.reach_cm ?? null}
+            weightKg={profile?.weight_visible ? (profile?.weight_kg ?? null) : null}
+            climbingStartDate={profile?.climbing_start_date ?? null}
+          />
+        )}
+
+        {!canSeeContent && (
+          <View style={s.privateBox}>
+            <Feather name="lock" size={24} color={c.text.muted} />
+            <Text style={s.privateBoxTitle}>비공개 계정이에요</Text>
+            <Text style={s.privateBoxSub}>
+              팔로우 요청을 보내고 수락되면 활동을 볼 수 있어요.
+            </Text>
+          </View>
+        )}
 
         {/* Stats section — scoped to this month */}
+        {canSeeContent && (
         <View style={s.sectionContainer}>
           <View style={s.sectionHeaderRow}>
             <Text style={s.sectionTitle}>{monthAnchor.month}월 운동 통계</Text>
@@ -201,11 +278,15 @@ export default function PublicProfileScreen() {
           )}
         </View>
 
-        <CrewsSection userId={id} />
+        )}
 
-        <BadgesSection userId={id} />
-
-        <ShoesSection userId={id} />
+        {canSeeContent && (
+          <>
+            <CrewsSection userId={id} />
+            <BadgesSection userId={id} />
+            <ShoesSection userId={id} />
+          </>
+        )}
       </ScrollView>
 
     </SafeAreaView>
@@ -1468,6 +1549,91 @@ function makeStyles(c: ThemeColors) {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
+  },
+  privateChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    backgroundColor: c.bg.subtle,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  privateChipText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: c.text.secondary,
+  },
+  followBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    paddingHorizontal: 20,
+    marginTop: 14,
+  },
+  followCountBox: {
+    alignItems: 'center',
+    gap: 2,
+  },
+  followCountNum: {
+    fontSize: 17,
+    fontWeight: '900',
+    color: c.text.primary,
+    letterSpacing: -0.3,
+  },
+  followCountLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: c.text.tertiary,
+  },
+  followCountDivider: {
+    width: StyleSheet.hairlineWidth,
+    height: 24,
+    backgroundColor: c.border.subtle,
+  },
+  followBtnFollow: {
+    flex: 1,
+    backgroundColor: c.brand.primary,
+    paddingVertical: 9,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  followBtnFollowText: {
+    color: c.brand.onPrimary,
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  followBtnFollowing: {
+    flex: 1,
+    backgroundColor: c.bg.subtle,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: c.border.subtle,
+    paddingVertical: 9,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  followBtnFollowingText: {
+    color: c.text.secondary,
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  privateBox: {
+    alignItems: 'center',
+    paddingVertical: 40,
+    paddingHorizontal: 32,
+    gap: 8,
+  },
+  privateBoxTitle: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: c.text.primary,
+  },
+  privateBoxSub: {
+    fontSize: 13,
+    color: c.text.tertiary,
+    fontWeight: '600',
+    textAlign: 'center',
+    lineHeight: 19,
   },
   selectedBadgeIconWrap: {
     width: 24,

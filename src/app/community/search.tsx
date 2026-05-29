@@ -22,6 +22,7 @@ import {
   type PostRow,
   type PostType,
 } from '@/hooks/use-community';
+import { useSearchUsers, type SearchUser } from '@/hooks/use-follows';
 import { useThemeColors, type ThemeColors } from '@/lib/theme';
 
 const BADGE_COLORS: Record<string, { bg: string; text: string }> = {
@@ -66,16 +67,20 @@ function useDebounced<T>(value: T, ms = 300): T {
   return v;
 }
 
+type SearchTab = 'posts' | 'users';
+
 export default function CommunitySearchScreen() {
   const c = useThemeColors();
   const s = useMemo(() => makeStyles(c), [c]);
 
   const router = useRouter();
   const [input, setInput] = useState('');
+  const [tab, setTab] = useState<SearchTab>('posts');
   const term = useDebounced(input.trim(), 300);
-  const feed = useCommunityFeed('all', term);
+  const feed = useCommunityFeed('all', tab === 'posts' ? term : '');
   const { data: likedSet } = useMyLikes();
   const posts = useMemo<PostRow[]>(() => feed.data?.pages.flat() ?? [], [feed.data]);
+  const usersQ = useSearchUsers(tab === 'users' ? term : '', 40);
 
   const hasTerm = term.length > 0;
 
@@ -94,7 +99,7 @@ export default function CommunitySearchScreen() {
           <TextInput
             value={input}
             onChangeText={setInput}
-            placeholder="제목·본문 검색"
+            placeholder={tab === 'posts' ? '제목·본문 검색' : '이름·아이디 검색'}
             placeholderTextColor={c.text.muted}
             style={s.searchInput}
             returnKeyType="search"
@@ -111,16 +116,56 @@ export default function CommunitySearchScreen() {
         </View>
       </View>
 
+      {/* 탭 전환 */}
+      <View style={s.tabBar}>
+        {(['posts', 'users'] as SearchTab[]).map((t) => (
+          <Pressable key={t} style={s.tabItem} onPress={() => setTab(t)}>
+            <Text style={[s.tabText, tab === t && s.tabTextActive]}>
+              {t === 'posts' ? '글' : '사람'}
+            </Text>
+            {tab === t && <View style={s.tabIndicator} />}
+          </Pressable>
+        ))}
+      </View>
+
       {!hasTerm ? (
         <View style={s.placeholderWrap}>
           <View style={s.placeholderIcon}>
             <Feather name="search" size={28} color={c.text.muted} />
           </View>
-          <Text style={s.placeholderTitle}>커뮤니티 검색</Text>
+          <Text style={s.placeholderTitle}>
+            {tab === 'posts' ? '커뮤니티 검색' : '사람 검색'}
+          </Text>
           <Text style={s.placeholderBody}>
-            제목이나 본문에 들어간 단어로{'\n'}글을 찾을 수 있어요
+            {tab === 'posts'
+              ? '제목이나 본문에 들어간 단어로\n글을 찾을 수 있어요'
+              : '닉네임이나 표시 이름으로\n사용자를 찾을 수 있어요'}
           </Text>
         </View>
+      ) : tab === 'users' ? (
+        usersQ.isLoading ? (
+          <View style={s.centerWrap}><ActivityIndicator color={c.brand.primary} /></View>
+        ) : usersQ.error ? (
+          <View style={s.errorBox}><Text style={s.errorText}>{usersQ.error.message}</Text></View>
+        ) : !usersQ.data || usersQ.data.length === 0 ? (
+          <View style={s.placeholderWrap}>
+            <View style={s.placeholderIcon}>
+              <Feather name="user-x" size={28} color={c.text.muted} />
+            </View>
+            <Text style={s.placeholderTitle}>일치하는 사용자가 없어요</Text>
+          </View>
+        ) : (
+          <FlatList
+            data={usersQ.data}
+            keyExtractor={(u) => u.id}
+            contentContainerStyle={s.listContent}
+            keyboardShouldPersistTaps="handled"
+            ItemSeparatorComponent={() => <View style={s.userRowDivider} />}
+            renderItem={({ item }) => (
+              <UserSearchRow user={item} onPress={() => router.push({ pathname: '/u/[id]', params: { id: item.id } } as never)} />
+            )}
+          />
+        )
       ) : feed.isLoading ? (
         <View style={s.centerWrap}>
           <ActivityIndicator color={c.brand.primary} />
@@ -300,9 +345,102 @@ function Highlighted({
   );
 }
 
+function UserSearchRow({ user, onPress }: { user: SearchUser; onPress: () => void }) {
+  const c = useThemeColors();
+  const s = useMemo(() => makeStyles(c), [c]);
+  const name = user.display_name || user.username;
+  const firstChar = name.length > 0 ? name.charAt(0).toUpperCase() : '?';
+  const bg = getAvatarBg(name);
+  const fg = getAvatarFg(name);
+  return (
+    <Pressable onPress={onPress} style={({ pressed }) => [s.userRow, pressed && { opacity: 0.7 }]}>
+      <View style={[s.userAvatar, { backgroundColor: bg }]}>
+        {user.avatar_url ? (
+          <Image source={{ uri: user.avatar_url }} style={s.userAvatarImg} />
+        ) : (
+          <Text style={[s.userAvatarText, { color: fg }]}>{firstChar}</Text>
+        )}
+      </View>
+      <View style={{ flex: 1, gap: 2 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+          <Text style={s.userName} numberOfLines={1}>{name}</Text>
+          {user.is_private && <Feather name="lock" size={10} color={c.text.tertiary} />}
+        </View>
+        <Text style={s.userHandle} numberOfLines={1}>@{user.username}</Text>
+      </View>
+      <Feather name="chevron-right" size={16} color={c.text.muted} />
+    </Pressable>
+  );
+}
+
 function makeStyles(c: ThemeColors) {
   return StyleSheet.create({
   container: { flex: 1, backgroundColor: c.bg.primary },
+  tabBar: {
+    flexDirection: 'row',
+    backgroundColor: c.bg.card,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: c.border.subtle,
+  },
+  tabItem: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: 12,
+    position: 'relative',
+  },
+  tabText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: c.text.muted,
+  },
+  tabTextActive: {
+    color: c.text.primary,
+    fontWeight: '800',
+  },
+  tabIndicator: {
+    position: 'absolute',
+    bottom: 0,
+    width: 24,
+    height: 3,
+    borderRadius: 2,
+    backgroundColor: c.brand.primary,
+  },
+  userRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    backgroundColor: c.bg.card,
+  },
+  userRowDivider: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: c.border.subtle,
+    marginLeft: 76,
+  },
+  userAvatar: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  userAvatarImg: { width: '100%', height: '100%' },
+  userAvatarText: {
+    fontSize: 16,
+    fontWeight: '900',
+  },
+  userName: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: c.text.primary,
+  },
+  userHandle: {
+    fontSize: 12,
+    color: c.text.tertiary,
+    fontWeight: '600',
+  },
 
   header: {
     flexDirection: 'row',

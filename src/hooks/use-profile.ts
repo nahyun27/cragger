@@ -26,10 +26,11 @@ export type Profile = {
   foot_width: FootWidth | null;
   instep_height: InstepHeight | null;
   arch_type: ArchType | null;
+  is_private: boolean;
 };
 
 const PROFILE_COLUMNS =
-  'id, username, display_name, avatar_url, bio, instagram_handle, height_cm, reach_cm, weight_kg, weight_visible, climbing_start_date, foot_length_mm, shoe_size_mm, foot_shape, foot_width, instep_height, arch_type';
+  'id, username, display_name, avatar_url, bio, instagram_handle, height_cm, reach_cm, weight_kg, weight_visible, climbing_start_date, foot_length_mm, shoe_size_mm, foot_shape, foot_width, instep_height, arch_type, is_private';
 
 export function useProfile() {
   const { session: authSession } = useAuth();
@@ -83,6 +84,7 @@ export type UpdateProfileArgs = {
   footWidth?: FootWidth | null;
   instepHeight?: InstepHeight | null;
   archType?: ArchType | null;
+  isPrivate?: boolean;
 };
 
 export function useUpdateProfile() {
@@ -109,6 +111,7 @@ export function useUpdateProfile() {
       if (args.footWidth !== undefined) patch.foot_width = args.footWidth;
       if (args.instepHeight !== undefined) patch.instep_height = args.instepHeight;
       if (args.archType !== undefined) patch.arch_type = args.archType;
+      if (args.isPrivate !== undefined) patch.is_private = args.isPrivate;
       const { error } = await supabase.from('profiles').update(patch).eq('id', userId);
       if (error) {
         // Postgres unique violation on username
