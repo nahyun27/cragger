@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { useAuth } from '@/lib/auth-context';
+import { checkBadgesAndNotify } from '@/lib/check-badges-and-notify';
 import { supabase } from '@/lib/supabase';
 
 export type CrewRole = 'owner' | 'member';
@@ -193,6 +194,7 @@ export function useCreateCrew() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['crews'] });
+      checkBadgesAndNotify();
     },
   });
 }
@@ -227,6 +229,7 @@ export function useJoinCrewByCode() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['crews'] });
+      checkBadgesAndNotify();
     },
   });
 }

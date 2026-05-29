@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 import { useAuth } from '@/lib/auth-context';
+import { checkBadgesAndNotify } from '@/lib/check-badges-and-notify';
 import { supabase } from '@/lib/supabase';
 
 import type { GridColor } from '@/components/climb/color-grid';
@@ -80,6 +81,7 @@ export function useRecordSession() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['sessions'] });
+      checkBadgesAndNotify();
     },
   });
 }

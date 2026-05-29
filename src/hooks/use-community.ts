@@ -8,6 +8,7 @@ import {
 import { Alert } from 'react-native';
 
 import { useAuth } from '@/lib/auth-context';
+import { checkBadgesAndNotify } from '@/lib/check-badges-and-notify';
 import { supabase } from '@/lib/supabase';
 
 export type PostType = 'general' | 'question' | 'review' | 'meetup';
@@ -319,6 +320,7 @@ export function useCreateComment() {
       queryClient.invalidateQueries({ queryKey: ['community', 'comments', vars.postId] });
       queryClient.invalidateQueries({ queryKey: ['community', 'post', vars.postId] });
       queryClient.invalidateQueries({ queryKey: ['community', 'feed'] });
+      checkBadgesAndNotify();
     },
   });
 }
@@ -410,6 +412,7 @@ export function useCreatePost() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['community', 'feed'] });
       queryClient.invalidateQueries({ queryKey: ['community', 'crew-feed'] });
+      checkBadgesAndNotify();
     },
   });
 }
@@ -542,6 +545,7 @@ export function useJoinMeetup() {
       queryClient.invalidateQueries({ queryKey: ['community', 'meetup-participants', postId] });
       queryClient.invalidateQueries({ queryKey: ['community', 'meetup-my-status', postId] });
       queryClient.invalidateQueries({ queryKey: ['community', 'feed'] });
+      checkBadgesAndNotify();
     },
   });
 }

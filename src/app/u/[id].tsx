@@ -1,4 +1,5 @@
 import { customAlert } from '@/components/ui/custom-alert';
+import { BadgeIcon } from '@/components/ui/badge-icon';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
@@ -510,9 +511,9 @@ function BadgesSection({ userId }: { userId: string }) {
                     isLocked && { opacity: 0.7 }
                   ]}>
                     {badge.type === 'text' ? (
-                      <Text style={[s.badgeTextIcon, { color: iconColor }]}>{badge.text}</Text>
+                      <BadgeIcon icon={badge.text as string} color={iconColor} size={20} />
                     ) : badge.type === 'icon' ? (
-                      <Feather name={badge.iconName as any} size={20} color={iconColor} />
+                      <BadgeIcon icon={badge.iconName as string} color={iconColor} size={20} />
                     ) : null}
                     
                     {isLocked && (

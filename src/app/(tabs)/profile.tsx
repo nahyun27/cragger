@@ -1,3 +1,4 @@
+import { BadgeIcon } from '@/components/ui/badge-icon';
 import { customAlert } from '@/components/ui/custom-alert';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
@@ -131,9 +132,7 @@ export default function ProfileScreen() {
                   s.selectedBadgeIconWrap,
                   { backgroundColor: selectedBadge.bg, borderColor: selectedBadge.color }
                 ]}>
-                  <Text style={[s.selectedBadgeTextIcon, { color: selectedBadge.color }]}>
-                    {selectedBadge.icon}
-                  </Text>
+                  <BadgeIcon icon={selectedBadge.icon} color={selectedBadge.color} size={30} />
                 </View>
               )}
             </View>
@@ -592,7 +591,7 @@ function BadgesSection({ onSelectBadge }: { onSelectBadge: (badge: BadgeDef) => 
                     { backgroundColor: bgColor, borderColor: borderColor },
                     isLocked && { opacity: 0.7 },
                   ]}>
-                    <Text style={[s.badgeTextIcon, { color: iconColor }]}>{badge.icon}</Text>
+                    <BadgeIcon icon={badge.icon} color={iconColor} size={22} />
                     {isLocked && (
                       <View style={s.badgeLockBadge}>
                         <Feather name="lock" size={8} color={c.bg.card} />

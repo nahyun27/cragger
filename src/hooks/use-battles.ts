@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { useAuth } from '@/lib/auth-context';
+import { checkBadgesAndNotify } from '@/lib/check-badges-and-notify';
 import { supabase } from '@/lib/supabase';
 
 export type BattleType = 'individual' | 'crew_vs_crew';
@@ -280,6 +281,7 @@ export function useCreateBattle() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['battles'] });
+      checkBadgesAndNotify();
     },
   });
 }

@@ -7,6 +7,7 @@ import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
+import { CustomAlert } from '@/components/ui/custom-alert';
 import { AuthProvider, useAuth } from '@/lib/auth-context';
 import { useEffectiveScheme, useHydrateThemePref } from '@/lib/theme';
 
@@ -31,6 +32,7 @@ function ThemedRoot() {
       <ThemeProvider value={scheme === 'dark' ? DarkTheme : DefaultTheme}>
         <AnimatedSplashOverlay />
         <RootStack />
+        <CustomAlert />
       </ThemeProvider>
     </View>
   );
