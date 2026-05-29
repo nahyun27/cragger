@@ -19,7 +19,12 @@ import { Feather } from '@expo/vector-icons';
 
 import { GymPickerModal } from '@/components/session/gym-picker-modal';
 import { useAuth } from '@/lib/auth-context';
-import { useCrewDetail, useUpdateCrew } from '@/hooks/use-crews';
+import {
+  CREW_REGION_OPTIONS,
+  useCrewDetail,
+  useUpdateCrew,
+  type CrewRegion,
+} from '@/hooks/use-crews';
 import { useGyms } from '@/hooks/use-gyms';
 import { uploadCrewLogo } from '@/lib/upload-image';
 import { useThemeColors, type ThemeColors } from '@/lib/theme';
@@ -41,6 +46,7 @@ export default function EditCrewScreen() {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [gymId, setGymId] = useState<string | null>(null);
+  const [region, setRegion] = useState<CrewRegion | null>(null);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [showGymModal, setShowGymModal] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -51,6 +57,7 @@ export default function EditCrewScreen() {
     setName(crew.name);
     setDescription(crew.description ?? '');
     setGymId(crew.home_gym?.id ?? null);
+    setRegion(crew.region ?? null);
     setImageUrl(crew.image_url ?? null);
     setPrefilled(true);
   }, [crew, prefilled]);
@@ -103,6 +110,7 @@ export default function EditCrewScreen() {
         description: description.trim() || null,
         homeGymId: gymId,
         imageUrl: imageUrl,
+        region: region,
       });
       router.back();
     } catch (e) {
@@ -190,6 +198,38 @@ export default function EditCrewScreen() {
             maxLength={DESC_MAX}
           />
           <Text style={s.charCount}>{description.length} / {DESC_MAX}</Text>
+
+          <Text style={[s.label, { marginTop: 18 }]}>주요 활동지역</Text>
+          <View style={s.regionGrid}>
+            {CREW_REGION_OPTIONS.map((r) => {
+              const active = region === r;
+              return (
+                <Pressable
+                  key={r}
+                  onPress={() => setRegion(active ? null : r)}
+                >
+                  {({ pressed }) => (
+                    <View
+                      style={[
+                        s.regionChip,
+                        active ? s.regionChipActive : s.regionChipInactive,
+                        pressed && { opacity: 0.8 },
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          s.regionChipText,
+                          active ? s.regionChipTextActive : s.regionChipTextInactive,
+                        ]}
+                      >
+                        {r}
+                      </Text>
+                    </View>
+                  )}
+                </Pressable>
+              );
+            })}
+          </View>
 
           <Text style={[s.label, { marginTop: 18 }]}>주 활동 암장</Text>
           <Pressable onPress={() => setShowGymModal(true)}>
@@ -328,6 +368,18 @@ function makeStyles(c: ThemeColors) {
   },
   textArea: { minHeight: 96, paddingTop: 12 },
   charCount: { fontSize: 11, color: c.text.muted, textAlign: 'right', marginTop: 4 },
+  regionGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  regionChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 999,
+    borderWidth: 1,
+  },
+  regionChipActive: { backgroundColor: c.brand.primary, borderColor: c.brand.primary },
+  regionChipInactive: { backgroundColor: c.bg.card, borderColor: c.border.subtle },
+  regionChipText: { fontSize: 12, fontWeight: '700' },
+  regionChipTextActive: { color: c.brand.onPrimary },
+  regionChipTextInactive: { color: c.text.secondary },
   gymBox: {
     flexDirection: 'row',
     alignItems: 'center',

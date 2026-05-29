@@ -247,11 +247,18 @@ export default function CrewDetailScreen() {
           </View>
         </View>
 
-        {data.description && (
+        {(data.description || data.region || data.home_gym) && (
           <View style={s.profileDescriptionBox}>
-            <Text style={s.profileDescriptionText}>
-              {data.description}
-            </Text>
+            {data.description && (
+              <Text style={s.profileDescriptionText}>
+                {data.description}
+              </Text>
+            )}
+            {data.region && (
+              <Text style={s.profileGymText}>
+                🗺️ {data.region}
+              </Text>
+            )}
             {data.home_gym && (
               <Text style={s.profileGymText}>
                 📍 {data.home_gym.name} {data.home_gym.branch || ''}

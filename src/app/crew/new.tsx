@@ -16,7 +16,7 @@ import { Feather } from '@expo/vector-icons';
 
 import { GymPickerModal } from '@/components/session/gym-picker-modal';
 import { Section } from '@/components/ui/section';
-import { useCreateCrew } from '@/hooks/use-crews';
+import { CREW_REGION_OPTIONS, useCreateCrew, type CrewRegion } from '@/hooks/use-crews';
 import { useGyms } from '@/hooks/use-gyms';
 import { useThemeColors } from '@/lib/theme';
 
@@ -32,6 +32,7 @@ export default function NewCrewScreen() {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [gymId, setGymId] = useState<string | null>(null);
+  const [region, setRegion] = useState<CrewRegion | null>(null);
   const [showGymModal, setShowGymModal] = useState(false);
 
   const selectedGym = useMemo(
@@ -48,6 +49,7 @@ export default function NewCrewScreen() {
         name: name.trim(),
         description: description.trim() || null,
         homeGymId: gymId,
+        region: region,
       });
       router.replace({ pathname: '/crew/[id]', params: { id } } as never);
     } catch (e) {
@@ -111,6 +113,33 @@ export default function NewCrewScreen() {
               <Text className="text-text-tertiary text-xs text-right">
                 {description.length} / {DESC_MAX}
               </Text>
+            </View>
+          </Section>
+
+          <Section title="주요 활동지역">
+            <View className="flex-row flex-wrap gap-1.5">
+              {CREW_REGION_OPTIONS.map((r) => {
+                const active = region === r;
+                return (
+                  <Pressable
+                    key={r}
+                    onPress={() => setRegion(active ? null : r)}
+                    className={`px-3 py-1.5 rounded-full border ${
+                      active
+                        ? 'bg-brand-primary border-brand-primary'
+                        : 'bg-background-secondary border-border-subtle'
+                    } active:opacity-80`}
+                  >
+                    <Text
+                      className={`text-xs font-bold ${
+                        active ? 'text-background-primary' : 'text-text-secondary'
+                      }`}
+                    >
+                      {r}
+                    </Text>
+                  </Pressable>
+                );
+              })}
             </View>
           </Section>
 

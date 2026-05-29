@@ -18,6 +18,15 @@ export type CrewUserMini = {
   avatar_url: string | null;
 };
 
+export const CREW_REGION_OPTIONS = [
+  '서울', '경기', '인천',
+  '강원', '충북', '충남', '대전', '세종',
+  '전북', '전남', '광주',
+  '경북', '경남', '대구', '울산', '부산',
+  '제주',
+] as const;
+export type CrewRegion = typeof CREW_REGION_OPTIONS[number];
+
 export type CrewSummary = {
   id: string;
   name: string;
@@ -29,6 +38,7 @@ export type CrewSummary = {
   image_url: string | null;
   member_count: number;
   created_at: string;
+  region: CrewRegion | null;
 };
 
 export type CrewMember = {
@@ -44,7 +54,7 @@ export type CrewDetail = CrewSummary & {
 };
 
 const CREW_COLS =
-  'id, name, description, invite_code, owner_id, home_gym_id, image_url, member_count, created_at, home_gym:gyms(id, name, branch)';
+  'id, name, description, invite_code, owner_id, home_gym_id, image_url, member_count, created_at, region, home_gym:gyms(id, name, branch)';
 
 // ── 내 크루 목록 ──────────────────────────────────────────────
 export function useMyCrews() {
@@ -116,6 +126,7 @@ export type CreateCrewArgs = {
   name: string;
   description: string | null;
   homeGymId: string | null;
+  region: CrewRegion | null;
 };
 
 export function useCreateCrew() {
@@ -137,6 +148,7 @@ export function useCreateCrew() {
             description: args.description?.trim() || null,
             owner_id: userId,
             home_gym_id: args.homeGymId,
+            region: args.region,
           })
           .select('id')
           .single();
@@ -246,6 +258,7 @@ export type UpdateCrewArgs = {
   description?: string | null;
   homeGymId?: string | null;
   imageUrl?: string | null;
+  region?: CrewRegion | null;
 };
 
 export function useUpdateCrew() {
@@ -256,6 +269,7 @@ export function useUpdateCrew() {
       if (args.name !== undefined) patch.name = args.name.trim();
       if (args.description !== undefined) patch.description = args.description?.trim() || null;
       if (args.homeGymId !== undefined) patch.home_gym_id = args.homeGymId;
+      if (args.region !== undefined) patch.region = args.region;
       if (args.imageUrl !== undefined) patch.image_url = args.imageUrl;
       const { error } = await supabase.from('crews').update(patch).eq('id', args.crewId);
       if (error) throw new Error(error.message);

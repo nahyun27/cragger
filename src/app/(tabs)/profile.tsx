@@ -43,7 +43,7 @@ import {
 } from '@/hooks/use-memberships';
 import { currentMonth, monthRange } from '@/lib/date-ranges';
 import { supabase } from '@/lib/supabase';
-import { useThemeColors, useThemePref, type ThemeColors, type ThemePref } from '@/lib/theme';
+import { useThemeColors, useThemePref, useEffectiveScheme, type ThemeColors, type ThemePref } from '@/lib/theme';
 
 export type Badge = {
   id: string;
@@ -567,9 +567,9 @@ function BadgesSection({ onSelectBadge }: { onSelectBadge: (badge: Badge) => voi
       <View style={s.badgesContainer}>
         {MOCK_BADGES.map((badge) => {
           const isLocked = !badge.unlocked;
-          const iconColor = isLocked ? '#94a3b8' : badge.color;
-          const bgColor = isLocked ? '#f1f5f9' : badge.bg;
-          const borderColor = isLocked ? '#e2e8f0' : badge.color;
+          const iconColor = isLocked ? c.text.muted : badge.color;
+          const bgColor = isLocked ? c.bg.subtle : c.bg.card;
+          const borderColor = isLocked ? c.border.subtle : badge.color;
 
           return (
             <Pressable key={badge.id} style={s.badgeItem} onPress={() => handleBadgePress(badge)}>
@@ -588,7 +588,7 @@ function BadgesSection({ onSelectBadge }: { onSelectBadge: (badge: Badge) => voi
                     
                     {isLocked && (
                       <View style={s.badgeLockBadge}>
-                        <Feather name="lock" size={8} color="#ffffff" />
+                        <Feather name="lock" size={8} color={c.bg.card} />
                       </View>
                     )}
                   </View>
@@ -632,7 +632,7 @@ function CrewsSection() {
             hitSlop={6}
           >
             <View style={s.addBtn}>
-              <Feather name="plus" size={14} color="#ffffff" />
+              <Feather name="plus" size={14} color={c.text.secondary} />
               <Text style={s.addBtnText}>만들기</Text>
             </View>
           </Pressable>
@@ -672,10 +672,10 @@ function CrewsSection() {
   );
 }
 
-function getCrewAvatarColors(name: string) {
-  const bgColors = ['#faf5ff', '#eff6ff', '#ecfeff', '#fffbeb', '#fef2f2', '#f0fdf4'];
-  const textColors = ['#7c3aed', '#2563eb', '#0891b2', '#d97706', '#dc2626', '#16a34a'];
-  const borderColors = ['#e9d5ff', '#bfdbfe', '#cffafe', '#fde68a', '#fee2e2', '#bbf7d0'];
+function getCrewAvatarColors(name: string, c: ThemeColors) {
+  const bgColors = [c.bg.subtle, c.bg.card, c.bg.accent, c.bg.subtle, c.bg.card, c.bg.accent];
+  const textColors = [c.text.primary, c.brand.primary, c.status.success, c.status.warning, c.status.danger, c.brand.primaryDeep];
+  const borderColors = [c.border.subtle, c.border.subtle, c.border.strong, c.border.subtle, c.border.subtle, c.border.subtle];
   let sum = 0;
   for (let i = 0; i < name.length; i++) sum += name.charCodeAt(i);
   const idx = sum % bgColors.length;
@@ -692,7 +692,7 @@ function CrewCard({ crew }: { crew: CrewSummary }) {
   const router = useRouter();
   const name = crew.name ?? '크루';
   const firstChar = name.length > 0 ? name.charAt(0).toUpperCase() : '?';
-  const colors = getCrewAvatarColors(name);
+  const colors = getCrewAvatarColors(name, c);
 
   return (
     <Pressable
@@ -770,7 +770,7 @@ function MembershipsSection() {
           style={({ pressed }) => [{ opacity: pressed ? 0.9 : 1 }]}
         >
           <View style={s.addMembershipBtn}>
-            <Feather name="plus" size={14} color="white" />
+            <Feather name="plus" size={14} color={c.text.secondary} />
             <Text style={s.addMembershipText}>추가</Text>
           </View>
         </Pressable>
@@ -849,6 +849,7 @@ function MembershipCard({
 }) {
   const c = useThemeColors();
   const s = React.useMemo(() => makeStyles(c), [c]);
+  const isDark = useEffectiveScheme() === 'dark';
   const router = useRouter();
   const usePass = useUsePass();
   const gymLabel = membership.gym
@@ -921,22 +922,22 @@ function MembershipCard({
   ];
 
   const iconColor = expired
-    ? '#94a3b8'
+    ? c.text.muted
     : expSoon
-    ? '#ef4444'
+    ? c.status.danger
     : isPasses
-    ? '#0891b2'
-    : '#4f46e5';
+    ? c.brand.primaryDeep
+    : isDark ? '#818cf8' : '#4f46e5';
 
   const dividerColor = expired
-    ? '#cbd5e1'
+    ? c.border.strong
     : expSoon
-    ? '#fca5a5'
+    ? c.status.dangerBg
     : isPasses
-    ? '#a5f3fc'
-    : '#c7d2fe';
+    ? c.brand.primaryLight
+    : isDark ? '#3730a3' : '#c7d2fe';
 
-  const cutoutBorderColor = expSoon ? '#fecaca' : c.border.subtle;
+  const cutoutBorderColor = expSoon ? c.status.dangerBg : c.border.subtle;
 
   // 카드 전체를 Pressable로 — Pressable의 함수형 style 배열이 내부 row
   // layout을 자꾸 무너뜨려서 children-as-function 패턴으로 옮김.
@@ -1078,7 +1079,7 @@ function ShoesSection() {
           hitSlop={6}
         >
           <View style={s.addBtn}>
-            <Feather name="plus" size={14} color="#ffffff" />
+            <Feather name="plus" size={14} color={c.text.secondary} />
             <Text style={s.addBtnText}>추가</Text>
           </View>
         </Pressable>
@@ -1112,7 +1113,7 @@ function ShoesSection() {
             <Pressable onPress={() => router.push('/shoes/new')}>
               {({ pressed }) => (
                 <View style={[s.addBtn, { marginTop: 12 }, pressed && { opacity: 0.8 }]}>
-                  <Feather name="plus" size={14} color="#ffffff" />
+                  <Feather name="plus" size={14} color={c.text.secondary} />
                   <Text style={s.addBtnText}>추가</Text>
                 </View>
               )}
@@ -1475,10 +1476,10 @@ function makeStyles(c: ThemeColors) {
     flexDirection: 'row',
     gap: 12,
     padding: 14,
-    backgroundColor: '#f0f9ff',
+    backgroundColor: c.bg.subtle,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: '#bae6fd',
+    borderColor: c.border.subtle,
     marginBottom: 12,
   },
   footCardLeft: {
@@ -1487,7 +1488,7 @@ function makeStyles(c: ThemeColors) {
     borderRadius: 12,
     backgroundColor: c.bg.card,
     borderWidth: 1,
-    borderColor: '#bae6fd',
+    borderColor: c.border.subtle,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1498,24 +1499,24 @@ function makeStyles(c: ThemeColors) {
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  footCardTitle: { fontSize: 14, fontWeight: '900', color: '#0c4a6e' },
+  footCardTitle: { fontSize: 14, fontWeight: '900', color: c.text.primary },
   footEditChip: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 2,
   },
-  footEditChipText: { fontSize: 12, fontWeight: '800', color: '#0891b2' },
+  footEditChipText: { fontSize: 12, fontWeight: '800', color: c.text.secondary },
   footEmptyText: { fontSize: 12, color: c.text.tertiary, lineHeight: 17 },
   footChipsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 4 },
   footMiniChip: {
     backgroundColor: c.bg.card,
     borderWidth: 1,
-    borderColor: '#bae6fd',
+    borderColor: c.border.subtle,
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 6,
   },
-  footMiniChipText: { fontSize: 11, fontWeight: '700', color: '#0c4a6e' },
+  footMiniChipText: { fontSize: 11, fontWeight: '700', color: c.text.secondary },
 
   sectionTitleCount: { color: c.brand.primary },
   flex1: { flex: 1 },
@@ -1845,11 +1846,11 @@ function makeStyles(c: ThemeColors) {
     width: 16,
     height: 16,
     borderRadius: 8,
-    backgroundColor: '#64748b',
+    backgroundColor: c.border.strong,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1.5,
-    borderColor: '#ffffff',
+    borderColor: c.bg.card,
   },
   badgeIconWrap: {
     width: 46,
@@ -1896,20 +1897,17 @@ function makeStyles(c: ThemeColors) {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: '#06b6d4',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 10,
-    shadowColor: '#06b6d4',
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 2,
+    backgroundColor: c.bg.card,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: c.border.strong,
   },
   addMembershipText: {
-    color: '#ffffff',
+    color: c.text.secondary,
     fontSize: 12,
-    fontWeight: '800',
+    fontWeight: '700',
   },
   emptyMembershipCard: {
     backgroundColor: c.bg.card,
@@ -1970,16 +1968,16 @@ function makeStyles(c: ThemeColors) {
     shadowOpacity: 0,
     elevation: 0,
     borderLeftWidth: 5,
-    borderLeftColor: '#cbd5e1',
+    borderLeftColor: c.border.strong,
   },
   mCardUrgent: {
-    borderColor: '#fecaca',
+    borderColor: c.status.dangerBg,
     borderLeftWidth: 5,
-    borderLeftColor: '#ef4444',
+    borderLeftColor: c.status.danger,
   },
   mCardPasses: {
     borderLeftWidth: 5,
-    borderLeftColor: '#06b6d4',
+    borderLeftColor: c.brand.primaryDeep,
   },
   mCardPeriod: {
     borderLeftWidth: 5,
@@ -1989,10 +1987,10 @@ function makeStyles(c: ThemeColors) {
     backgroundColor: c.bg.accent,
   },
   mIconBoxPeriod: {
-    backgroundColor: '#e0e7ff',
+    backgroundColor: 'rgba(99, 102, 241, 0.15)',
   },
   mIconBoxUrgent: {
-    backgroundColor: '#ffe4e6',
+    backgroundColor: c.status.dangerBg,
   },
   ticketDivider: {
     width: 0,
@@ -2058,7 +2056,7 @@ function makeStyles(c: ThemeColors) {
   mBadge: {
     backgroundColor: c.bg.accent,
     borderWidth: 1,
-    borderColor: '#cffafe',
+    borderColor: c.brand.primaryLight,
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 8,
@@ -2066,12 +2064,12 @@ function makeStyles(c: ThemeColors) {
   mBadgeText: {
     fontSize: 10,
     fontWeight: '800',
-    color: c.brand.primary,
+    color: c.brand.primaryDeep,
   },
   mBadgePeriod: {
-    backgroundColor: '#e0e7ff',
+    backgroundColor: 'rgba(99, 102, 241, 0.15)',
     borderWidth: 1,
-    borderColor: '#c7d2fe',
+    borderColor: 'rgba(99, 102, 241, 0.3)',
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 8,
@@ -2079,12 +2077,12 @@ function makeStyles(c: ThemeColors) {
   mBadgeTextPeriod: {
     fontSize: 10,
     fontWeight: '800',
-    color: '#4f46e5',
+    color: '#6366f1',
   },
   mCountBadge: {
     backgroundColor: c.bg.accent,
     borderWidth: 1,
-    borderColor: '#cffafe',
+    borderColor: c.brand.primaryLight,
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 8,
@@ -2092,7 +2090,7 @@ function makeStyles(c: ThemeColors) {
   mCountBadgeText: {
     fontSize: 10,
     fontWeight: '800',
-    color: '#0891b2',
+    color: c.brand.primaryDeep,
   },
   mCountBadgeExpired: {
     backgroundColor: c.bg.subtle,
@@ -2121,9 +2119,9 @@ function makeStyles(c: ThemeColors) {
     color: c.text.tertiary,
   },
   mBadgeUrgent: {
-    backgroundColor: '#ffe4e6',
+    backgroundColor: c.status.dangerBg,
     borderWidth: 1,
-    borderColor: '#fecaca',
+    borderColor: c.status.dangerBg,
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 8,
@@ -2218,20 +2216,17 @@ function makeStyles(c: ThemeColors) {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 10,
-    backgroundColor: '#06b6d4',
-    shadowColor: '#06b6d4',
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 2,
+    backgroundColor: c.bg.card,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: c.border.strong,
   },
   addBtnText: {
-    color: '#ffffff',
+    color: c.text.secondary,
     fontSize: 12,
-    fontWeight: '800',
+    fontWeight: '700',
   },
   crewOutlineBtn: {
     flexDirection: 'row',
@@ -2313,15 +2308,15 @@ function makeStyles(c: ThemeColors) {
   },
   primaryChip: {
     alignSelf: 'flex-start',
-    backgroundColor: '#fffbeb',
+    backgroundColor: c.status.warningBg,
     borderWidth: 1,
-    borderColor: '#fde68a',
+    borderColor: c.status.warning,
     borderRadius: 999,
     paddingHorizontal: 8,
     paddingVertical: 2,
     marginTop: 2,
   },
-  primaryChipText: { fontSize: 10, fontWeight: '800', color: '#92400e' },
+  primaryChipText: { fontSize: 10, fontWeight: '800', color: c.status.warning },
   sizePill: {
     backgroundColor: c.bg.subtle,
     paddingHorizontal: 10,
@@ -2330,18 +2325,18 @@ function makeStyles(c: ThemeColors) {
   },
   sizePillText: { fontSize: 11, fontWeight: '900', color: c.text.primary },
   overallRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  overallStar: { fontSize: 13, color: '#10b981' },
+  overallStar: { fontSize: 13, color: c.status.success },
   overallNum: { fontSize: 13, fontWeight: '900', color: c.text.primary },
   shoeChipsRow: { flexDirection: 'row', gap: 6, marginTop: 2, flexWrap: 'wrap' },
   tagChipActive: {
     borderWidth: 1,
-    borderColor: '#10b981',
-    backgroundColor: '#ecfdf5',
+    borderColor: c.status.success,
+    backgroundColor: c.status.successBg,
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 6,
   },
-  tagChipActiveText: { fontSize: 10, fontWeight: '800', color: '#047857' },
+  tagChipActiveText: { fontSize: 10, fontWeight: '800', color: c.status.success },
   tagChip: {
     borderWidth: 1,
     borderColor: c.border.subtle,
@@ -2385,10 +2380,10 @@ function makeStyles(c: ThemeColors) {
     flex: 1,
     height: 6,
     borderRadius: 3,
-    backgroundColor: '#e2e8f0',
+    backgroundColor: c.bg.subtle,
     overflow: 'hidden',
   },
-  miniBarFill: { height: '100%', backgroundColor: '#10b981', borderRadius: 3 },
+  miniBarFill: { height: '100%', backgroundColor: c.status.success, borderRadius: 3 },
   miniBarValue: { fontSize: 9, fontWeight: '800', color: c.text.primary, minWidth: 10, textAlign: 'right' },
   shoeIcon: {
     width: 40,

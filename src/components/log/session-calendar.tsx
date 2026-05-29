@@ -126,10 +126,10 @@ export function SessionCalendar() {
       const condColor = condition ? CONDITION_COLOR[condition] : null;
 
       const dayNumColor = isDisabled
-        ? '#cbd5e1'
+        ? c.text.tertiary
         : isToday
         ? BRAND
-        : '#475569';
+        : c.text.primary;
 
       return (
         <Pressable
@@ -185,10 +185,10 @@ export function SessionCalendar() {
           )}
           theme={{
             backgroundColor: c.bg.card,
-            calendarBackground: '#ffffff',
-            textSectionTitleColor: '#94a3b8',
-            monthTextColor: '#0f172a',
-            arrowColor: '#0f172a',
+            calendarBackground: c.bg.card,
+            textSectionTitleColor: c.text.muted,
+            monthTextColor: c.text.primary,
+            arrowColor: c.text.primary,
             textMonthFontWeight: '800',
             textMonthFontSize: 16,
             textDayHeaderFontWeight: '700',
@@ -326,17 +326,17 @@ function makeStyles(c: ThemeColors) {
     position: 'absolute',
     top: -4,
     right: -6,
-    backgroundColor: '#0f172a',
+    backgroundColor: c.text.primary,
     paddingHorizontal: 4,
     paddingVertical: 1,
     borderRadius: 8,
     minWidth: 16,
     alignItems: 'center',
     borderWidth: 1.5,
-    borderColor: '#ffffff',
+    borderColor: c.bg.card,
   },
   extraBadgeText: {
-    color: '#ffffff',
+    color: c.bg.primary,
     fontSize: 8,
     fontWeight: '800',
   },
@@ -356,7 +356,7 @@ function makeStyles(c: ThemeColors) {
     paddingHorizontal: 8,
     borderTopWidth: 1,
     borderColor: c.border.subtle,
-    backgroundColor: '#fafbfc',
+    backgroundColor: c.bg.subtle,
   },
   summaryCol: {
     flex: 1,
@@ -365,7 +365,7 @@ function makeStyles(c: ThemeColors) {
   },
   summaryDivider: {
     width: 1,
-    backgroundColor: '#e2e8f0',
+    backgroundColor: c.border.subtle,
     alignSelf: 'center',
     height: 24,
   },
@@ -404,9 +404,9 @@ function makeStyles(c: ThemeColors) {
   errorBox: {
     padding: 16,
     borderRadius: 16,
-    backgroundColor: '#fef2f2',
+    backgroundColor: c.status.dangerBg,
     borderWidth: 1,
-    borderColor: '#fecaca',
+    borderColor: c.status.danger,
   },
   errorText: { color: c.status.danger, fontSize: 13, fontWeight: '600' },
   emptyBox: {
