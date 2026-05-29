@@ -1,7 +1,7 @@
 import { customAlert } from '@/components/ui/custom-alert';
 import { BadgeIcon } from '@/components/ui/badge-icon';
 import { InstagramIcon } from '@/components/ui/instagram-icon';
-import { Redirect, useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
   ActivityIndicator,
@@ -83,8 +83,13 @@ export default function PublicProfileScreen() {
   const followMut = useFollow();
   const unfollowMut = useUnfollow();
 
-  // 본인 프로필이면 마이페이지로 redirect — expo-router 의 <Redirect> 사용 (render 안전)
-  if (isMe) return <Redirect href="/(tabs)/profile" />;
+  // 본인 프로필이면 마이페이지로 redirect — setTimeout 으로 render cycle 밖에서 실행
+  React.useEffect(() => {
+    if (!isMe) return;
+    const t = setTimeout(() => router.replace('/(tabs)/profile'), 0);
+    return () => clearTimeout(t);
+  }, [isMe, router]);
+  if (isMe) return null;
 
   const isPrivate = profile?.is_private ?? false;
   // 비공개 + 비팔로워 + (본인 아님) → 콘텐츠 가림

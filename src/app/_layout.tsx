@@ -42,16 +42,19 @@ function RootStack() {
   const { session, isLoading } = useAuth();
   const segments = useSegments();
   const router = useRouter();
+  const seg0 = segments[0];
 
   useEffect(() => {
     if (isLoading) return;
-    const inAuthGroup = segments[0] === 'auth';
+    const inAuthGroup = seg0 === 'auth';
     if (!session && !inAuthGroup) {
       router.replace('/auth/sign-in');
     } else if (session && inAuthGroup) {
       router.replace('/(tabs)');
     }
-  }, [session, isLoading, segments, router]);
+    // router 는 expo-router 에서 안정 — deps 에서 제외 (재실행 줄임).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session, isLoading, seg0]);
 
   if (isLoading) {
     return (
