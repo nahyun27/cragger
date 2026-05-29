@@ -25,13 +25,13 @@ export const BADGES: BadgeDef[] = [
   { key: 'session_100',   category: 'record', name: '세션 100',    hint: '세션 100회', icon: 'session-100', color: '#1e40af', bg: '#93c5fd' },
 
   // ── 그레이드 (grade) ───────────────────────────────────────
-  { key: 'first_v3',      category: 'grade',  name: 'V3 돌파',     hint: 'V3 첫 완등', icon: 'V3', color: '#22c55e', bg: '#dcfce7' },
-  { key: 'first_v5',      category: 'grade',  name: 'V5 돌파',     hint: 'V5 첫 완등', icon: 'V5', color: '#4f46e5', bg: '#e0e7ff' },
-  { key: 'first_v7',      category: 'grade',  name: 'V7 돌파',     hint: 'V7 첫 완등', icon: 'V7', color: '#9333ea', bg: '#f3e8ff' },
-  { key: 'first_v9',      category: 'grade',  name: 'V9 돌파',     hint: 'V9 첫 완등', icon: 'V9', color: '#c026d3', bg: '#fae8ff' },
-  { key: 'first_lead_510',category: 'grade',  name: '5.10 돌파',   hint: '5.10 첫 완등', icon: '5.10', color: '#ea580c', bg: '#fed7aa' },
-  { key: 'first_lead_511',category: 'grade',  name: '5.11 돌파',   hint: '5.11 첫 완등', icon: '5.11', color: '#dc2626', bg: '#fecaca' },
-  { key: 'first_lead_512',category: 'grade',  name: '5.12 돌파',   hint: '5.12 첫 완등', icon: '5.12', color: '#991b1b', bg: '#fca5a5' },
+  { key: 'first_v3',      category: 'grade',  name: 'V3 돌파',     hint: 'V3 첫 완등', icon: 'V3', color: '#7c3aed', bg: '#ede9fe' },
+  { key: 'first_v5',      category: 'grade',  name: 'V5 돌파',     hint: 'V5 첫 완등', icon: 'V5', color: '#7c3aed', bg: '#ede9fe' },
+  { key: 'first_v7',      category: 'grade',  name: 'V7 돌파',     hint: 'V7 첫 완등', icon: 'V7', color: '#7c3aed', bg: '#ede9fe' },
+  { key: 'first_v9',      category: 'grade',  name: 'V9 돌파',     hint: 'V9 첫 완등', icon: 'V9', color: '#7c3aed', bg: '#ede9fe' },
+  { key: 'first_lead_510',category: 'grade',  name: '5.10 돌파',   hint: '5.10 첫 완등', icon: '5.10', color: '#7c3aed', bg: '#ede9fe' },
+  { key: 'first_lead_511',category: 'grade',  name: '5.11 돌파',   hint: '5.11 첫 완등', icon: '5.11', color: '#7c3aed', bg: '#ede9fe' },
+  { key: 'first_lead_512',category: 'grade',  name: '5.12 돌파',   hint: '5.12 첫 완등', icon: '5.12', color: '#7c3aed', bg: '#ede9fe' },
 
   // ── 색깔 (color) ──────────────────────────────────────────
   { key: 'rainbow',       category: 'color',  name: '레인보우',    hint: '한 세션에 5색 이상 완등', icon: 'rainbow', color: '#0891b2', bg: '#cffafe' },

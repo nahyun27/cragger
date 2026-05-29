@@ -22,6 +22,7 @@ import React from 'react';
 import { Text, View, StyleSheet } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import Svg, { Path } from 'react-native-svg';
 
 type BadgeIconProps = {
   icon: string;
@@ -118,20 +119,22 @@ export function BadgeIcon({ icon, color, size = 20 }: BadgeIconProps) {
     );
   }
 
-  // V그레이드 / 리드 — 컬러 원형 배경 + 텍스트
+  // V그레이드 / 리드 — 방패 모양 + 흰 텍스트
   if (/^V\d/.test(icon) || /^5\.\d/.test(icon)) {
+    const w = size * 1.6;
+    const h = size * 1.85;
     return (
-      <View style={[textIconStyles.outer, {
-        width: size * 1.6,
-        height: size * 1.6,
-        borderRadius: size * 0.8,
-        backgroundColor: color + '22',
-        borderWidth: 1.5,
-        borderColor: color,
-      }]}>
+      <View style={{ width: w, height: h, alignItems: 'center', justifyContent: 'center' }}>
+        <Svg width={w} height={h} viewBox="0 0 100 115" style={{ position: 'absolute' }}>
+          <Path
+            d="M 15,5 L 85,5 Q 92,5 92,12 L 92,58 L 50,108 L 8,58 L 8,12 Q 8,5 15,5 Z"
+            fill={color}
+          />
+        </Svg>
         <Text style={[textIconStyles.text, {
-          color,
-          fontSize: icon.length >= 4 ? size * 0.55 : size * 0.8,
+          color: '#ffffff',
+          fontSize: icon.length >= 4 ? size * 0.5 : size * 0.78,
+          marginTop: -size * 0.18,
         }]}>
           {icon}
         </Text>
