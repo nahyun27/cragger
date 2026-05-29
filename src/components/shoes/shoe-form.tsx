@@ -14,6 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 
 import { Section } from '@/components/ui/section';
+import { Sheet } from '@/components/ui/sheet';
 import { useThemeColors, type ThemeColors } from '@/lib/theme';
 import {
   FIT_FEATURE_OPTIONS,
@@ -575,24 +576,8 @@ function BrandPicker({
         />
       )}
 
-      <Modal
-        visible={open}
-        animationType="slide"
-        presentationStyle="pageSheet"
-        onRequestClose={() => setOpen(false)}
-      >
-        <SafeAreaView style={s.sheetContainer} edges={['top', 'bottom']}>
-          <View style={s.sheetHeader}>
-            <Text style={s.sheetTitle}>브랜드 선택</Text>
-            <Pressable onPress={() => setOpen(false)} hitSlop={8}>
-              {({ pressed }) => (
-                <View style={[s.sheetCloseBtn, pressed && s.btnPressed]}>
-                  <Feather name="x" size={20} color={c.text.primary} />
-                </View>
-              )}
-            </Pressable>
-          </View>
-          <ScrollView contentContainerStyle={s.sheetList}>
+      <Sheet visible={open} onClose={() => setOpen(false)} variant="full" title="브랜드 선택">
+          <View style={s.sheetList}>
             {BRAND_PRESETS.map((b) => {
               const active = !isCustom && value === b;
               return (
@@ -633,9 +618,8 @@ function BrandPicker({
                 </View>
               )}
             </Pressable>
-          </ScrollView>
-        </SafeAreaView>
-      </Modal>
+          </View>
+      </Sheet>
     </>
   );
 }
@@ -776,23 +760,7 @@ function SizePicker({
         )}
       </Pressable>
 
-      <Modal
-        visible={open}
-        animationType="slide"
-        presentationStyle="pageSheet"
-        onRequestClose={() => setOpen(false)}
-      >
-        <SafeAreaView style={s.sheetContainer} edges={['top', 'bottom']}>
-          <View style={s.sheetHeader}>
-            <Text style={s.sheetTitle}>EU 사이즈 선택</Text>
-            <Pressable onPress={() => setOpen(false)} hitSlop={8}>
-              {({ pressed }) => (
-                <View style={[s.sheetCloseBtn, pressed && s.btnPressed]}>
-                  <Feather name="x" size={20} color={c.text.primary} />
-                </View>
-              )}
-            </Pressable>
-          </View>
+      <Sheet visible={open} onClose={() => setOpen(false)} variant="full" title="EU 사이즈 선택">
           <ScrollView ref={scrollRef} contentContainerStyle={s.sheetList}>
             {EU_SIZES.map((size) => {
               const active = size === value;
@@ -818,8 +786,7 @@ function SizePicker({
               );
             })}
           </ScrollView>
-        </SafeAreaView>
-      </Modal>
+      </Sheet>
     </>
   );
 }
