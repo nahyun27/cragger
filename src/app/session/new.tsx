@@ -27,6 +27,7 @@ import { useGymRegisteredColors } from '@/hooks/use-gym-registered-colors';
 import { useRecentColorActivity } from '@/hooks/use-recent-color-activity';
 import { useRecentGyms } from '@/hooks/use-recent-gyms';
 import { useRecordSession, type ClimbingDiscipline } from '@/hooks/use-record-session';
+import { useThemeColors } from '@/lib/theme';
 
 // ── 날짜 칩 헬퍼 ────────────────────────────────────────────
 type DateChoice = 'today' | 'yesterday' | 'day_before';
@@ -73,6 +74,7 @@ function DisciplineBtn({
   disabled?: boolean;
   onPress: () => void;
 }) {
+  const c = useThemeColors();
   return (
     <Pressable onPress={onPress} style={{ flex: 1 }}>
       {({ pressed }) => (
@@ -119,7 +121,8 @@ function DisciplineBtn({
 }
 
 export default function NewSessionScreen() {
-  const router = useRouter();
+
+  const c = useThemeColors();  const router = useRouter();
   const recordSession = useRecordSession();
 
   const [dateChoice, setDateChoice] = useState<DateChoice>('today');
@@ -207,7 +210,7 @@ export default function NewSessionScreen() {
     <SafeAreaView className="flex-1 bg-background-primary" edges={['top', 'bottom']}>
       <View className="flex-row items-center px-4 py-2 border-b border-border-subtle">
         <Pressable onPress={() => router.back()} className="p-2 -ml-2 active:opacity-60" hitSlop={8}>
-          <Feather name="arrow-left" size={24} color="#0f172a" />
+          <Feather name="arrow-left" size={24} color={c.text.primary} />
         </Pressable>
         <Text className="flex-1 text-center text-text-primary text-base font-semibold mr-6">
           오늘 운동 기록
@@ -270,7 +273,7 @@ export default function NewSessionScreen() {
           <View className="flex-row flex-wrap gap-2">
             <Chip
               label="장소 검색"
-              icon={<Feather name="search" size={14} color="#64748b" />}
+              icon={<Feather name="search" size={14} color={c.text.tertiary} />}
               selected={false}
               onPress={() => setShowGymModal(true)}
             />

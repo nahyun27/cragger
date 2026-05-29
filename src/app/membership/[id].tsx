@@ -18,6 +18,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { GymPickerModal } from '@/components/session/gym-picker-modal';
 import { Section } from '@/components/ui/section';
 import { useGyms } from '@/hooks/use-gyms';
+import { useThemeColors } from '@/lib/theme';
 import {
   addMonthsISO,
   useDeleteMembership,
@@ -34,7 +35,8 @@ const DURATION_CHIPS: { months: number; label: string }[] = [
 ];
 
 export default function EditMembershipScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+
+  const c = useThemeColors();  const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { data, isLoading, error } = useMembership(id);
   const updateMembership = useUpdateMembership();
@@ -149,7 +151,7 @@ export default function EditMembershipScreen() {
         className="flex-1 bg-background-primary items-center justify-center"
         edges={['top', 'bottom']}
       >
-        <ActivityIndicator size="large" color="#06b6d4" />
+        <ActivityIndicator size="large" color={c.brand.primary} />
       </SafeAreaView>
     );
   }
@@ -194,9 +196,9 @@ export default function EditMembershipScreen() {
           hitSlop={8}
         >
           {deleteMembership.isPending ? (
-            <ActivityIndicator size="small" color="#ef4444" />
+            <ActivityIndicator size="small" color={c.status.danger} />
           ) : (
-            <Feather name="trash-2" size={22} color="#ef4444" />
+            <Feather name="trash-2" size={22} color={c.status.danger} />
           )}
         </Pressable>
       </View>
@@ -213,7 +215,7 @@ export default function EditMembershipScreen() {
               className="flex-row items-center justify-between border border-border-subtle bg-background-secondary rounded-xl py-3 px-4 active:bg-background-tertiary"
             >
               <View className="flex-row items-center gap-2">
-                <Feather name="search" size={16} color="#64748b" />
+                <Feather name="search" size={16} color={c.text.tertiary} />
                 <Text
                   className={`text-base ${
                     selectedGym ? 'text-text-primary font-semibold' : 'text-text-muted'
@@ -224,14 +226,14 @@ export default function EditMembershipScreen() {
                     : '암장을 선택해주세요'}
                 </Text>
               </View>
-              <Feather name="chevron-down" size={16} color="#64748b" />
+              <Feather name="chevron-down" size={16} color={c.text.tertiary} />
             </Pressable>
           </Section>
 
           {/* Start Date Section (Read-Only Card) */}
           <Section title="시작일">
             <View className="px-4 py-3.5 rounded-xl bg-background-secondary border border-border-subtle flex-row items-center gap-2">
-              <Feather name="calendar" size={16} color="#64748b" />
+              <Feather name="calendar" size={16} color={c.text.tertiary} />
               <Text className="text-text-primary text-base font-semibold">{data.start_date}</Text>
             </View>
             <Text className="text-text-tertiary text-xs px-1 mt-0.5">
@@ -343,7 +345,7 @@ export default function EditMembershipScreen() {
               </View>
 
               <View className="mt-1 flex-row items-center gap-1.5 bg-brand-primary/5 p-3 rounded-xl border border-brand-primary/10">
-                <Feather name="info" size={14} color="#06b6d4" />
+                <Feather name="info" size={14} color={c.brand.primary} />
                 <Text className="text-brand-primary text-xs font-semibold">
                   선택 시 종료일: {addMonthsISO(data.start_date, durationMonths)}
                 </Text>
@@ -358,7 +360,7 @@ export default function EditMembershipScreen() {
                 <Section title="총 횟수" required>
                   <TextInput
                     placeholder="10"
-                    placeholderTextColor="#94a3b8"
+                    placeholderTextColor={c.text.muted}
                     value={totalPasses}
                     onChangeText={(t) => setTotalPasses(t.replace(/[^\d]/g, '').slice(0, 4))}
                     keyboardType="number-pad"
@@ -376,7 +378,7 @@ export default function EditMembershipScreen() {
                 <Section title="사용한 횟수">
                   <TextInput
                     placeholder="0"
-                    placeholderTextColor="#94a3b8"
+                    placeholderTextColor={c.text.muted}
                     value={usedPasses}
                     onChangeText={(t) => setUsedPasses(t.replace(/[^\d]/g, '').slice(0, 4))}
                     keyboardType="number-pad"
@@ -405,7 +407,7 @@ export default function EditMembershipScreen() {
               <Text className="text-text-muted text-base mr-1.5">₩</Text>
               <TextInput
                 placeholder="선택 사항"
-                placeholderTextColor="#94a3b8"
+                placeholderTextColor={c.text.muted}
                 value={price}
                 onChangeText={(t) => setPrice(t.replace(/[^\d]/g, '').slice(0, 8))}
                 keyboardType="number-pad"
@@ -427,7 +429,7 @@ export default function EditMembershipScreen() {
             >
               <TextInput
                 placeholder="메모를 입력해 주세요 (선택 사항)"
-                placeholderTextColor="#94a3b8"
+                placeholderTextColor={c.text.muted}
                 value={notes}
                 onChangeText={(t) => setNotes(t.slice(0, 200))}
                 maxLength={200}

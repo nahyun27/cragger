@@ -17,9 +17,11 @@ import {
 } from '@/constants/climb-colors';
 import { useFavoriteGymIds, useToggleFavorite } from '@/hooks/use-favorites';
 import { useGymDetail, type ColorScheme, type ColorStat } from '@/hooks/use-gym-detail';
+import { useThemeColors } from '@/lib/theme';
 
 export default function GymDetailScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+
+  const c = useThemeColors();  const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { data, isLoading, error } = useGymDetail(id);
   const { data: favoriteIds } = useFavoriteGymIds();
@@ -86,7 +88,7 @@ export default function GymDetailScreen() {
       {/* Header */}
       <View className="flex-row items-center justify-between px-4 py-2 border-b border-border-subtle">
         <Pressable onPress={() => router.back()} className="p-2 -ml-2 active:opacity-60" hitSlop={8}>
-          <Feather name="arrow-left" size={24} color="#0f172a" />
+          <Feather name="arrow-left" size={24} color={c.text.primary} />
         </Pressable>
         <Text className="text-text-primary text-base font-bold">암장 정보</Text>
         <Pressable
@@ -121,7 +123,7 @@ export default function GymDetailScreen() {
           </View>
           {location && (
             <View className="flex-row items-start gap-1.5 mt-1.5">
-              <Feather name="map-pin" size={14} color="#64748b" style={{ marginTop: 2 }} />
+              <Feather name="map-pin" size={14} color={c.text.tertiary} style={{ marginTop: 2 }} />
               <Text className="text-text-secondary text-sm flex-1 leading-5">
                 {[location, data.address].filter(Boolean).join(' · ')}
               </Text>
@@ -134,21 +136,21 @@ export default function GymDetailScreen() {
           <View className="flex-row gap-3">
             {data.size_pyeong && (
               <View className="flex-1 bg-background-secondary p-3.5 rounded-2xl border border-border-subtle items-center">
-                <Feather name="maximize-2" size={16} color="#06b6d4" className="mb-1" />
+                <Feather name="maximize-2" size={16} color={c.brand.primary} className="mb-1" />
                 <Text className="text-text-tertiary text-[10px] mb-0.5">규모</Text>
                 <Text className="text-text-primary text-sm font-bold">{data.size_pyeong}평</Text>
               </View>
             )}
             {data.floors_count && (
               <View className="flex-1 bg-background-secondary p-3.5 rounded-2xl border border-border-subtle items-center">
-                <Feather name="layers" size={16} color="#06b6d4" className="mb-1" />
+                <Feather name="layers" size={16} color={c.brand.primary} className="mb-1" />
                 <Text className="text-text-tertiary text-[10px] mb-0.5">층수</Text>
                 <Text className="text-text-primary text-sm font-bold">{data.floors_count}층</Text>
               </View>
             )}
             {data.opened_at && (
               <View className="flex-1 bg-background-secondary p-3.5 rounded-2xl border border-border-subtle items-center">
-                <Feather name="calendar" size={16} color="#06b6d4" className="mb-1" />
+                <Feather name="calendar" size={16} color={c.brand.primary} className="mb-1" />
                 <Text className="text-text-tertiary text-[10px] mb-0.5">오픈</Text>
                 <Text className="text-text-primary text-sm font-bold">
                   {new Date(data.opened_at).getFullYear()}년
@@ -190,7 +192,7 @@ export default function GymDetailScreen() {
           </View>
           {data.color_schemes.length === 0 && data.color_stats.length === 0 ? (
             <View className="p-8 items-center justify-center bg-background-secondary rounded-2xl border border-border-subtle">
-              <Feather name="bar-chart-2" size={24} color="#94a3b8" className="mb-2" />
+              <Feather name="bar-chart-2" size={24} color={c.text.muted} className="mb-2" />
               <Text className="text-text-secondary text-sm">아직 난이도 데이터가 없습니다</Text>
             </View>
           ) : (

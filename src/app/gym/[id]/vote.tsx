@@ -14,6 +14,7 @@ import { Feather } from '@expo/vector-icons';
 import { GradePickerModal } from '@/components/vote/grade-picker-modal';
 import { resolveColorHex, resolveColorLabel } from '@/constants/climb-colors';
 import { useGymDetail } from '@/hooks/use-gym-detail';
+import { useThemeColors } from '@/lib/theme';
 import {
   useGymColorAvgs,
   useSubmitGradeVote,
@@ -23,7 +24,8 @@ import {
 } from '@/hooks/use-gym-vote';
 
 export default function GymVoteScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+
+  const c = useThemeColors();  const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { data: gym } = useGymDetail(id);
   const { data: colors, isLoading, error } = useVoteableColors(id);
@@ -70,7 +72,7 @@ export default function GymVoteScreen() {
     <SafeAreaView className="flex-1 bg-background-primary" edges={['top', 'bottom']}>
       <View className="flex-row items-center px-4 py-2 border-b border-border-subtle">
         <Pressable onPress={() => router.back()} className="p-2 -ml-2 active:opacity-60" hitSlop={8}>
-          <Feather name="arrow-left" size={24} color="#0f172a" />
+          <Feather name="arrow-left" size={24} color={c.text.primary} />
         </Pressable>
         <Text className="flex-1 text-center text-text-primary text-base font-semibold mr-6">
           난이도 투표

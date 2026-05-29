@@ -25,6 +25,7 @@ import {
   type MembershipType,
 } from '@/hooks/use-memberships';
 import { useRecentGyms } from '@/hooks/use-recent-gyms';
+import { useThemeColors } from '@/lib/theme';
 
 type StartDateChoice = 'today' | 'yesterday' | 'day_before';
 const START_CHIPS: { value: StartDateChoice; label: string }[] = [
@@ -48,7 +49,8 @@ const DURATION_CHIPS: { months: number; label: string }[] = [
 ];
 
 export default function NewMembershipScreen() {
-  const router = useRouter();
+
+  const c = useThemeColors();  const router = useRouter();
   const createMembership = useCreateMembership();
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
@@ -156,7 +158,7 @@ export default function NewMembershipScreen() {
               className="flex-row items-center justify-between border border-border-subtle bg-background-secondary rounded-xl py-3 px-4 active:bg-background-tertiary"
             >
               <View className="flex-row items-center gap-2">
-                <Feather name="search" size={16} color="#64748b" />
+                <Feather name="search" size={16} color={c.text.tertiary} />
                 <Text
                   className={`text-base ${
                     selectedGym ? 'text-text-primary font-semibold' : 'text-text-muted'
@@ -167,7 +169,7 @@ export default function NewMembershipScreen() {
                     : '암장을 선택해주세요'}
                 </Text>
               </View>
-              <Feather name="chevron-down" size={16} color="#64748b" />
+              <Feather name="chevron-down" size={16} color={c.text.tertiary} />
             </Pressable>
 
             {sortedRecentGyms && sortedRecentGyms.length > 0 && (
@@ -317,7 +319,7 @@ export default function NewMembershipScreen() {
             </View>
 
             <View className="flex-row items-center gap-1.5 mt-1 px-1">
-              <Feather name="calendar" size={12} color="#64748b" />
+              <Feather name="calendar" size={12} color={c.text.tertiary} />
               <Text className="text-text-tertiary text-xs font-semibold">
                 지정일: {startDate}
               </Text>
@@ -353,7 +355,7 @@ export default function NewMembershipScreen() {
               </View>
 
               <View className="mt-1 flex-row items-center gap-1.5 bg-brand-primary/5 p-3 rounded-xl border border-brand-primary/10">
-                <Feather name="info" size={14} color="#06b6d4" />
+                <Feather name="info" size={14} color={c.brand.primary} />
                 <Text className="text-brand-primary text-xs font-semibold">
                   선택 시 종료일: {computedEndDate}
                 </Text>
@@ -368,7 +370,7 @@ export default function NewMembershipScreen() {
                 <Section title="총 횟수" required>
                   <TextInput
                     placeholder="10"
-                    placeholderTextColor="#94a3b8"
+                    placeholderTextColor={c.text.muted}
                     value={totalPasses}
                     onChangeText={(t) => setTotalPasses(t.replace(/[^\d]/g, '').slice(0, 4))}
                     keyboardType="number-pad"
@@ -386,7 +388,7 @@ export default function NewMembershipScreen() {
                 <Section title="이미 사용한 횟수">
                   <TextInput
                     placeholder="0"
-                    placeholderTextColor="#94a3b8"
+                    placeholderTextColor={c.text.muted}
                     value={usedPasses}
                     onChangeText={(t) => setUsedPasses(t.replace(/[^\d]/g, '').slice(0, 4))}
                     keyboardType="number-pad"
@@ -415,7 +417,7 @@ export default function NewMembershipScreen() {
               <Text className="text-text-muted text-base mr-1.5">₩</Text>
               <TextInput
                 placeholder="선택 사항"
-                placeholderTextColor="#94a3b8"
+                placeholderTextColor={c.text.muted}
                 value={price}
                 onChangeText={(t) => setPrice(t.replace(/[^\d]/g, '').slice(0, 8))}
                 keyboardType="number-pad"
@@ -437,7 +439,7 @@ export default function NewMembershipScreen() {
             >
               <TextInput
                 placeholder="메모를 입력해 주세요 (선택 사항)"
-                placeholderTextColor="#94a3b8"
+                placeholderTextColor={c.text.muted}
                 value={notes}
                 onChangeText={(t) => setNotes(t.slice(0, 200))}
                 maxLength={200}

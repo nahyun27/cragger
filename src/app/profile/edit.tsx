@@ -24,6 +24,7 @@ import { Section } from '@/components/ui/section';
 import { useCheckUsername, useProfile, useUpdateProfile } from '@/hooks/use-profile';
 import { useAuth } from '@/lib/auth-context';
 import { deleteAvatarByUrl, uploadAvatarImage } from '@/lib/upload-image';
+import { useThemeColors } from '@/lib/theme';
 
 const schema = z.object({
   username: z
@@ -99,7 +100,8 @@ function formatLongDate(s: string | null): string {
 }
 
 export default function ProfileEditScreen() {
-  const router = useRouter();
+
+  const c = useThemeColors();  const router = useRouter();
   const { session: authSession } = useAuth();
   const { data: profile, isLoading, error: profileError } = useProfile();
   const updateProfile = useUpdateProfile();
@@ -279,7 +281,7 @@ export default function ProfileEditScreen() {
     <SafeAreaView className="flex-1 bg-background-primary" edges={['top', 'bottom']}>
       <View className="flex-row items-center px-2 py-2 border-b border-border-subtle">
         <Pressable onPress={() => router.back()} className="p-2" hitSlop={8}>
-          <Feather name="arrow-left" size={22} color="#0f172a" />
+          <Feather name="arrow-left" size={22} color={c.text.primary} />
         </Pressable>
         <Text className="flex-1 text-center text-text-primary text-base font-semibold">
           프로필 편집
@@ -305,7 +307,7 @@ export default function ProfileEditScreen() {
                 disabled={uploadingAvatar}
                 className="flex-row items-center gap-1.5 px-4 py-2 rounded-full bg-background-secondary border border-border-subtle active:opacity-70"
               >
-                <Feather name="image" size={13} color="#06b6d4" />
+                <Feather name="image" size={13} color={c.brand.primary} />
                 <Text className="text-text-primary text-xs font-semibold">
                   {avatarPreviewUri ? '사진 변경' : '사진 선택'}
                 </Text>
@@ -316,7 +318,7 @@ export default function ProfileEditScreen() {
                   disabled={uploadingAvatar}
                   className="flex-row items-center gap-1.5 px-4 py-2 rounded-full bg-background-secondary border border-border-subtle active:opacity-70"
                 >
-                  <Feather name="trash-2" size={13} color="#ef4444" />
+                  <Feather name="trash-2" size={13} color={c.status.danger} />
                   <Text className="text-status-danger text-xs font-semibold">삭제</Text>
                 </Pressable>
               )}
@@ -472,7 +474,7 @@ export default function ProfileEditScreen() {
                 >
                   {formatLongDate(climbingStartDate)}
                 </Text>
-                <Feather name="calendar" size={16} color="#64748b" />
+                <Feather name="calendar" size={16} color={c.text.tertiary} />
               </Pressable>
               {climbingStartDate && (
                 <Pressable
@@ -615,10 +617,11 @@ function UsernameStatusIcon({
 }: {
   status: 'unchanged' | 'invalid' | 'checking' | 'available' | 'taken' | 'idle';
 }) {
+  const c = useThemeColors();
   if (status === 'checking') return <ActivityIndicator size="small" />;
   if (status === 'available')
-    return <Feather name="check-circle" size={16} color="#06b6d4" />;
-  if (status === 'taken') return <Feather name="x-circle" size={16} color="#ef4444" />;
+    return <Feather name="check-circle" size={16} color={c.brand.primary} />;
+  if (status === 'taken') return <Feather name="x-circle" size={16} color={c.status.danger} />;
   return null;
 }
 

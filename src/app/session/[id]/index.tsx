@@ -12,6 +12,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 
 import { resolveColorHex, resolveColorLabel } from '@/constants/climb-colors';
+import { useThemeColors } from '@/lib/theme';
 import {
   useDeleteSession,
   useSessionDetail,
@@ -45,7 +46,8 @@ const CONDITION_LABEL: Record<number, { icon: 'frown' | 'meh' | 'smile'; color: 
 };
 
 export default function SessionDetailScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+
+  const c = useThemeColors();  const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { data, isLoading, error } = useSessionDetail(id);
   const deleteSession = useDeleteSession();
@@ -116,7 +118,7 @@ export default function SessionDetailScreen() {
     <SafeAreaView className="flex-1 bg-background-primary" edges={['top', 'bottom']}>
       <View className="flex-row items-center justify-between px-4 py-2 border-b border-border-subtle">
         <Pressable onPress={() => router.back()} className="p-2 -ml-2 active:opacity-60" hitSlop={8}>
-          <Feather name="arrow-left" size={24} color="#0f172a" />
+          <Feather name="arrow-left" size={24} color={c.text.primary} />
         </Pressable>
         <Text className="text-text-primary text-base font-bold">기록 상세</Text>
         <View className="flex-row gap-1">
@@ -130,7 +132,7 @@ export default function SessionDetailScreen() {
             className="p-2 active:opacity-60"
             hitSlop={8}
           >
-            <Feather name="share" size={20} color="#64748b" />
+            <Feather name="share" size={20} color={c.text.tertiary} />
           </Pressable>
           {canEdit && (
             <Pressable
@@ -140,7 +142,7 @@ export default function SessionDetailScreen() {
               className="p-2 active:opacity-60"
               hitSlop={8}
             >
-              <Feather name="edit-3" size={20} color="#64748b" />
+              <Feather name="edit-3" size={20} color={c.text.tertiary} />
             </Pressable>
           )}
           <Pressable
@@ -152,7 +154,7 @@ export default function SessionDetailScreen() {
             {deleteSession.isPending ? (
               <ActivityIndicator size="small" />
             ) : (
-              <Feather name="trash-2" size={20} color="#ef4444" />
+              <Feather name="trash-2" size={20} color={c.status.danger} />
             )}
           </Pressable>
         </View>
@@ -181,7 +183,7 @@ export default function SessionDetailScreen() {
         <View className="flex-row flex-wrap gap-4 bg-background-secondary p-4 rounded-2xl border border-border-subtle">
           {data.duration_min != null && (
             <View className="flex-row items-center gap-1.5">
-              <Feather name="clock" size={16} color="#64748b" />
+              <Feather name="clock" size={16} color={c.text.tertiary} />
               <Text className="text-text-secondary text-sm font-medium">
                 {formatDuration(data.duration_min)}
               </Text>
@@ -233,7 +235,7 @@ export default function SessionDetailScreen() {
         {/* 둘 다 없을 때 */}
         {data.discipline === 'empty' && (
           <View className="p-8 items-center justify-center bg-background-secondary rounded-2xl border border-border-subtle">
-            <Feather name="activity" size={24} color="#94a3b8" className="mb-2" />
+            <Feather name="activity" size={24} color={c.text.muted} className="mb-2" />
             <Text className="text-text-secondary text-sm">기록된 등반이 없어요</Text>
           </View>
         )}
@@ -249,6 +251,7 @@ export default function SessionDetailScreen() {
 }
 
 function ColorSummaryRow({ summary }: { summary: ColorSummary }) {
+  const c = useThemeColors();
   const hex = resolveColorHex(summary.color);
   const label = resolveColorLabel(summary.color);
   const needsBorder =
@@ -283,6 +286,7 @@ const LEAD_RESULT_LABEL: Record<keyof LeadSummary['breakdown'], { label: string;
 };
 
 function LeadSummaryRow({ summary }: { summary: LeadSummary }) {
+  const c = useThemeColors();
   const chips: { key: keyof LeadSummary['breakdown']; count: number }[] = [
     { key: 'onsight',  count: summary.breakdown.onsight },
     { key: 'flash',    count: summary.breakdown.flash },
@@ -295,19 +299,19 @@ function LeadSummaryRow({ summary }: { summary: LeadSummary }) {
         {summary.grade}
       </Text>
       <View className="flex-1 flex-row flex-wrap gap-1.5">
-        {chips.filter((c) => c.count > 0).map((c) => {
-          const meta = LEAD_RESULT_LABEL[c.key];
+        {chips.filter((chip) => chip.count > 0).map((chip) => {
+          const meta = LEAD_RESULT_LABEL[chip.key];
           return (
             <View
-              key={c.key}
+              key={chip.key}
               className="flex-row items-center gap-1 px-2 py-0.5 rounded-full bg-white border border-border-subtle"
             >
               <Text style={{ fontSize: 11, fontWeight: '700', color: meta.color }}>
                 {meta.label}
               </Text>
-              {c.count > 1 && (
-                <Text style={{ fontSize: 11, fontWeight: '700', color: '#94a3b8' }}>
-                  ×{c.count}
+              {chip.count > 1 && (
+                <Text style={{ fontSize: 11, fontWeight: '700', color: c.text.muted }}>
+                  ×{chip.count}
                 </Text>
               )}
             </View>

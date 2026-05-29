@@ -35,6 +35,7 @@ import { useGyms } from '@/hooks/use-gyms';
 import { useRecentGyms } from '@/hooks/use-recent-gyms';
 import { useAuth } from '@/lib/auth-context';
 import { uploadPostImage } from '@/lib/upload-image';
+import { useThemeColors } from '@/lib/theme';
 
 const MAX_IMAGES = 4;
 
@@ -55,7 +56,8 @@ function formatMeetupAt(d: Date): string {
 }
 
 export default function NewPostScreen() {
-  const router = useRouter();
+
+  const c = useThemeColors();  const router = useRouter();
   const { crewId, type } = useLocalSearchParams<{ crewId?: string; type?: string }>();
   const createPost = useCreatePost();
   const createPoll = useCreatePoll();
@@ -190,7 +192,7 @@ export default function NewPostScreen() {
     <SafeAreaView className="flex-1 bg-background-primary" edges={['top', 'bottom']}>
       <View className="flex-row items-center px-4 py-2 border-b border-border-subtle">
         <Pressable onPress={() => router.back()} className="p-2 -ml-2 active:opacity-60" hitSlop={8}>
-          <Feather name="arrow-left" size={24} color="#0f172a" />
+          <Feather name="arrow-left" size={24} color={c.text.primary} />
         </Pressable>
         <Text className="flex-1 text-center text-text-primary text-base font-semibold mr-6">
           새 글 작성
@@ -229,12 +231,12 @@ export default function NewPostScreen() {
                     className="flex-1 flex-row items-center justify-between border border-border-default rounded-md px-3 py-2.5 active:opacity-70"
                   >
                     <View className="flex-row items-center gap-2">
-                      <Feather name="calendar" size={14} color="#64748b" />
+                      <Feather name="calendar" size={14} color={c.text.tertiary} />
                       <Text className={`text-base ${meetupAt ? 'text-text-primary font-semibold' : 'text-text-muted'}`}>
                         {meetupAt ? formatMeetupAt(meetupAt).slice(0, 16) : '날짜 선택'}
                       </Text>
                     </View>
-                    <Feather name="chevron-down" size={14} color="#94a3b8" />
+                    <Feather name="chevron-down" size={14} color={c.text.muted} />
                   </Pressable>
                   <Pressable
                     onPress={() => setDatePickerMode('time')}
@@ -242,14 +244,14 @@ export default function NewPostScreen() {
                     className={`flex-1 flex-row items-center justify-between border border-border-default rounded-md px-3 py-2.5 active:opacity-70 ${!meetupAt ? 'opacity-50' : ''}`}
                   >
                     <View className="flex-row items-center gap-2">
-                      <Feather name="clock" size={14} color="#64748b" />
+                      <Feather name="clock" size={14} color={c.text.tertiary} />
                       <Text className={`text-base ${meetupAt ? 'text-text-primary font-semibold' : 'text-text-muted'}`}>
                         {meetupAt
                           ? `${String(meetupAt.getHours()).padStart(2, '0')}:${String(meetupAt.getMinutes()).padStart(2, '0')}`
                           : '시간 선택'}
                       </Text>
                     </View>
-                    <Feather name="chevron-down" size={14} color="#94a3b8" />
+                    <Feather name="chevron-down" size={14} color={c.text.muted} />
                   </Pressable>
                 </View>
                 {datePickerMode && (
@@ -286,7 +288,7 @@ export default function NewPostScreen() {
                 )}
                 {meetupAt && (
                   <View className="mt-1 flex-row items-center gap-1.5 px-1">
-                    <Feather name="info" size={12} color="#64748b" />
+                    <Feather name="info" size={12} color={c.text.tertiary} />
                     <Text className="text-text-tertiary text-xs font-semibold">
                       {formatMeetupAt(meetupAt)}
                     </Text>
@@ -352,7 +354,7 @@ export default function NewPostScreen() {
             <View className="flex-row flex-wrap gap-2">
               <Chip
                 label="장소 검색"
-                icon={<Feather name="search" size={14} color="#64748b" />}
+                icon={<Feather name="search" size={14} color={c.text.tertiary} />}
                 selected={false}
                 onPress={() => setShowGymModal(true)}
               />
@@ -399,7 +401,7 @@ export default function NewPostScreen() {
                     hitSlop={6}
                     className="absolute -top-1.5 -right-1.5 w-6 h-6 rounded-full bg-background-primary border border-border-default items-center justify-center active:opacity-70"
                   >
-                    <Feather name="x" size={12} color="#64748b" />
+                    <Feather name="x" size={12} color={c.text.tertiary} />
                   </Pressable>
                 </View>
               ))}
@@ -408,7 +410,7 @@ export default function NewPostScreen() {
                   onPress={handlePickImages}
                   className="w-20 h-20 rounded-xl border border-dashed border-border-default items-center justify-center bg-background-secondary active:opacity-70"
                 >
-                  <Feather name="plus" size={18} color="#64748b" />
+                  <Feather name="plus" size={18} color={c.text.tertiary} />
                   <Text className="text-text-tertiary text-[10px] mt-1">
                     {pickedAssets.length}/{MAX_IMAGES}
                   </Text>

@@ -18,12 +18,14 @@ import { GymPickerModal } from '@/components/session/gym-picker-modal';
 import { Section } from '@/components/ui/section';
 import { useCreateCrew } from '@/hooks/use-crews';
 import { useGyms } from '@/hooks/use-gyms';
+import { useThemeColors } from '@/lib/theme';
 
 const NAME_MAX = 30;
 const DESC_MAX = 200;
 
 export default function NewCrewScreen() {
-  const router = useRouter();
+
+  const c = useThemeColors();  const router = useRouter();
   const createCrew = useCreateCrew();
   const { data: allGyms } = useGyms();
 
@@ -57,7 +59,7 @@ export default function NewCrewScreen() {
     <SafeAreaView className="flex-1 bg-background-primary" edges={['top', 'bottom']}>
       <View className="flex-row items-center px-4 py-2 border-b border-border-subtle">
         <Pressable onPress={() => router.back()} className="p-2 -ml-2 active:opacity-60" hitSlop={8}>
-          <Feather name="arrow-left" size={24} color="#0f172a" />
+          <Feather name="arrow-left" size={24} color={c.text.primary} />
         </Pressable>
         <Text className="flex-1 text-center text-text-primary text-base font-semibold mr-6">
           크루 만들기
@@ -75,7 +77,7 @@ export default function NewCrewScreen() {
               className="w-24 h-24 rounded-full bg-background-secondary border-2 border-border-subtle items-center justify-center"
               style={{ borderStyle: 'dashed' }}
             >
-              <Feather name="users" size={28} color="#94a3b8" />
+              <Feather name="users" size={28} color={c.text.muted} />
             </View>
             <Text className="text-text-tertiary text-xs">로고 업로드는 곧 추가됩니다</Text>
           </View>
@@ -118,7 +120,7 @@ export default function NewCrewScreen() {
               className="flex-row items-center justify-between bg-background-secondary border border-border-subtle rounded-xl px-3.5 py-3 active:opacity-70"
             >
               <View className="flex-row items-center gap-2 flex-1">
-                <Feather name="search" size={16} color="#64748b" />
+                <Feather name="search" size={16} color={c.text.tertiary} />
                 <Text
                   className={`text-base ${
                     selectedGym ? 'text-text-primary font-semibold' : 'text-text-muted'
@@ -138,7 +140,7 @@ export default function NewCrewScreen() {
                   }}
                   hitSlop={6}
                 >
-                  <Feather name="x" size={16} color="#94a3b8" />
+                  <Feather name="x" size={16} color={c.text.muted} />
                 </Pressable>
               )}
             </Pressable>

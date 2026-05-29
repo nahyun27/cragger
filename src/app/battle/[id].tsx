@@ -13,6 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 
 import { useAuth } from '@/lib/auth-context';
+import { useThemeColors } from '@/lib/theme';
 import {
   effectiveStatus,
   useAcceptBattle,
@@ -37,7 +38,8 @@ function daysBetween(a: Date, b: Date): number {
 }
 
 export default function BattleDetailScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+
+  const c = useThemeColors();  const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { session: authSession } = useAuth();
   const meId = authSession?.user.id;
@@ -50,7 +52,7 @@ export default function BattleDetailScreen() {
   if (battleQ.isLoading) {
     return (
       <SafeAreaView className="flex-1 bg-background-primary items-center justify-center" edges={['top']}>
-        <ActivityIndicator color="#06b6d4" />
+        <ActivityIndicator color={c.brand.primary} />
       </SafeAreaView>
     );
   }
@@ -125,12 +127,12 @@ export default function BattleDetailScreen() {
     <SafeAreaView className="flex-1 bg-background-primary" edges={['top']}>
       <View className="flex-row items-center justify-between px-4 py-2 border-b border-border-subtle">
         <Pressable onPress={() => router.back()} className="p-2 -ml-2 active:opacity-60" hitSlop={8}>
-          <Feather name="arrow-left" size={24} color="#0f172a" />
+          <Feather name="arrow-left" size={24} color={c.text.primary} />
         </Pressable>
         <Text className="text-text-primary text-base font-bold">대결</Text>
         {isCreator ? (
           <Pressable onPress={handleDelete} className="p-2 active:opacity-60" hitSlop={8}>
-            <Feather name="trash-2" size={20} color="#ef4444" />
+            <Feather name="trash-2" size={20} color={c.status.danger} />
           </Pressable>
         ) : (
           <View style={{ width: 40 }} />
@@ -202,7 +204,7 @@ export default function BattleDetailScreen() {
             </Text>
             {rankingQ.isLoading ? (
               <View className="py-6 items-center">
-                <ActivityIndicator color="#06b6d4" />
+                <ActivityIndicator color={c.brand.primary} />
               </View>
             ) : rankingQ.data && rankingQ.data.individuals.length > 0 ? (
               <View className="bg-white border border-border-subtle rounded-2xl overflow-hidden">
@@ -219,7 +221,7 @@ export default function BattleDetailScreen() {
               </View>
             ) : (
               <View className="bg-background-secondary border border-border-subtle rounded-2xl p-6 items-center gap-1">
-                <Feather name="users" size={20} color="#94a3b8" />
+                <Feather name="users" size={20} color={c.text.muted} />
                 <Text className="text-text-tertiary text-sm font-semibold">
                   아직 참가자가 없어요
                 </Text>
@@ -232,7 +234,7 @@ export default function BattleDetailScreen() {
         {(status === 'active' || isEnded) && (
           <View className="bg-background-secondary border border-border-subtle rounded-xl p-3 gap-1">
             <View className="flex-row items-center gap-1.5">
-              <Feather name="info" size={11} color="#64748b" />
+              <Feather name="info" size={11} color={c.text.tertiary} />
               <Text className="text-text-tertiary text-xs font-bold">점수 계산</Text>
             </View>
             <Text className="text-text-tertiary text-xs leading-4">
@@ -279,6 +281,7 @@ function CrewVsCrewCard({
   totals: { crew_id: string; crew_name: string; score: number; send_count: number }[];
   status: string;
 }) {
+  const c = useThemeColors();
   const home = totals.find((t) => t.crew_id === battle.crew_id);
   const away = totals.find((t) => t.crew_id === battle.opponent_crew_id);
   if (!home || !away) return null;
@@ -300,7 +303,7 @@ function CrewVsCrewCard({
     >
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
         <CrewTotal name={home.crew_name} score={home.score} isWinner={homeWin} align="left" />
-        <Text style={{ fontSize: 11, fontWeight: '800', color: '#94a3b8' }}>VS</Text>
+        <Text style={{ fontSize: 11, fontWeight: '800', color: c.text.muted }}>VS</Text>
         <CrewTotal name={away.crew_name} score={away.score} isWinner={awayWin} align="right" />
       </View>
       {/* 비율 바 */}
@@ -313,7 +316,7 @@ function CrewVsCrewCard({
           flexDirection: 'row',
         }}
       >
-        <View style={{ width: `${homePct}%`, backgroundColor: '#06b6d4' }} />
+        <View style={{ width: `${homePct}%`, backgroundColor: c.brand.primary }} />
       </View>
     </View>
   );
@@ -420,6 +423,7 @@ function ParticipantRow({
   isLast: boolean;
   isWinner: boolean;
 }) {
+  const c = useThemeColors();
   const name = participant.display_name || participant.username;
 
   return (
@@ -474,7 +478,7 @@ function ParticipantRow({
             resizeMode="cover"
           />
         ) : (
-          <Text style={{ fontSize: 11, fontWeight: '800', color: '#64748b' }}>
+          <Text style={{ fontSize: 11, fontWeight: '800', color: c.text.tertiary }}>
             {(name[0] ?? '?').toUpperCase()}
           </Text>
         )}
@@ -484,16 +488,16 @@ function ParticipantRow({
           style={{
             fontSize: 13,
             fontWeight: isMe ? '900' : '700',
-            color: '#0f172a',
+            color: c.text.primary,
           }}
           numberOfLines={1}
         >
           {name}
           {isMe && (
-            <Text style={{ fontSize: 11, fontWeight: '700', color: '#0e7490' }}> (나)</Text>
+            <Text style={{ fontSize: 11, fontWeight: '700', color: c.brand.primaryDeep }}> (나)</Text>
           )}
         </Text>
-        <Text style={{ fontSize: 11, fontWeight: '600', color: '#94a3b8', marginTop: 1 }}>
+        <Text style={{ fontSize: 11, fontWeight: '600', color: c.text.muted, marginTop: 1 }}>
           완등 {participant.send_count}
         </Text>
       </View>
@@ -501,7 +505,7 @@ function ParticipantRow({
         style={{
           fontSize: 18,
           fontWeight: '900',
-          color: '#0f172a',
+          color: c.text.primary,
           letterSpacing: -0.3,
         }}
       >

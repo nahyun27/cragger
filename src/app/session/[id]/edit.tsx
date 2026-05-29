@@ -26,6 +26,7 @@ import { useGymRegisteredColors } from '@/hooks/use-gym-registered-colors';
 import { useRecentColorActivity } from '@/hooks/use-recent-color-activity';
 import { useRecentGyms } from '@/hooks/use-recent-gyms';
 import { useSessionDetail, useUpdateSession } from '@/hooks/use-session';
+import { useThemeColors } from '@/lib/theme';
 
 const KO_WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
 
@@ -56,7 +57,8 @@ const CONDITION_OPTIONS: { value: number; icon: 'frown' | 'meh' | 'smile'; color
 ];
 
 export default function EditSessionScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+
+  const c = useThemeColors();  const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { data, isLoading, error } = useSessionDetail(id);
   const updateSession = useUpdateSession();
@@ -186,7 +188,7 @@ export default function EditSessionScreen() {
     <SafeAreaView className="flex-1 bg-background-primary" edges={['top', 'bottom']}>
       <View className="flex-row items-center px-4 py-2 border-b border-border-subtle">
         <Pressable onPress={() => router.back()} className="p-2 -ml-2 active:opacity-60" hitSlop={8}>
-          <Feather name="arrow-left" size={24} color="#0f172a" />
+          <Feather name="arrow-left" size={24} color={c.text.primary} />
         </Pressable>
         <Text className="flex-1 text-center text-text-primary text-base font-semibold mr-6">
           세션 수정
@@ -208,7 +210,7 @@ export default function EditSessionScreen() {
           <View className="flex-row flex-wrap gap-2">
             <Chip
               label="장소 검색"
-              icon={<Feather name="search" size={14} color="#64748b" />}
+              icon={<Feather name="search" size={14} color={c.text.tertiary} />}
               selected={false}
               onPress={() => setShowGymModal(true)}
             />

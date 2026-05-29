@@ -13,6 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 
 import { EMPTY_SHOE_FORM, ShoeForm, type ShoeFormValue } from '@/components/shoes/shoe-form';
+import { useThemeColors } from '@/lib/theme';
 import {
   useDeleteShoe,
   useShoe,
@@ -20,7 +21,8 @@ import {
 } from '@/hooks/use-shoes';
 
 export default function EditShoeScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+
+  const c = useThemeColors();  const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const shoeQ = useShoe(id);
   const updateShoe = useUpdateShoe();
@@ -155,7 +157,7 @@ export default function EditShoeScreen() {
     <SafeAreaView className="flex-1 bg-background-primary" edges={['top', 'bottom']}>
       <View className="flex-row items-center px-4 py-2 border-b border-border-subtle">
         <Pressable onPress={() => router.back()} className="p-2 -ml-2 active:opacity-60" hitSlop={8}>
-          <Feather name="arrow-left" size={24} color="#0f172a" />
+          <Feather name="arrow-left" size={24} color={c.text.primary} />
         </Pressable>
         <Text className="flex-1 text-center text-text-primary text-base font-semibold">
           암벽화 수정
@@ -167,9 +169,9 @@ export default function EditShoeScreen() {
           hitSlop={8}
         >
           {deleteShoe.isPending ? (
-            <ActivityIndicator size="small" color="#ef4444" />
+            <ActivityIndicator size="small" color={c.status.danger} />
           ) : (
-            <Feather name="trash-2" size={20} color="#ef4444" />
+            <Feather name="trash-2" size={20} color={c.status.danger} />
           )}
         </Pressable>
       </View>

@@ -16,9 +16,11 @@ import { Feather } from '@expo/vector-icons';
 
 import { Section } from '@/components/ui/section';
 import { useJoinCrewByCode, useLookupCrewByCode } from '@/hooks/use-crews';
+import { useThemeColors } from '@/lib/theme';
 
 export default function JoinCrewScreen() {
-  const router = useRouter();
+
+  const c = useThemeColors();  const router = useRouter();
   const [code, setCode] = useState('');
   const joinCrew = useJoinCrewByCode();
   const codeUpper = code.trim().toUpperCase();
@@ -43,7 +45,7 @@ export default function JoinCrewScreen() {
     <SafeAreaView className="flex-1 bg-background-primary" edges={['top', 'bottom']}>
       <View className="flex-row items-center px-4 py-2 border-b border-border-subtle">
         <Pressable onPress={() => router.back()} className="p-2 -ml-2 active:opacity-60" hitSlop={8}>
-          <Feather name="arrow-left" size={24} color="#0f172a" />
+          <Feather name="arrow-left" size={24} color={c.text.primary} />
         </Pressable>
         <Text className="flex-1 text-center text-text-primary text-base font-semibold mr-6">
           크루 가입
@@ -57,7 +59,7 @@ export default function JoinCrewScreen() {
         <ScrollView contentContainerClassName="p-5 gap-6 pb-8">
           <Section title="초대코드" required>
             <View className="flex-row items-center bg-background-secondary border border-border-subtle rounded-xl px-3.5">
-              <Feather name="key" size={16} color="#64748b" />
+              <Feather name="key" size={16} color={c.text.tertiary} />
               <TextInput
                 placeholder="6자리 (예: ABC234)"
                 placeholderTextColor="#9CA3AF"
@@ -80,7 +82,7 @@ export default function JoinCrewScreen() {
             <View className="bg-background-secondary border border-border-subtle rounded-xl p-4 gap-3">
               {previewLoading ? (
                 <View className="items-center py-2">
-                  <ActivityIndicator color="#06b6d4" />
+                  <ActivityIndicator color={c.brand.primary} />
                 </View>
               ) : previewError ? (
                 <Text className="text-status-danger text-sm font-semibold">
@@ -90,7 +92,7 @@ export default function JoinCrewScreen() {
                 <>
                   <View className="flex-row items-center gap-3">
                     <View className="w-12 h-12 rounded-full bg-brand-primary/10 items-center justify-center">
-                      <Feather name="users" size={20} color="#06b6d4" />
+                      <Feather name="users" size={20} color={c.brand.primary} />
                     </View>
                     <View className="flex-1 min-w-0">
                       <Text className="text-text-primary text-base font-extrabold" numberOfLines={1}>
@@ -109,7 +111,7 @@ export default function JoinCrewScreen() {
                 </>
               ) : (
                 <View className="items-center py-2 gap-1">
-                  <Feather name="x-circle" size={20} color="#94a3b8" />
+                  <Feather name="x-circle" size={20} color={c.text.muted} />
                   <Text className="text-text-tertiary text-sm font-semibold">
                     코드를 확인해주세요
                   </Text>

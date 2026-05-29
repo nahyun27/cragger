@@ -16,6 +16,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 
 import { Section } from '@/components/ui/section';
+import { useThemeColors } from '@/lib/theme';
 import {
   useCreateBattle,
   useLookupCrewForBattle,
@@ -31,7 +32,8 @@ function endOfDay(d: Date): Date {
 }
 
 export default function NewBattleScreen() {
-  const router = useRouter();
+
+  const c = useThemeColors();  const router = useRouter();
   const { crewId } = useLocalSearchParams<{ crewId: string }>();
   const createBattle = useCreateBattle();
 
@@ -85,7 +87,7 @@ export default function NewBattleScreen() {
     <SafeAreaView className="flex-1 bg-background-primary" edges={['top', 'bottom']}>
       <View className="flex-row items-center px-4 py-2 border-b border-border-subtle">
         <Pressable onPress={() => router.back()} className="p-2 -ml-2 active:opacity-60" hitSlop={8}>
-          <Feather name="arrow-left" size={24} color="#0f172a" />
+          <Feather name="arrow-left" size={24} color={c.text.primary} />
         </Pressable>
         <Text className="flex-1 text-center text-text-primary text-base font-semibold mr-6">
           대결 만들기
@@ -173,7 +175,7 @@ export default function NewBattleScreen() {
           {battleType === 'crew_vs_crew' && (
             <Section title="상대 크루" required>
               <View className="flex-row items-center bg-background-secondary border border-border-subtle rounded-xl px-3.5">
-                <Feather name="key" size={14} color="#64748b" />
+                <Feather name="key" size={14} color={c.text.tertiary} />
                 <TextInput
                   placeholder="상대 크루 초대코드 (6자리)"
                   placeholderTextColor="#9CA3AF"
@@ -191,7 +193,7 @@ export default function NewBattleScreen() {
               {opponentCodeUpper.length === 6 && (
                 <View className="mt-2 bg-background-secondary rounded-xl p-3">
                   {opponentLookup.isLoading ? (
-                    <ActivityIndicator size="small" color="#06b6d4" />
+                    <ActivityIndicator size="small" color={c.brand.primary} />
                   ) : opponentLookup.data ? (
                     opponentLookup.data.id === crewId ? (
                       <Text className="text-status-danger text-xs font-semibold">
@@ -304,6 +306,7 @@ function RnDatePicker({
   onChange: (d: Date) => void;
   onClose: () => void;
 }) {
+  const c = useThemeColors();
   return (
     <>
       <DateTimePicker
@@ -318,7 +321,7 @@ function RnDatePicker({
       />
       {Platform.OS === 'ios' && (
         <Pressable onPress={onClose} style={{ alignSelf: 'flex-end', padding: 6 }}>
-          <Text style={{ fontSize: 13, fontWeight: '800', color: '#06b6d4' }}>완료</Text>
+          <Text style={{ fontSize: 13, fontWeight: '800', color: c.brand.primary }}>완료</Text>
         </Pressable>
       )}
     </>

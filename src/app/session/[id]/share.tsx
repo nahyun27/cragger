@@ -17,6 +17,7 @@ import { Feather } from '@expo/vector-icons';
 
 import { SessionShareCard } from '@/components/share/session-card';
 import { useSessionDetail } from '@/hooks/use-session';
+import { useThemeColors } from '@/lib/theme';
 
 const BG_COLORS = [
   { value: '#ffffff', name: '화이트', isDark: false },
@@ -47,7 +48,8 @@ const LAYOUTS = [
 ] as const;
 
 export default function SessionShareScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+
+  const c = useThemeColors();  const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { data, isLoading, error } = useSessionDetail(id);
   
@@ -173,7 +175,7 @@ export default function SessionShareScreen() {
       {/* Header */}
       <View className="flex-row items-center px-4 py-2 border-b border-border-subtle">
         <Pressable onPress={() => router.back()} className="p-2 -ml-2 active:opacity-60" hitSlop={8}>
-          <Feather name="arrow-left" size={24} color="#0f172a" />
+          <Feather name="arrow-left" size={24} color={c.text.primary} />
         </Pressable>
         <Text className="flex-1 text-center text-text-primary text-base font-semibold mr-6">
           기록 공유 카드
@@ -368,7 +370,7 @@ export default function SessionShareScreen() {
                     }
                   ]}
                 >
-                  <Feather name="image" size={12} color="#64748b" />
+                  <Feather name="image" size={12} color={c.text.tertiary} />
                   <Text className="text-text-secondary text-xs font-bold">
                     {bgImageUri ? '변경' : '등록'}
                   </Text>
@@ -383,7 +385,7 @@ export default function SessionShareScreen() {
                       }
                     ]}
                   >
-                    <Feather name="trash-2" size={14} color="#ef4444" />
+                    <Feather name="trash-2" size={14} color={c.status.danger} />
                   </Pressable>
                 )}
               </View>
@@ -454,7 +456,7 @@ export default function SessionShareScreen() {
             <ActivityIndicator size="small" />
           ) : (
             <>
-              <Feather name="download" size={16} color="#0f172a" />
+              <Feather name="download" size={16} color={c.text.primary} />
               <Text className="text-text-primary font-bold text-sm">이미지 저장</Text>
             </>
           )}
@@ -469,7 +471,7 @@ export default function SessionShareScreen() {
               paddingVertical: 14,
               alignItems: 'center',
               justifyContent: 'center',
-              backgroundColor: '#06b6d4',
+              backgroundColor: c.brand.primary,
               flexDirection: 'row',
               gap: 6,
               opacity: pressed ? 0.8 : 1,

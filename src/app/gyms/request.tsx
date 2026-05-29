@@ -19,6 +19,7 @@ import { Feather } from '@expo/vector-icons';
 
 import { Section } from '@/components/ui/section';
 import { useSubmitGymRequest } from '@/hooks/use-gym-requests';
+import { useThemeColors } from '@/lib/theme';
 
 const schema = z.object({
   name: z
@@ -34,7 +35,8 @@ const schema = z.object({
 type FormValues = z.infer<typeof schema>;
 
 export default function GymRequestScreen() {
-  const router = useRouter();
+
+  const c = useThemeColors();  const router = useRouter();
   const submit = useSubmitGymRequest();
 
   const {
@@ -66,7 +68,7 @@ export default function GymRequestScreen() {
     <SafeAreaView className="flex-1 bg-background-primary" edges={['top', 'bottom']}>
       <View className="flex-row items-center px-4 py-2 border-b border-border-subtle">
         <Pressable onPress={() => router.back()} className="p-2 -ml-2 active:opacity-60" hitSlop={8}>
-          <Feather name="arrow-left" size={24} color="#0f172a" />
+          <Feather name="arrow-left" size={24} color={c.text.primary} />
         </Pressable>
         <Text className="flex-1 text-center text-text-primary text-base font-semibold mr-6">
           암장 추가 요청
