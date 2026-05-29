@@ -8,6 +8,7 @@ import {
   Modal,
   Pressable,
   ScrollView,
+  Share,
   Text,
   TextInput,
   View,
@@ -124,9 +125,18 @@ export default function CrewDetailScreen() {
   const isOwner = data.my_role === 'owner';
   const isMember = data.my_role != null;
 
-  function handleCopyCode() {
+  async function handleCopyCode() {
     if (!data) return;
-    customAlert('초대코드', data.invite_code, [{ text: '확인' }]);
+    // Sheet 가 떠있는 상태에서 다른 modal 을 스택하면 dismiss 후 터치가 막히는 RN 이슈.
+    // → Sheet 닫고 native Share sheet 으로 공유(=복사 가능).
+    setShowInviteCode(false);
+    try {
+      await Share.share({
+        message: `크루 초대코드: ${data.invite_code}`,
+      });
+    } catch {
+      // 사용자 취소 / 시스템 거부 — 무시
+    }
   }
 
   function handleLeave() {
@@ -340,7 +350,7 @@ export default function CrewDetailScreen() {
               onClose={() => setShowInviteCode(false)}
               variant="center"
               title="멤버십 초대코드"
-              subtitle="초대코드를 탭하여 공유해보세요"
+              subtitle="탭하면 공유 시트가 열려요 (복사 포함)"
             >
               <View style={[s.inviteCard, { borderColor: colors.border, marginHorizontal: 0, marginBottom: 0 }]}>
                 <View style={[s.inviteBgDeco, { backgroundColor: colors.bg }]} />
@@ -351,8 +361,8 @@ export default function CrewDetailScreen() {
                         {data.invite_code}
                       </Text>
                       <View style={[s.copyBadge, { backgroundColor: colors.text, shadowColor: colors.text }]}>
-                        <Feather name="copy" size={12} color="#ffffff" />
-                        <Text style={s.copyBadgeText}>복사</Text>
+                        <Feather name="share-2" size={12} color="#ffffff" />
+                        <Text style={s.copyBadgeText}>공유</Text>
                       </View>
                     </View>
                   )}
