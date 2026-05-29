@@ -86,8 +86,8 @@ function DisciplineBtn({
             alignItems: 'center',
             gap: 6,
             borderWidth: 1.5,
-            borderColor: active ? '#06b6d4' : '#e2e8f0',
-            backgroundColor: active ? '#06b6d4' : '#ffffff',
+            borderColor: active ? '#06b6d4' : c.border.subtle,
+            backgroundColor: active ? '#06b6d4' : c.bg.primary,
             opacity: disabled ? 0.45 : pressed ? 0.85 : 1,
             ...(active
               ? {
@@ -103,13 +103,13 @@ function DisciplineBtn({
           <Feather
             name={icon}
             size={20}
-            color={active ? '#ffffff' : '#64748b'}
+            color={active ? '#ffffff' : c.text.secondary}
           />
           <Text
             style={{
               fontSize: 12,
               fontWeight: '800',
-              color: active ? '#ffffff' : '#64748b',
+              color: active ? '#ffffff' : c.text.secondary,
               letterSpacing: -0.2,
             }}
           >

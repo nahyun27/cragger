@@ -168,7 +168,13 @@ export default function SessionDetailScreen() {
           </Text>
 
           {data.gym && (
-            <View className="flex-row items-baseline gap-2 flex-wrap mt-1">
+            <Pressable
+              onPress={() =>
+                router.push({ pathname: '/gym/[id]', params: { id: data.gym!.id } })
+              }
+              className="flex-row items-baseline gap-2 flex-wrap mt-1 active:opacity-60"
+              hitSlop={4}
+            >
               <Text className="text-lg font-bold text-text-primary">
                 {data.gym.name}
               </Text>
@@ -177,7 +183,8 @@ export default function SessionDetailScreen() {
                   {data.gym.branch}
                 </Text>
               )}
-            </View>
+              <Feather name="chevron-right" size={14} color={c.text.tertiary} />
+            </Pressable>
           )}
         </View>
 

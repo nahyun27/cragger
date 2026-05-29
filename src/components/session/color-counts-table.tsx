@@ -4,6 +4,7 @@ import { Pressable, Text, View } from 'react-native';
 import { GRID_COLORS, type GridColor } from '@/components/climb/color-grid';
 import { resolveColorHex, resolveColorLabel } from '@/constants/climb-colors';
 import type { ColorCount } from '@/hooks/use-record-session';
+import { useEffectiveScheme } from '@/lib/theme';
 
 export type ColorCountsValue = Record<GridColor, ColorCount>;
 
@@ -103,9 +104,10 @@ function ColorRow({
   onBumpSends: (delta: number) => void;
   onBumpTries: (delta: number) => void;
 }) {
+  const scheme = useEffectiveScheme();
   const hex = resolveColorHex(color);
   const label = resolveColorLabel(color);
-  const needsBorder = color === 'white' || color === 'yellow';
+  const needsBorder = color === 'white' || color === 'yellow' || (scheme === 'dark' && color === 'black');
   return (
     <View className="flex-row items-center gap-3">
       <View className="flex-row items-center gap-2" style={{ width: 64 }}>
@@ -113,7 +115,7 @@ function ColorRow({
           className="w-6 h-6 rounded-full"
           style={{
             backgroundColor: hex,
-            ...(needsBorder ? { borderWidth: 1, borderColor: '#D4D4D8' } : null),
+            ...(needsBorder ? { borderWidth: 1, borderColor: scheme === 'dark' && color === 'black' ? '#525252' : '#D4D4D8' } : null),
           }}
         />
         <Text className="text-text-primary text-sm">{label}</Text>

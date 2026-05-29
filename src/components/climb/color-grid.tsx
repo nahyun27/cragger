@@ -2,6 +2,7 @@ import React from 'react';
 import { Pressable, Text, View } from 'react-native';
 
 import { resolveColorHex, resolveColorLabel } from '@/constants/climb-colors';
+import { useEffectiveScheme } from '@/lib/theme';
 
 // 14색. 암장별 동적 color scheme은 v1.1.
 // 순서는 일반 난이도 desc (시드 시트 기준):
@@ -59,10 +60,11 @@ function ColorCell({
   disabled?: boolean;
   onSelect: (color: GridColor) => void;
 }) {
+  const scheme = useEffectiveScheme();
   const hex = resolveColorHex(color);
   const label = resolveColorLabel(color);
   // 흰/노랑은 밝아서 흰 배경에서 잘 안 보임 → 옅은 border
-  const needsContrastBorder = color === 'white' || color === 'yellow';
+  const needsContrastBorder = color === 'white' || color === 'yellow' || (scheme === 'dark' && color === 'black');
 
   return (
     <Pressable
@@ -92,7 +94,7 @@ function ColorCell({
             elevation: 3,
           },
           !selected && needsContrastBorder
-            ? { borderWidth: 1, borderColor: '#D4D4D8' }
+            ? { borderWidth: 1, borderColor: scheme === 'dark' && color === 'black' ? '#525252' : '#D4D4D8' }
             : null,
         ]}
       />
