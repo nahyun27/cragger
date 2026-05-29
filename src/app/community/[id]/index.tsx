@@ -1,5 +1,5 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useState, useMemo} from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -37,6 +37,7 @@ import {
 import { PollWidget } from '@/components/community/poll-widget';
 import { usePoll } from '@/hooks/use-polls';
 import { useAuth } from '@/lib/auth-context';
+import { useThemeColors, type ThemeColors } from '@/lib/theme';
 
 const KO_WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
 
@@ -102,6 +103,9 @@ function getAvatarTextColor(name: string) {
 const COMMENT_MAX = 500;
 
 export default function PostDetailScreen() {
+  const c = useThemeColors();
+  const s = useMemo(() => makeStyles(c), [c]);
+
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { session: authSession } = useAuth();
@@ -128,7 +132,7 @@ export default function PostDetailScreen() {
   if (postQ.isLoading) {
     return (
       <SafeAreaView style={s.loadingContainer} edges={['top']}>
-        <ActivityIndicator size="large" color="#06b6d4" />
+        <ActivityIndicator size="large" color={c.brand.primary} />
       </SafeAreaView>
     );
   }
@@ -225,7 +229,7 @@ export default function PostDetailScreen() {
       {/* Detail Header */}
       <View style={s.header}>
         <Pressable onPress={() => router.back()} style={({ pressed }) => [s.headerAction, { opacity: pressed ? 0.6 : 1 }]} hitSlop={8}>
-          <Feather name="arrow-left" size={24} color="#0f172a" />
+          <Feather name="arrow-left" size={24} color={c.text.primary} />
         </Pressable>
         <Text style={s.headerTitle}>상세 보기</Text>
         {isMine ? (
@@ -237,7 +241,7 @@ export default function PostDetailScreen() {
               style={({ pressed }) => [s.headerAction, { opacity: pressed ? 0.6 : 1 }]}
               hitSlop={8}
             >
-              <Feather name="edit-3" size={20} color="#64748b" />
+              <Feather name="edit-3" size={20} color={c.text.tertiary} />
             </Pressable>
             <Pressable
               onPress={handleDeletePost}
@@ -246,9 +250,9 @@ export default function PostDetailScreen() {
               hitSlop={8}
             >
               {deletePost.isPending ? (
-                <ActivityIndicator size="small" color="#ef4444" />
+                <ActivityIndicator size="small" color={c.status.danger} />
               ) : (
-                <Feather name="trash-2" size={20} color="#ef4444" />
+                <Feather name="trash-2" size={20} color={c.status.danger} />
               )}
             </Pressable>
           </View>
@@ -283,7 +287,7 @@ export default function PostDetailScreen() {
                   style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
                 >
                   <View style={s.gymPill}>
-                    <Feather name="map-pin" size={11} color="#64748b" />
+                    <Feather name="map-pin" size={11} color={c.text.tertiary} />
                     <Text style={s.gymPillText} numberOfLines={1}>
                       {post.gym.name}
                       {post.gym.branch ? ` ${post.gym.branch}` : ''}
@@ -337,7 +341,7 @@ export default function PostDetailScreen() {
                 </View>
               </Pressable>
               <View style={s.metricBtn}>
-                <Feather name="message-circle" size={18} color="#64748b" />
+                <Feather name="message-circle" size={18} color={c.text.tertiary} />
                 <Text style={s.metricText} numberOfLines={1}>{post.comment_count}</Text>
               </View>
             </View>
@@ -350,7 +354,7 @@ export default function PostDetailScreen() {
             </Text>
 
             {commentsQ.isLoading && (
-              <ActivityIndicator color="#06b6d4" style={{ marginVertical: 12 }} />
+              <ActivityIndicator color={c.brand.primary} style={{ marginVertical: 12 }} />
             )}
 
             {commentsQ.error && (
@@ -436,12 +440,12 @@ export default function PostDetailScreen() {
         {/* Reply context banner */}
         {replyToId && (
           <View style={s.replyBanner}>
-            <Feather name="corner-down-right" size={12} color="#64748b" />
+            <Feather name="corner-down-right" size={12} color={c.text.tertiary} />
             <Text style={s.replyBannerText} numberOfLines={1}>
               {replyToName ?? '댓글'}에게 답글 작성 중
             </Text>
             <Pressable onPress={cancelReply} hitSlop={6}>
-              <Feather name="x" size={14} color="#64748b" />
+              <Feather name="x" size={14} color={c.text.tertiary} />
             </Pressable>
           </View>
         )}
@@ -453,7 +457,7 @@ export default function PostDetailScreen() {
             value={commentBody}
             onChangeText={(t) => setCommentBody(t.slice(0, COMMENT_MAX))}
             placeholder={replyToId ? '답글 입력...' : '따뜻한 댓글을 남겨보세요...'}
-            placeholderTextColor="#94a3b8"
+            placeholderTextColor={c.text.muted}
             maxLength={COMMENT_MAX}
             multiline
             style={s.textInput}
@@ -485,6 +489,9 @@ export default function PostDetailScreen() {
 }
 
 function PostHeader({ post }: { post: PostRow }) {
+  const c = useThemeColors();
+  const s = useMemo(() => makeStyles(c), [c]);
+
   const authorName = post.author?.display_name ?? post.author?.username ?? '익명';
   const label = POST_TYPE_LABEL[post.post_type];
   const avatarBg = getAvatarBgColor(authorName);
@@ -515,6 +522,9 @@ function PostHeader({ post }: { post: PostRow }) {
 }
 
 function MeetupInfoCard({ post, isMine }: { post: PostRow; isMine: boolean }) {
+  const c = useThemeColors();
+  const s = useMemo(() => makeStyles(c), [c]);
+
   const cap = post.meetup_capacity;
   const remaining = cap != null ? Math.max(0, cap - post.participant_count) : null;
   const full = cap != null && post.participant_count >= cap;
@@ -620,7 +630,7 @@ function MeetupInfoCard({ post, isMine }: { post: PostRow; isMine: boolean }) {
           </View>
         ) : isPast ? (
           <View style={[s.meetupJoinBtn, s.meetupJoinBtnDisabled]}>
-            <Feather name="x" size={14} color="#94a3b8" />
+            <Feather name="x" size={14} color={c.text.muted} />
             <Text style={s.meetupJoinBtnDisabledText}>종료된 모임</Text>
           </View>
         ) : isJoined ? (
@@ -644,7 +654,7 @@ function MeetupInfoCard({ post, isMine }: { post: PostRow; isMine: boolean }) {
           </Pressable>
         ) : full ? (
           <View style={[s.meetupJoinBtn, s.meetupJoinBtnDisabled]}>
-            <Feather name="users" size={14} color="#94a3b8" />
+            <Feather name="users" size={14} color={c.text.muted} />
             <Text style={s.meetupJoinBtnDisabledText}>정원 마감</Text>
           </View>
         ) : (
@@ -700,6 +710,9 @@ function ParticipantChip({
   participant: MeetupParticipant;
   isHost: boolean;
 }) {
+  const c = useThemeColors();
+  const s = useMemo(() => makeStyles(c), [c]);
+
   const name = participant.user?.display_name ?? participant.user?.username ?? '익명';
   const avatarBg = getAvatarBgColor(name);
   const avatarFg = getAvatarTextColor(name);
@@ -752,6 +765,9 @@ function CommentItem({
   onReply: () => void;
   onDelete: () => void;
 }) {
+  const c = useThemeColors();
+  const s = useMemo(() => makeStyles(c), [c]);
+
   const authorName = comment.author?.display_name ?? comment.author?.username ?? '익명';
   const avatarBg = getAvatarBgColor(authorName);
   const avatarText = getAvatarTextColor(authorName);
@@ -798,7 +814,7 @@ function CommentItem({
                     hitSlop={4}
                     style={({ pressed }) => [s.commentAction, { opacity: pressed ? 0.5 : 1 }]}
                   >
-                    <Text style={[s.commentActionText, { color: '#ef4444' }]}>삭제</Text>
+                    <Text style={[s.commentActionText, { color: c.status.danger }]}>삭제</Text>
                   </Pressable>
                 </>
               )}
@@ -851,26 +867,27 @@ function CommentItem({
   );
 }
 
-const s = StyleSheet.create({
+function makeStyles(c: ThemeColors) {
+  return StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8fafc',
+    backgroundColor: c.bg.primary,
   },
   loadingContainer: {
     flex: 1,
-    backgroundColor: '#ffffff',
+    backgroundColor: c.bg.card,
     alignItems: 'center',
     justifyContent: 'center',
   },
   errorContainer: {
     flex: 1,
-    backgroundColor: '#ffffff',
+    backgroundColor: c.bg.card,
     alignItems: 'center',
     justifyContent: 'center',
     padding: 24,
   },
   errorText: {
-    color: '#ef4444',
+    color: c.status.danger,
     textAlign: 'center',
     fontSize: 15,
     fontWeight: '600',
@@ -878,13 +895,13 @@ const s = StyleSheet.create({
   },
   backBtn: {
     borderWidth: 1,
-    borderColor: '#cbd5e1',
+    borderColor: c.border.strong,
     borderRadius: 8,
     paddingHorizontal: 16,
     paddingVertical: 8,
   },
   backBtnText: {
-    color: '#0f172a',
+    color: c.text.primary,
     fontSize: 14,
     fontWeight: '600',
   },
@@ -894,9 +911,9 @@ const s = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: '#ffffff',
+    backgroundColor: c.bg.card,
     borderBottomWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: c.border.subtle,
   },
   headerAction: {
     width: 38,
@@ -911,7 +928,7 @@ const s = StyleSheet.create({
   headerTitle: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#0f172a',
+    color: c.text.primary,
   },
   scrollContent: {
     padding: 16,
@@ -919,12 +936,12 @@ const s = StyleSheet.create({
     gap: 12,
   },
   postCard: {
-    backgroundColor: '#ffffff',
+    backgroundColor: c.bg.card,
     borderWidth: 1,
-    borderColor: '#f1f5f9',
+    borderColor: c.border.subtle,
     borderRadius: 20,
     padding: 18,
-    shadowColor: '#0f172a',
+    shadowColor: c.shadow.color,
     shadowOpacity: 0.03,
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 4 },
@@ -938,7 +955,7 @@ const s = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: '#f1f5f9',
+    backgroundColor: c.bg.subtle,
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 8,
@@ -946,12 +963,12 @@ const s = StyleSheet.create({
   gymPillText: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#475569',
+    color: c.text.secondary,
     maxWidth: 240,
   },
   cardSeparator: {
     height: 1,
-    backgroundColor: '#f1f5f9',
+    backgroundColor: c.bg.subtle,
     marginTop: 16,
     marginBottom: 4,
   },
@@ -980,11 +997,11 @@ const s = StyleSheet.create({
   authorName: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#0f172a',
+    color: c.text.primary,
   },
   timestamp: {
     fontSize: 11,
-    color: '#94a3b8',
+    color: c.text.muted,
     marginTop: 2,
   },
   badge: {
@@ -1000,14 +1017,14 @@ const s = StyleSheet.create({
   postTitle: {
     fontSize: 18,
     fontWeight: '800',
-    color: '#0f172a',
+    color: c.text.primary,
     lineHeight: 26,
     marginBottom: 8,
     letterSpacing: -0.4,
   },
   postBody: {
     fontSize: 14,
-    color: '#334155',
+    color: c.text.secondary,
     lineHeight: 22,
   },
   imageGrid: {
@@ -1018,7 +1035,7 @@ const s = StyleSheet.create({
     borderRadius: 14,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: '#f1f5f9',
+    borderColor: c.border.subtle,
   },
   postImage: {
     width: '100%',
@@ -1039,41 +1056,41 @@ const s = StyleSheet.create({
   metricText: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#64748b',
+    color: c.text.tertiary,
   },
   metricTextLiked: {
-    color: '#ef4444',
+    color: c.status.danger,
   },
   commentsCard: {
-    backgroundColor: '#ffffff',
+    backgroundColor: c.bg.card,
     borderWidth: 1,
-    borderColor: '#f1f5f9',
+    borderColor: c.border.subtle,
     borderRadius: 20,
     padding: 18,
-    shadowColor: '#0f172a',
+    shadowColor: c.shadow.color,
     shadowOpacity: 0.03,
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 4 },
     elevation: 1,
   },
   commentsCount: {
-    color: '#475569',
+    color: c.text.secondary,
   },
   commentsTitle: {
     fontSize: 16,
     fontWeight: '800',
-    color: '#0f172a',
+    color: c.text.primary,
     marginBottom: 12,
   },
   noCommentsText: {
     fontSize: 13,
-    color: '#94a3b8',
+    color: c.text.muted,
     textAlign: 'center',
     lineHeight: 20,
     marginVertical: 16,
   },
   commentsError: {
-    color: '#ef4444',
+    color: c.status.danger,
     fontSize: 13,
     marginVertical: 8,
   },
@@ -1081,7 +1098,7 @@ const s = StyleSheet.create({
     flexDirection: 'row',
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderColor: '#f1f5f9',
+    borderColor: c.border.subtle,
   },
   avatarSmall: {
     width: 28,
@@ -1114,20 +1131,20 @@ const s = StyleSheet.create({
   commentAuthor: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#0f172a',
+    color: c.text.primary,
   },
   commentTime: {
     fontSize: 10,
-    color: '#94a3b8',
+    color: c.text.muted,
   },
   commentBody: {
     fontSize: 13,
-    color: '#334155',
+    color: c.text.secondary,
     lineHeight: 18,
   },
   commentItemReply: {
     marginLeft: 36,
-    backgroundColor: '#f8fafc',
+    backgroundColor: c.bg.primary,
     paddingHorizontal: 10,
     paddingVertical: 8,
     borderRadius: 10,
@@ -1144,17 +1161,17 @@ const s = StyleSheet.create({
   commentActionText: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#64748b',
+    color: c.text.tertiary,
   },
   commentEditInput: {
     borderWidth: 1,
-    borderColor: '#cbd5e1',
+    borderColor: c.border.strong,
     borderRadius: 12,
     paddingHorizontal: 10,
     paddingVertical: 8,
     fontSize: 13,
-    color: '#0f172a',
-    backgroundColor: '#ffffff',
+    color: c.text.primary,
+    backgroundColor: c.bg.card,
     minHeight: 40,
     maxHeight: 120,
     marginTop: 4,
@@ -1173,7 +1190,7 @@ const s = StyleSheet.create({
   commentEditCancelText: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#64748b',
+    color: c.text.tertiary,
   },
   commentEditSaveBtn: {
     backgroundColor: '#06b6d4',
@@ -1192,39 +1209,39 @@ const s = StyleSheet.create({
     gap: 6,
     paddingHorizontal: 14,
     paddingVertical: 6,
-    backgroundColor: '#f1f5f9',
+    backgroundColor: c.bg.subtle,
     borderTopWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: c.border.subtle,
   },
   replyBannerText: {
     flex: 1,
     fontSize: 12,
     fontWeight: '700',
-    color: '#334155',
+    color: c.text.secondary,
   },
   commentInputBar: {
     paddingHorizontal: 12,
     paddingVertical: 10,
     borderTopWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: c.border.subtle,
     flexDirection: 'row',
     alignItems: 'flex-end',
     gap: 8,
-    backgroundColor: '#ffffff',
+    backgroundColor: c.bg.card,
   },
   textInput: {
     flex: 1,
     minWidth: 0,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: c.border.subtle,
     borderRadius: 22,
     paddingHorizontal: 16,
     paddingTop: 10,
     paddingBottom: 10,
     fontSize: 14,
-    color: '#0f172a',
+    color: c.text.primary,
     maxHeight: 100,
-    backgroundColor: '#f8fafc',
+    backgroundColor: c.bg.primary,
   },
   sendBtn: {
     width: 44,
@@ -1297,7 +1314,7 @@ const s = StyleSheet.create({
     fontWeight: '700',
   },
   meetupCardFullText: {
-    color: '#64748b',
+    color: c.text.tertiary,
     fontWeight: '800',
   },
   // CTA buttons
@@ -1329,12 +1346,12 @@ const s = StyleSheet.create({
     fontWeight: '800',
   },
   meetupJoinBtnDisabled: {
-    backgroundColor: '#f1f5f9',
+    backgroundColor: c.bg.subtle,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: c.border.subtle,
   },
   meetupJoinBtnDisabledText: {
-    color: '#94a3b8',
+    color: c.text.muted,
     fontSize: 13,
     fontWeight: '800',
   },
@@ -1374,7 +1391,7 @@ const s = StyleSheet.create({
   meetupParticipantsEmpty: {
     fontSize: 11,
     fontWeight: '600',
-    color: '#94a3b8',
+    color: c.text.muted,
     fontStyle: 'italic',
   },
   meetupParticipantsList: {
@@ -1390,7 +1407,7 @@ const s = StyleSheet.create({
     paddingRight: 8,
     paddingVertical: 3,
     borderRadius: 999,
-    backgroundColor: '#ffffff',
+    backgroundColor: c.bg.card,
     borderWidth: 1,
     borderColor: '#fde68a',
   },
@@ -1413,10 +1430,11 @@ const s = StyleSheet.create({
   participantName: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#334155',
+    color: c.text.secondary,
     maxWidth: 80,
   },
   participantHostDot: {
     marginLeft: -2,
   },
-});
+  });
+}

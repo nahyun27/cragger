@@ -22,6 +22,7 @@ import {
   type PostRow,
   type PostType,
 } from '@/hooks/use-community';
+import { useThemeColors, type ThemeColors } from '@/lib/theme';
 
 const BADGE_COLORS: Record<string, { bg: string; text: string }> = {
   general: { bg: '#eff6ff', text: '#2563eb' },
@@ -66,6 +67,9 @@ function useDebounced<T>(value: T, ms = 300): T {
 }
 
 export default function CommunitySearchScreen() {
+  const c = useThemeColors();
+  const s = useMemo(() => makeStyles(c), [c]);
+
   const router = useRouter();
   const [input, setInput] = useState('');
   const term = useDebounced(input.trim(), 300);
@@ -83,15 +87,15 @@ export default function CommunitySearchScreen() {
           hitSlop={8}
           style={({ pressed }) => [s.backBtn, { opacity: pressed ? 0.6 : 1 }]}
         >
-          <Feather name="arrow-left" size={22} color="#0f172a" />
+          <Feather name="arrow-left" size={22} color={c.text.primary} />
         </Pressable>
         <View style={s.searchBox}>
-          <Feather name="search" size={16} color="#94a3b8" />
+          <Feather name="search" size={16} color={c.text.muted} />
           <TextInput
             value={input}
             onChangeText={setInput}
             placeholder="제목·본문 검색"
-            placeholderTextColor="#94a3b8"
+            placeholderTextColor={c.text.muted}
             style={s.searchInput}
             returnKeyType="search"
             onSubmitEditing={Keyboard.dismiss}
@@ -101,7 +105,7 @@ export default function CommunitySearchScreen() {
           />
           {input.length > 0 && (
             <Pressable onPress={() => setInput('')} hitSlop={8}>
-              <Feather name="x-circle" size={16} color="#94a3b8" />
+              <Feather name="x-circle" size={16} color={c.text.muted} />
             </Pressable>
           )}
         </View>
@@ -110,7 +114,7 @@ export default function CommunitySearchScreen() {
       {!hasTerm ? (
         <View style={s.placeholderWrap}>
           <View style={s.placeholderIcon}>
-            <Feather name="search" size={28} color="#94a3b8" />
+            <Feather name="search" size={28} color={c.text.muted} />
           </View>
           <Text style={s.placeholderTitle}>커뮤니티 검색</Text>
           <Text style={s.placeholderBody}>
@@ -119,7 +123,7 @@ export default function CommunitySearchScreen() {
         </View>
       ) : feed.isLoading ? (
         <View style={s.centerWrap}>
-          <ActivityIndicator color="#06b6d4" />
+          <ActivityIndicator color={c.brand.primary} />
         </View>
       ) : feed.error ? (
         <View style={s.errorBox}>
@@ -128,7 +132,7 @@ export default function CommunitySearchScreen() {
       ) : posts.length === 0 ? (
         <View style={s.placeholderWrap}>
           <View style={s.placeholderIcon}>
-            <Feather name="frown" size={28} color="#94a3b8" />
+            <Feather name="frown" size={28} color={c.text.muted} />
           </View>
           <Text style={s.placeholderTitle}>검색 결과가 없어요</Text>
           <Text style={s.placeholderBody}>다른 단어로 검색해보세요</Text>
@@ -151,7 +155,7 @@ export default function CommunitySearchScreen() {
           ListFooterComponent={
             feed.isFetchingNextPage ? (
               <View style={s.footerLoader}>
-                <ActivityIndicator color="#06b6d4" />
+                <ActivityIndicator color={c.brand.primary} />
               </View>
             ) : null
           }
@@ -182,6 +186,9 @@ function ResultCard({
   liked: boolean;
   onPress: () => void;
 }) {
+  const c = useThemeColors();
+  const s = useMemo(() => makeStyles(c), [c]);
+
   const toggle = useToggleLike();
   const authorName = post.author?.display_name ?? post.author?.username ?? '익명';
   const firstChar = authorName[0]?.toUpperCase() ?? '?';
@@ -236,10 +243,10 @@ function ResultCard({
           style={({ pressed }) => [s.metricBtn, { opacity: pressed ? 0.6 : 1 }]}
         >
           <Feather name="heart" size={15} color={liked ? '#ef4444' : '#94a3b8'} />
-          <Text style={[s.metricCount, liked && { color: '#ef4444' }]}>{post.like_count}</Text>
+          <Text style={[s.metricCount, liked && { color: c.status.danger }]}>{post.like_count}</Text>
         </Pressable>
         <View style={s.metricBtn}>
-          <Feather name="message-circle" size={15} color="#94a3b8" />
+          <Feather name="message-circle" size={15} color={c.text.muted} />
           <Text style={s.metricCount}>{post.comment_count}</Text>
         </View>
       </View>
@@ -258,6 +265,9 @@ function Highlighted({
   style: object;
   numberOfLines?: number;
 }) {
+  const c = useThemeColors();
+  const s = useMemo(() => makeStyles(c), [c]);
+
   if (!term) {
     return (
       <Text style={style} numberOfLines={numberOfLines}>
@@ -290,8 +300,9 @@ function Highlighted({
   );
 }
 
-const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f8fafc' },
+function makeStyles(c: ThemeColors) {
+  return StyleSheet.create({
+  container: { flex: 1, backgroundColor: c.bg.primary },
 
   header: {
     flexDirection: 'row',
@@ -317,13 +328,13 @@ const s = StyleSheet.create({
     gap: 8,
     paddingHorizontal: 12,
     height: 40,
-    backgroundColor: '#f1f5f9',
+    backgroundColor: c.bg.subtle,
     borderRadius: 12,
   },
   searchInput: {
     flex: 1,
     fontSize: 14,
-    color: '#0f172a',
+    color: c.text.primary,
     padding: 0,
   },
 
@@ -343,12 +354,12 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: c.border.subtle,
   },
-  placeholderTitle: { fontSize: 16, fontWeight: '800', color: '#0f172a' },
+  placeholderTitle: { fontSize: 16, fontWeight: '800', color: c.text.primary },
   placeholderBody: {
     fontSize: 12,
-    color: '#64748b',
+    color: c.text.tertiary,
     textAlign: 'center',
     lineHeight: 18,
   },
@@ -360,13 +371,13 @@ const s = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#fecaca',
   },
-  errorText: { color: '#ef4444', fontSize: 13, fontWeight: '600' },
+  errorText: { color: c.status.danger, fontSize: 13, fontWeight: '600' },
 
   listContent: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 32 },
   resultsHeader: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#64748b',
+    color: c.text.tertiary,
     marginBottom: 10,
     paddingHorizontal: 4,
   },
@@ -374,7 +385,7 @@ const s = StyleSheet.create({
 
   card: {
     borderWidth: 1,
-    borderColor: '#f1f5f9',
+    borderColor: c.border.subtle,
     borderRadius: 18,
     padding: 16,
     marginBottom: 10,
@@ -395,25 +406,26 @@ const s = StyleSheet.create({
   },
   avatarImage: { width: '100%', height: '100%' },
   avatarText: { fontSize: 13, fontWeight: '800' },
-  authorName: { flex: 1, fontSize: 13, fontWeight: '700', color: '#0f172a' },
+  authorName: { flex: 1, fontSize: 13, fontWeight: '700', color: c.text.primary },
   badge: { paddingHorizontal: 7, paddingVertical: 2, borderRadius: 8 },
   badgeText: { fontSize: 10, fontWeight: '800', letterSpacing: 0.2 },
-  time: { fontSize: 10, color: '#94a3b8', fontWeight: '600' },
+  time: { fontSize: 10, color: c.text.muted, fontWeight: '600' },
 
-  title: { fontSize: 14, fontWeight: '800', color: '#0f172a', lineHeight: 20, marginBottom: 4 },
-  body: { fontSize: 13, color: '#475569', lineHeight: 19, marginBottom: 10 },
+  title: { fontSize: 14, fontWeight: '800', color: c.text.primary, lineHeight: 20, marginBottom: 4 },
+  body: { fontSize: 13, color: c.text.secondary, lineHeight: 19, marginBottom: 10 },
   highlight: { backgroundColor: '#fef3c7', color: '#92400e', fontWeight: '700' },
 
   thumbWrap: {
     borderRadius: 12,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: '#f1f5f9',
+    borderColor: c.border.subtle,
     marginBottom: 10,
   },
   thumb: { width: '100%', height: 160 },
 
   metricsRow: { flexDirection: 'row', alignItems: 'center', gap: 18 },
   metricBtn: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  metricCount: { fontSize: 12, fontWeight: '700', color: '#94a3b8' },
-});
+  metricCount: { fontSize: 12, fontWeight: '700', color: c.text.muted },
+  });
+}

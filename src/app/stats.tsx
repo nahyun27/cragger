@@ -17,6 +17,7 @@ import { BarChart, LineChart } from 'react-native-gifted-charts';
 import { GymStatsCard } from '@/components/stats/gym-stats-card';
 import { useMonthlyStats } from '@/hooks/use-monthly-stats';
 import { useUserStats } from '@/hooks/use-user-stats';
+import { useThemeColors, type ThemeColors } from '@/lib/theme';
 import {
   currentMonth,
   currentYear,
@@ -29,6 +30,9 @@ import {
 type Scope = 'month' | 'year' | 'all';
 
 export default function StatsScreen() {
+  const c = useThemeColors();
+  const s = useMemo(() => makeStyles(c), [c]);
+
   const router = useRouter();
   const [scope, setScope] = useState<Scope>('month');
   const [monthAnchor, setMonthAnchor] = useState<{ year: number; month: number }>(
@@ -73,7 +77,7 @@ export default function StatsScreen() {
           style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
         >
           <View style={s.backBtn}>
-            <Feather name="arrow-left" size={22} color="#0f172a" />
+            <Feather name="arrow-left" size={22} color={c.text.primary} />
           </View>
         </Pressable>
         <Text style={s.headerTitle}>전체 통계</Text>
@@ -114,7 +118,7 @@ export default function StatsScreen() {
 
         {isLoading && (
           <View style={s.loaderWrap}>
-            <ActivityIndicator color="#06b6d4" />
+            <ActivityIndicator color={c.brand.primary} />
           </View>
         )}
 
@@ -152,7 +156,7 @@ export default function StatsScreen() {
 
             {stats.gyms.length === 0 ? (
               <View style={s.emptyCard}>
-                <Feather name="activity" size={24} color="#94a3b8" />
+                <Feather name="activity" size={24} color={c.text.muted} />
                 <Text style={s.emptyTitle}>해당 기간 기록이 없어요</Text>
                 <Text style={s.emptySubtitle}>
                   {scope === 'month'
@@ -191,6 +195,9 @@ function chartInnerWidth(windowWidth: number): number {
 }
 
 function MonthlyTrendCard({ deep, title = '최근 6개월 추이' }: { deep: { monthly: { monthLabel: string; sessionCount: number; sendCount: number }[] }; title?: string }) {
+  const c = useThemeColors();
+  const s = useMemo(() => makeStyles(c), [c]);
+
   const { width: winW } = useWindowDimensions();
   const sessionMax = Math.max(...deep.monthly.map((m) => m.sessionCount), 1);
   const sendMax = Math.max(...deep.monthly.map((m) => m.sendCount), 1);
@@ -250,8 +257,8 @@ function MonthlyTrendCard({ deep, title = '최근 6개월 추이' }: { deep: { m
         yAxisThickness={0}
         xAxisThickness={1}
         xAxisColor="#e2e8f0"
-        xAxisLabelTextStyle={{ color: '#94a3b8', fontSize: 10 }}
-        yAxisTextStyle={{ color: '#94a3b8', fontSize: 10 }}
+        xAxisLabelTextStyle={{ color: c.text.muted, fontSize: 10 }}
+        yAxisTextStyle={{ color: c.text.muted, fontSize: 10 }}
         noOfSections={Math.min(4, maxVal)}
         maxValue={maxVal}
         hideRules
@@ -286,6 +293,9 @@ function LeadStatsCard({
   grades: { grade: string; sendCount: number }[];
   maxGrade: string | null;
 }) {
+  const c = useThemeColors();
+  const s = useMemo(() => makeStyles(c), [c]);
+
   return (
     <DistributionCard
       title="리드 통계"
@@ -310,6 +320,8 @@ function DistributionCard<T extends { sendCount: number }>({
   maxGrade: string | null;
   barColor: string;
 }) {
+  const c = useThemeColors();
+  const s = useMemo(() => makeStyles(c), [c]);
   const { width: winW } = useWindowDimensions();
   const barData = data.map((g) => ({
     value: g.sendCount,
@@ -349,8 +361,8 @@ function DistributionCard<T extends { sendCount: number }>({
         barBorderRadius={3}
         yAxisThickness={0}
         xAxisThickness={0}
-        xAxisLabelTextStyle={{ color: '#94a3b8', fontSize: 10 }}
-        yAxisTextStyle={{ color: '#94a3b8', fontSize: 10 }}
+        xAxisLabelTextStyle={{ color: c.text.muted, fontSize: 10 }}
+        yAxisTextStyle={{ color: c.text.muted, fontSize: 10 }}
         noOfSections={Math.min(4, maxVal)}
         maxValue={maxVal}
         hideRules
@@ -369,6 +381,9 @@ function ScopeBtn({
   active: boolean;
   onPress: () => void;
 }) {
+  const c = useThemeColors();
+  const s = useMemo(() => makeStyles(c), [c]);
+
   // Pressable 함수형 style 이 flex: 1 을 silently drop 해서 width 0 으로
   // 무너지는 케이스. children-as-function + inner View 패턴으로 안전하게.
   return (
@@ -393,6 +408,9 @@ function AnchorPicker({
   onNext: () => void;
   canGoNext: boolean;
 }) {
+  const c = useThemeColors();
+  const s = useMemo(() => makeStyles(c), [c]);
+
   return (
     <View style={s.anchorRow}>
       <Pressable
@@ -401,7 +419,7 @@ function AnchorPicker({
         style={({ pressed }) => ({ opacity: pressed ? 0.5 : 1 })}
       >
         <View style={s.anchorBtn}>
-          <Feather name="chevron-left" size={18} color="#0f172a" />
+          <Feather name="chevron-left" size={18} color={c.text.primary} />
         </View>
       </Pressable>
       <Text style={s.anchorLabel}>{label}</Text>
@@ -412,7 +430,7 @@ function AnchorPicker({
         style={({ pressed }) => ({ opacity: !canGoNext ? 0.3 : pressed ? 0.5 : 1 })}
       >
         <View style={s.anchorBtn}>
-          <Feather name="chevron-right" size={18} color="#0f172a" />
+          <Feather name="chevron-right" size={18} color={c.text.primary} />
         </View>
       </Pressable>
     </View>
@@ -428,9 +446,12 @@ function SummaryMetric({
   value: number;
   icon: React.ComponentProps<typeof Feather>['name'];
 }) {
+  const c = useThemeColors();
+  const s = useMemo(() => makeStyles(c), [c]);
+
   return (
     <View style={s.metricCol}>
-      <Feather name={icon} size={14} color="#475569" />
+      <Feather name={icon} size={14} color={c.text.secondary} />
       <Text style={s.metricVal}>{value}</Text>
       <Text style={s.metricLabel}>{label}</Text>
     </View>
@@ -438,11 +459,15 @@ function SummaryMetric({
 }
 
 function Divider() {
+  const c = useThemeColors();
+  const s = useMemo(() => makeStyles(c), [c]);
+
   return <View style={s.divider} />;
 }
 
-const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f8fafc' },
+function makeStyles(c: ThemeColors) {
+  return StyleSheet.create({
+  container: { flex: 1, backgroundColor: c.bg.primary },
 
   header: {
     flexDirection: 'row',
@@ -450,9 +475,9 @@ const s = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 12,
     paddingVertical: 10,
-    backgroundColor: '#ffffff',
+    backgroundColor: c.bg.card,
     borderBottomWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: c.border.subtle,
   },
   backBtn: {
     width: 38,
@@ -464,23 +489,23 @@ const s = StyleSheet.create({
   headerTitle: {
     fontSize: 16,
     fontWeight: '800',
-    color: '#0f172a',
+    color: c.text.primary,
     letterSpacing: -0.3,
   },
 
   toggleWrap: {
     paddingHorizontal: 16,
     paddingTop: 14,
-    backgroundColor: '#f8fafc',
+    backgroundColor: c.bg.primary,
   },
   toggle: {
     flexDirection: 'row',
-    backgroundColor: '#ffffff',
+    backgroundColor: c.bg.card,
     borderRadius: 14,
     padding: 5,
     gap: 4,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: c.border.subtle,
   },
   scopeBtnPressable: {
     flex: 1,
@@ -499,7 +524,7 @@ const s = StyleSheet.create({
     shadowOffset: { width: 0, height: 3 },
     elevation: 2,
   },
-  scopeBtnLabel: { fontSize: 13, fontWeight: '700', color: '#64748b' },
+  scopeBtnLabel: { fontSize: 13, fontWeight: '700', color: c.text.tertiary },
   scopeBtnLabelActive: { fontWeight: '800', color: '#ffffff' },
 
   anchorRow: {
@@ -510,22 +535,22 @@ const s = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 14,
     paddingBottom: 6,
-    backgroundColor: '#f8fafc',
+    backgroundColor: c.bg.primary,
   },
   anchorBtn: {
     width: 36,
     height: 36,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: c.border.subtle,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#ffffff',
+    backgroundColor: c.bg.card,
   },
   anchorLabel: {
     fontSize: 16,
     fontWeight: '800',
-    color: '#0f172a',
+    color: c.text.primary,
     minWidth: 140,
     textAlign: 'center',
     letterSpacing: -0.3,
@@ -535,12 +560,12 @@ const s = StyleSheet.create({
   loaderWrap: { paddingVertical: 24, alignItems: 'center' },
 
   summaryCard: {
-    backgroundColor: '#f8fafc',
+    backgroundColor: c.bg.primary,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: c.border.subtle,
     borderRadius: 22,
     padding: 18,
-    shadowColor: '#0f172a',
+    shadowColor: c.shadow.color,
     shadowOpacity: 0.03,
     shadowRadius: 10,
     shadowOffset: { width: 0, height: 4 },
@@ -552,23 +577,23 @@ const s = StyleSheet.create({
     alignItems: 'center',
   },
   metricCol: { flex: 1, alignItems: 'center', gap: 4 },
-  metricVal: { fontSize: 22, fontWeight: '900', color: '#0f172a' },
-  metricLabel: { fontSize: 11, fontWeight: '700', color: '#94a3b8' },
+  metricVal: { fontSize: 22, fontWeight: '900', color: c.text.primary },
+  metricLabel: { fontSize: 11, fontWeight: '700', color: c.text.muted },
   divider: { width: 1, alignSelf: 'stretch', backgroundColor: '#e2e8f0' },
 
   emptyCard: {
     borderWidth: 1,
     borderStyle: 'dashed',
-    borderColor: '#cbd5e1',
+    borderColor: c.border.strong,
     borderRadius: 22,
     padding: 28,
     alignItems: 'center',
     gap: 8,
-    backgroundColor: '#ffffff',
+    backgroundColor: c.bg.card,
     marginTop: 4,
   },
-  emptyTitle: { fontSize: 15, fontWeight: '800', color: '#0f172a' },
-  emptySubtitle: { fontSize: 11, color: '#94a3b8', textAlign: 'center', lineHeight: 16 },
+  emptyTitle: { fontSize: 15, fontWeight: '800', color: c.text.primary },
+  emptySubtitle: { fontSize: 11, color: c.text.muted, textAlign: 'center', lineHeight: 16 },
 
   errorCard: {
     margin: 4,
@@ -578,19 +603,19 @@ const s = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#fecaca',
   },
-  errorText: { color: '#ef4444', fontSize: 13, fontWeight: '600' },
+  errorText: { color: c.status.danger, fontSize: 13, fontWeight: '600' },
 
   gymList: { gap: 10, marginTop: 4 },
 
   // Chart cards
   chartCard: {
-    backgroundColor: '#ffffff',
+    backgroundColor: c.bg.card,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: c.border.subtle,
     borderRadius: 18,
     padding: 16,
     paddingBottom: 6,
-    shadowColor: '#0f172a',
+    shadowColor: c.shadow.color,
     shadowOpacity: 0.05,
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 6 },
@@ -606,7 +631,7 @@ const s = StyleSheet.create({
   chartTitle: {
     fontSize: 14,
     fontWeight: '800',
-    color: '#0f172a',
+    color: c.text.primary,
   },
   chartLegendRow: {
     flexDirection: 'row',
@@ -625,7 +650,7 @@ const s = StyleSheet.create({
   chartLegendText: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#475569',
+    color: c.text.secondary,
   },
   maxVPill: {
     flexDirection: 'row',
@@ -643,4 +668,5 @@ const s = StyleSheet.create({
     fontWeight: '700',
     color: '#b45309',
   },
-});
+  });
+}

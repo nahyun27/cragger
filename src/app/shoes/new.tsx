@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useState, useMemo} from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -16,8 +16,12 @@ import { Feather } from '@expo/vector-icons';
 import { EMPTY_SHOE_FORM, ShoeForm, type ShoeFormValue } from '@/components/shoes/shoe-form';
 import { ShoeSizeGuide } from '@/components/shoes/shoe-size-guide';
 import { useCreateShoe } from '@/hooks/use-shoes';
+import { useThemeColors, type ThemeColors } from '@/lib/theme';
 
 export default function NewShoeScreen() {
+  const c = useThemeColors();
+  const s = useMemo(() => makeStyles(c), [c]);
+
   const router = useRouter();
   const createShoe = useCreateShoe();
   const [form, setForm] = useState<ShoeFormValue>(EMPTY_SHOE_FORM);
@@ -67,7 +71,7 @@ export default function NewShoeScreen() {
         <Pressable onPress={() => router.back()} hitSlop={8}>
           {({ pressed }) => (
             <View style={[s.headerIconBtn, pressed && s.btnPressed]}>
-              <Feather name="arrow-left" size={22} color="#0f172a" />
+              <Feather name="arrow-left" size={22} color={c.text.primary} />
             </View>
           )}
         </Pressable>
@@ -86,7 +90,7 @@ export default function NewShoeScreen() {
         >
           {({ pressed }) => (
             <View style={[s.guideBanner, pressed && s.btnPressed]}>
-              <Feather name="info" size={14} color="#06b6d4" />
+              <Feather name="info" size={14} color={c.brand.primary} />
               <Text style={s.guideBannerText}>
                 어떤 사이즈가 맞을까요? 사이즈 가이드 확인하기
               </Text>
@@ -126,13 +130,15 @@ export default function NewShoeScreen() {
   );
 }
 
-const s = StyleSheet.create({
+function makeStyles(c: ThemeColors) {
+  return StyleSheet.create({
   safeContainer: {
     flex: 1,
-    backgroundColor: '#f8fafc',
+    backgroundColor: c.bg.card,
   },
   flex1: {
     flex: 1,
+    backgroundColor: c.bg.primary,
   },
   headerRow: {
     flexDirection: 'row',
@@ -142,10 +148,10 @@ const s = StyleSheet.create({
     paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: '#f1f5f9',
-    backgroundColor: '#ffffff',
+    backgroundColor: c.bg.card,
   },
   headerTitle: {
-    color: '#0f172a',
+    color: c.text.primary,
     fontSize: 16,
     fontWeight: '800',
     letterSpacing: -0.3,
@@ -156,7 +162,7 @@ const s = StyleSheet.create({
     borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#ffffff',
+    backgroundColor: c.bg.card,
   },
   btnPressed: {
     opacity: 0.65,
@@ -167,7 +173,7 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    backgroundColor: '#ecfeff',
+    backgroundColor: c.bg.accent,
     borderBottomWidth: 1,
     borderBottomColor: '#cffafe',
     paddingVertical: 10,
@@ -184,7 +190,7 @@ const s = StyleSheet.create({
     paddingBottom: 16,
     borderTopWidth: 1,
     borderTopColor: '#e2e8f0',
-    backgroundColor: '#ffffff',
+    backgroundColor: c.bg.card,
   },
   submitBtn: {
     backgroundColor: '#06b6d4',
@@ -209,6 +215,7 @@ const s = StyleSheet.create({
     fontWeight: '800',
   },
   submitBtnTextDisabled: {
-    color: '#94a3b8',
+    color: c.text.muted,
   },
-});
+  });
+}

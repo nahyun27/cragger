@@ -45,6 +45,35 @@ import { currentMonth, monthRange } from '@/lib/date-ranges';
 import { supabase } from '@/lib/supabase';
 import { useThemeColors, useThemePref, type ThemeColors, type ThemePref } from '@/lib/theme';
 
+export type Badge = {
+  id: string;
+  title: string;
+  type: 'icon' | 'text';
+  iconName?: string;
+  text?: string;
+  color: string;
+  bg: string;
+  unlocked: boolean;
+  hint: string;
+  unlockedDate?: string;
+};
+
+export const MOCK_BADGES: Badge[] = [
+  { id: '1', title: '완등 1000문제', type: 'icon', iconName: 'award', color: '#3b82f6', bg: '#eff6ff', unlocked: true, hint: '1000문제 완등 시 획득', unlockedDate: '2026.05.20' },
+  { id: '2', title: '원정 50회', type: 'icon', iconName: 'map-pin', color: '#10b981', bg: '#ecfdf5', unlocked: true, hint: '다른 암장 50회 방문 시 획득', unlockedDate: '2026.05.15' },
+  { id: '3', title: '게시판 첫 글', type: 'icon', iconName: 'edit-2', color: '#f59e0b', bg: '#fffbeb', unlocked: true, hint: '게시판에 첫 글 작성 시 획득', unlockedDate: '2026.05.01' },
+  { id: '4', title: 'V6 클라이머', type: 'text', text: 'V6', color: '#a855f7', bg: '#faf5ff', unlocked: true, hint: 'V6 난이도 완등 시 획득', unlockedDate: '2026.05.18' },
+  { id: '5', title: '완등 500문제', type: 'icon', iconName: 'star', color: '#f59e0b', bg: '#fffbeb', unlocked: true, hint: '500문제 완등 시 획득', unlockedDate: '2026.03.10' },
+  { id: '6', title: 'V5 클라이머', type: 'text', text: 'V5', color: '#4f46e5', bg: '#e0e7ff', unlocked: true, hint: 'V5 난이도 완등 시 획득', unlockedDate: '2026.02.05' },
+  { id: '7', title: 'V4 클라이머', type: 'text', text: 'V4', color: '#3b82f6', bg: '#eff6ff', unlocked: true, hint: 'V4 난이도 완등 시 획득', unlockedDate: '2026.01.12' },
+  { id: '8', title: 'V3 클라이머', type: 'text', text: 'V3', color: '#22c55e', bg: '#f0fdf4', unlocked: true, hint: 'V3 난이도 완등 시 획득', unlockedDate: '2025.11.20' },
+  { id: '9', title: 'V2 클라이머', type: 'text', text: 'V2', color: '#eab308', bg: '#fefce8', unlocked: true, hint: 'V2 난이도 완등 시 획득', unlockedDate: '2025.10.10' },
+  { id: '10', title: 'V1 클라이머', type: 'text', text: 'V1', color: '#f97316', bg: '#fff7ed', unlocked: true, hint: 'V1 난이도 완등 시 획득', unlockedDate: '2025.09.05' },
+  { id: '11', title: 'V0 클라이머', type: 'text', text: 'V0', color: '#ef4444', bg: '#fef2f2', unlocked: true, hint: 'V0 난이도 완등 시 획득', unlockedDate: '2025.08.01' },
+  { id: '12', title: 'V7 클라이머', type: 'text', text: 'V7', color: '#92400e', bg: '#fef3c7', unlocked: false, hint: 'V7 난이도 완등 시 획득' },
+  { id: '13', title: 'V8 클라이머', type: 'text', text: 'V8', color: '#64748b', bg: '#f8fafc', unlocked: false, hint: 'V8 난이도 완등 시 획득' },
+  { id: '14', title: 'V9 클라이머', type: 'text', text: 'V9', color: '#0f172a', bg: '#f1f5f9', unlocked: false, hint: 'V9 난이도 완등 시 획득' },
+];
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -59,6 +88,7 @@ export default function ProfileScreen() {
   );
   const { data: stats, isLoading, error } = useUserStats(thisMonthRange);
   const [menuVisible, setMenuVisible] = useState(false);
+  const [selectedBadge, setSelectedBadge] = useState<Badge | null>(null);
 
   const username = profile?.username ?? '...';
   const firstChar = username && username.length > 0 ? username.charAt(0).toUpperCase() : '?';
@@ -97,9 +127,23 @@ export default function ProfileScreen() {
             )}
           </View>
           <View style={s.profileInfo}>
-            <Text style={s.profileName} numberOfLines={1}>
-              {username}
-            </Text>
+            <View style={s.profileNameRow}>
+              <Text style={s.profileName} numberOfLines={1}>
+                {username}
+              </Text>
+              {selectedBadge && (
+                <View style={[
+                  s.selectedBadgeIconWrap,
+                  { backgroundColor: selectedBadge.bg, borderColor: selectedBadge.color }
+                ]}>
+                  {selectedBadge.type === 'text' ? (
+                    <Text style={[s.selectedBadgeTextIcon, { color: selectedBadge.color }]}>{selectedBadge.text}</Text>
+                  ) : selectedBadge.type === 'icon' ? (
+                    <Feather name={selectedBadge.iconName as any} size={14} color={selectedBadge.color} />
+                  ) : null}
+                </View>
+              )}
+            </View>
             {profile?.instagram_handle ? (
               <Pressable
                 onPress={() =>
@@ -208,11 +252,11 @@ export default function ProfileScreen() {
           )}
         </View>
 
-        <BadgesSection />
-
         <CrewsSection />
 
         <MembershipsSection />
+
+        <BadgesSection onSelectBadge={setSelectedBadge} />
 
         <ShoesSection />
       </ScrollView>
@@ -489,32 +533,22 @@ function BodyMetricPill({
   );
 }
 
-const MOCK_BADGES = [
-  { id: '1', title: '완등 1000문제', type: 'icon', iconName: 'award', color: '#3b82f6', bg: '#eff6ff', unlocked: true, hint: '1000문제 완등 시 획득', unlockedDate: '2026.05.20' },
-  { id: '2', title: '원정 50회', type: 'icon', iconName: 'map-pin', color: '#10b981', bg: '#ecfdf5', unlocked: true, hint: '다른 암장 50회 방문 시 획득', unlockedDate: '2026.05.15' },
-  { id: '3', title: '게시판 첫 글', type: 'icon', iconName: 'edit-2', color: '#f59e0b', bg: '#fffbeb', unlocked: true, hint: '게시판에 첫 글 작성 시 획득', unlockedDate: '2026.05.01' },
-  { id: '4', title: 'V6 클라이머', type: 'text', text: 'V6', color: '#a855f7', bg: '#faf5ff', unlocked: true, hint: 'V6 난이도 완등 시 획득', unlockedDate: '2026.05.18' },
-  { id: '5', title: '완등 500문제', type: 'icon', iconName: 'star', color: '#f59e0b', bg: '#fffbeb', unlocked: true, hint: '500문제 완등 시 획득', unlockedDate: '2026.03.10' },
-  { id: '6', title: 'V5 클라이머', type: 'text', text: 'V5', color: '#4f46e5', bg: '#e0e7ff', unlocked: true, hint: 'V5 난이도 완등 시 획득', unlockedDate: '2026.02.05' },
-  { id: '7', title: 'V4 클라이머', type: 'text', text: 'V4', color: '#3b82f6', bg: '#eff6ff', unlocked: true, hint: 'V4 난이도 완등 시 획득', unlockedDate: '2026.01.12' },
-  { id: '8', title: 'V3 클라이머', type: 'text', text: 'V3', color: '#22c55e', bg: '#f0fdf4', unlocked: true, hint: 'V3 난이도 완등 시 획득', unlockedDate: '2025.11.20' },
-  { id: '9', title: 'V2 클라이머', type: 'text', text: 'V2', color: '#eab308', bg: '#fefce8', unlocked: true, hint: 'V2 난이도 완등 시 획득', unlockedDate: '2025.10.10' },
-  { id: '10', title: 'V1 클라이머', type: 'text', text: 'V1', color: '#f97316', bg: '#fff7ed', unlocked: true, hint: 'V1 난이도 완등 시 획득', unlockedDate: '2025.09.05' },
-  { id: '11', title: 'V0 클라이머', type: 'text', text: 'V0', color: '#ef4444', bg: '#fef2f2', unlocked: true, hint: 'V0 난이도 완등 시 획득', unlockedDate: '2025.08.01' },
-  { id: '12', title: 'V7 클라이머', type: 'text', text: 'V7', color: '#92400e', bg: '#fef3c7', unlocked: false, hint: 'V7 난이도 완등 시 획득' },
-  { id: '13', title: 'V8 클라이머', type: 'text', text: 'V8', color: '#64748b', bg: '#f8fafc', unlocked: false, hint: 'V8 난이도 완등 시 획득' },
-  { id: '14', title: 'V9 클라이머', type: 'text', text: 'V9', color: '#0f172a', bg: '#f1f5f9', unlocked: false, hint: 'V9 난이도 완등 시 획득' },
-];
-
-function BadgesSection() {
+function BadgesSection({ onSelectBadge }: { onSelectBadge: (badge: Badge) => void }) {
   const c = useThemeColors();
   const s = React.useMemo(() => makeStyles(c), [c]);
   const unlockedCount = MOCK_BADGES.filter(b => b.unlocked).length;
   const totalCount = MOCK_BADGES.length;
 
-  const handleBadgePress = (badge: typeof MOCK_BADGES[0]) => {
+  const handleBadgePress = (badge: Badge) => {
     if (badge.unlocked) {
-      Alert.alert(badge.title, `달성일: ${badge.unlockedDate}\n\n${badge.hint}`);
+      Alert.alert(
+        badge.title, 
+        `달성일: ${badge.unlockedDate}\n\n${badge.hint}`,
+        [
+          { text: '닫기', style: 'cancel' },
+          { text: '대표 배지로 설정', onPress: () => onSelectBadge(badge) }
+        ]
+      );
     } else {
       Alert.alert('미획득 배지', `${badge.hint}\n\n(아직 획득하지 못했습니다)`);
     }
@@ -902,13 +936,7 @@ function MembershipCard({
     ? '#a5f3fc'
     : '#c7d2fe';
 
-  const cutoutBorderColor = expired
-    ? '#cbd5e1'
-    : expSoon
-    ? '#fecaca'
-    : isPasses
-    ? '#cffafe'
-    : '#c7d2fe';
+  const cutoutBorderColor = expSoon ? '#fecaca' : c.border.subtle;
 
   // 카드 전체를 Pressable로 — Pressable의 함수형 style 배열이 내부 row
   // layout을 자꾸 무너뜨려서 children-as-function 패턴으로 옮김.
@@ -1557,6 +1585,23 @@ function makeStyles(c: ThemeColors) {
   profileInfo: {
     alignItems: 'center',
     gap: 4,
+  },
+  profileNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  selectedBadgeIconWrap: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  selectedBadgeTextIcon: {
+    fontSize: 10,
+    fontWeight: '900',
   },
   profileName: {
     fontSize: 22,

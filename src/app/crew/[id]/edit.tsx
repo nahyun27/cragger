@@ -22,11 +22,15 @@ import { useAuth } from '@/lib/auth-context';
 import { useCrewDetail, useUpdateCrew } from '@/hooks/use-crews';
 import { useGyms } from '@/hooks/use-gyms';
 import { uploadCrewLogo } from '@/lib/upload-image';
+import { useThemeColors, type ThemeColors } from '@/lib/theme';
 
 const NAME_MAX = 30;
 const DESC_MAX = 200;
 
 export default function EditCrewScreen() {
+  const c = useThemeColors();
+  const s = useMemo(() => makeStyles(c), [c]);
+
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { session: authSession } = useAuth();
@@ -109,7 +113,7 @@ export default function EditCrewScreen() {
   if (isLoading || !prefilled) {
     return (
       <SafeAreaView style={s.center} edges={['top']}>
-        <ActivityIndicator color="#06b6d4" />
+        <ActivityIndicator color={c.brand.primary} />
       </SafeAreaView>
     );
   }
@@ -120,7 +124,7 @@ export default function EditCrewScreen() {
         <Pressable onPress={() => router.back()} hitSlop={8}>
           {({ pressed }) => (
             <View style={[s.headerBtn, pressed && { opacity: 0.6 }]}>
-              <Feather name="arrow-left" size={22} color="#0f172a" />
+              <Feather name="arrow-left" size={22} color={c.text.primary} />
             </View>
           )}
         </Pressable>
@@ -142,7 +146,7 @@ export default function EditCrewScreen() {
                     <Image source={{ uri: imageUrl }} style={s.logoImage} resizeMode="cover" />
                   ) : (
                     <View style={s.logoPlaceholder}>
-                      <Feather name="users" size={28} color="#94a3b8" />
+                      <Feather name="users" size={28} color={c.text.muted} />
                     </View>
                   )}
                   <View style={s.logoCameraBadge}>
@@ -170,7 +174,7 @@ export default function EditCrewScreen() {
             value={name}
             onChangeText={(t) => setName(t.slice(0, NAME_MAX))}
             placeholder="크루 이름 (최대 30자)"
-            placeholderTextColor="#94a3b8"
+            placeholderTextColor={c.text.muted}
             maxLength={NAME_MAX}
           />
 
@@ -180,7 +184,7 @@ export default function EditCrewScreen() {
             value={description}
             onChangeText={(t) => setDescription(t.slice(0, DESC_MAX))}
             placeholder="크루 소개 (최대 200자)"
-            placeholderTextColor="#94a3b8"
+            placeholderTextColor={c.text.muted}
             multiline
             textAlignVertical="top"
             maxLength={DESC_MAX}
@@ -192,7 +196,7 @@ export default function EditCrewScreen() {
             {({ pressed }) => (
               <View style={[s.gymBox, pressed && { opacity: 0.7 }]}>
                 <View style={s.gymBoxLeft}>
-                  <Feather name="search" size={16} color="#64748b" />
+                  <Feather name="search" size={16} color={c.text.tertiary} />
                   <Text
                     style={selectedGym ? s.gymBoxText : s.gymBoxPlaceholder}
                     numberOfLines={1}
@@ -210,7 +214,7 @@ export default function EditCrewScreen() {
                     }}
                     hitSlop={6}
                   >
-                    <Feather name="x" size={16} color="#94a3b8" />
+                    <Feather name="x" size={16} color={c.text.muted} />
                   </Pressable>
                 )}
               </View>
@@ -257,17 +261,18 @@ export default function EditCrewScreen() {
   );
 }
 
-const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f8fafc' },
+function makeStyles(c: ThemeColors) {
+  return StyleSheet.create({
+  container: { flex: 1, backgroundColor: c.bg.primary },
   flex1: { flex: 1 },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#f8fafc' },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: c.bg.primary },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 8,
-    backgroundColor: '#ffffff',
+    backgroundColor: c.bg.card,
     borderBottomWidth: 1,
     borderBottomColor: '#f1f5f9',
   },
@@ -277,18 +282,18 @@ const s = StyleSheet.create({
     borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#f1f5f9',
+    backgroundColor: c.bg.subtle,
   },
-  headerTitle: { fontSize: 17, fontWeight: '700', color: '#0f172a' },
+  headerTitle: { fontSize: 17, fontWeight: '700', color: c.text.primary },
   scrollContent: { padding: 20, paddingBottom: 40 },
   logoBlock: { alignItems: 'center', gap: 8, marginBottom: 24 },
   logoRing: {
     width: 96,
     height: 96,
     borderRadius: 48,
-    backgroundColor: '#f1f5f9',
+    backgroundColor: c.bg.subtle,
     borderWidth: 2,
-    borderColor: '#e2e8f0',
+    borderColor: c.border.subtle,
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
@@ -308,42 +313,42 @@ const s = StyleSheet.create({
     borderWidth: 2,
     borderColor: '#ffffff',
   },
-  logoRemoveText: { fontSize: 12, color: '#ef4444', fontWeight: '700' },
-  label: { fontSize: 13, fontWeight: '700', color: '#475569', marginBottom: 8 },
-  required: { color: '#ef4444' },
+  logoRemoveText: { fontSize: 12, color: c.status.danger, fontWeight: '700' },
+  label: { fontSize: 13, fontWeight: '700', color: c.text.secondary, marginBottom: 8 },
+  required: { color: c.status.danger },
   input: {
-    backgroundColor: '#ffffff',
+    backgroundColor: c.bg.card,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: c.border.subtle,
     borderRadius: 12,
     paddingHorizontal: 14,
     paddingVertical: 12,
     fontSize: 15,
-    color: '#0f172a',
+    color: c.text.primary,
   },
   textArea: { minHeight: 96, paddingTop: 12 },
-  charCount: { fontSize: 11, color: '#94a3b8', textAlign: 'right', marginTop: 4 },
+  charCount: { fontSize: 11, color: c.text.muted, textAlign: 'right', marginTop: 4 },
   gymBox: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#ffffff',
+    backgroundColor: c.bg.card,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: c.border.subtle,
     borderRadius: 12,
     paddingHorizontal: 14,
     paddingVertical: 12,
   },
   gymBoxLeft: { flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 },
-  gymBoxText: { fontSize: 15, color: '#0f172a', fontWeight: '700', flex: 1 },
-  gymBoxPlaceholder: { fontSize: 15, color: '#94a3b8', flex: 1 },
+  gymBoxText: { fontSize: 15, color: c.text.primary, fontWeight: '700', flex: 1 },
+  gymBoxPlaceholder: { fontSize: 15, color: c.text.muted, flex: 1 },
   footer: {
     paddingHorizontal: 20,
     paddingTop: 12,
     paddingBottom: 16,
     borderTopWidth: 1,
     borderTopColor: '#e2e8f0',
-    backgroundColor: '#ffffff',
+    backgroundColor: c.bg.card,
   },
   submitBtn: {
     backgroundColor: '#06b6d4',
@@ -353,5 +358,6 @@ const s = StyleSheet.create({
   },
   submitBtnDisabled: { backgroundColor: '#cbd5e1' },
   submitBtnText: { color: '#ffffff', fontSize: 15, fontWeight: '800' },
-  submitBtnTextDisabled: { color: '#94a3b8' },
-});
+  submitBtnTextDisabled: { color: c.text.muted },
+  });
+}

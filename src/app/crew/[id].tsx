@@ -1,5 +1,5 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useState, useMemo} from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -40,6 +40,7 @@ import {
 } from '@/hooks/use-crew-announcements';
 import { useCrewHomeStats, useCrewGradeDistribution } from '@/hooks/use-crew-stats';
 import { effectiveStatus, useBattles, type Battle } from '@/hooks/use-battles';
+import { useThemeColors, type ThemeColors } from '@/lib/theme';
 
 function getAvatarBg(name: string) {
   const colors = ['#e0f2fe', '#fef3c7', '#dcfce7', '#f3e8ff', '#fee2e2', '#e0e7ff'];
@@ -70,6 +71,9 @@ function getCrewAvatarColors(name: string) {
 }
 
 export default function CrewDetailScreen() {
+  const c = useThemeColors();
+  const s = useMemo(() => makeStyles(c), [c]);
+
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { session: authSession } = useAuth();
@@ -87,7 +91,7 @@ export default function CrewDetailScreen() {
   if (isLoading) {
     return (
       <SafeAreaView style={s.safeCenter} edges={['top']}>
-        <ActivityIndicator color="#06b6d4" size="large" />
+        <ActivityIndicator color={c.brand.primary} size="large" />
       </SafeAreaView>
     );
   }
@@ -182,7 +186,7 @@ export default function CrewDetailScreen() {
         <Pressable onPress={() => router.back()} hitSlop={8}>
           {({ pressed }) => (
             <View style={[s.headerIconBtn, pressed && s.btnPressed]}>
-              <Feather name="arrow-left" size={22} color="#0f172a" />
+              <Feather name="arrow-left" size={22} color={c.text.primary} />
             </View>
           )}
         </Pressable>
@@ -191,7 +195,7 @@ export default function CrewDetailScreen() {
           <Pressable onPress={handleOpenMenu} hitSlop={8}>
             {({ pressed }) => (
               <View style={[s.headerIconBtn, pressed && s.btnPressed]}>
-                <Feather name="more-vertical" size={20} color="#0f172a" />
+                <Feather name="more-vertical" size={20} color={c.text.primary} />
               </View>
             )}
           </Pressable>
@@ -200,7 +204,7 @@ export default function CrewDetailScreen() {
         )}
       </View>
 
-      <ScrollView style={{ flex: 1, backgroundColor: '#f8fafc' }} contentContainerStyle={s.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView style={{ flex: 1, backgroundColor: c.bg.primary }} contentContainerStyle={s.scrollContent} showsVerticalScrollIndicator={false}>
         {/* Hero Area */}
         {/* Hero Area */}
         {/* Horizontal Header (Reference Style) */}
@@ -226,7 +230,7 @@ export default function CrewDetailScreen() {
                 <Pressable onPress={() => setShowInviteCode(true)} hitSlop={8}>
                   {({ pressed }) => (
                     <View style={[s.headerKeyBtn, pressed && { opacity: 0.6 }]}>
-                      <Feather name="key" size={16} color="#06b6d4" />
+                      <Feather name="key" size={16} color={c.brand.primary} />
                     </View>
                   )}
                 </Pressable>
@@ -292,7 +296,7 @@ export default function CrewDetailScreen() {
                   <View style={s.inviteModalHeaderCloseRow}>
                     <Text style={s.inviteModalTitle}>멤버십 초대코드</Text>
                     <Pressable onPress={() => setShowInviteCode(false)} hitSlop={10}>
-                      <Feather name="x" size={24} color="#64748b" />
+                      <Feather name="x" size={24} color={c.text.tertiary} />
                     </Pressable>
                   </View>
                   <View style={[s.inviteCard, { borderColor: colors.border, marginHorizontal: 0, marginBottom: 0 }]}>
@@ -444,6 +448,9 @@ function TransferOwnerModal({
   onClose: () => void;
   onDone: () => void;
 }) {
+  const c = useThemeColors();
+  const s = useMemo(() => makeStyles(c), [c]);
+
   const [selected, setSelected] = useState<string | null>(null);
   const [alsoLeave, setAlsoLeave] = useState(true);
   const transfer = useTransferAndLeave();
@@ -493,7 +500,7 @@ function TransferOwnerModal({
           <Pressable onPress={onClose} hitSlop={8}>
             {({ pressed }) => (
               <View style={[s.headerIconBtn, pressed && s.btnPressed]}>
-                <Feather name="x" size={22} color="#0f172a" />
+                <Feather name="x" size={22} color={c.text.primary} />
               </View>
             )}
           </Pressable>
@@ -522,7 +529,7 @@ function TransferOwnerModal({
                       i !== candidates.length - 1 && s.candidateRowDivider,
                       pressed && s.btnPressed
                     ]}>
-                      <View style={[s.candidateAvatar, { backgroundColor: '#f1f5f9' }]}>
+                      <View style={[s.candidateAvatar, { backgroundColor: c.bg.subtle }]}>
                         {m.user?.avatar_url ? (
                           <Image
                             source={{ uri: m.user.avatar_url }}
@@ -591,6 +598,9 @@ function TransferOwnerModal({
 }
 
 function CrewBattlesSection({ crewId }: { crewId: string }) {
+  const c = useThemeColors();
+  const s = useMemo(() => makeStyles(c), [c]);
+
   const router = useRouter();
   const { data, isLoading, error } = useBattles(crewId);
 
@@ -628,7 +638,7 @@ function CrewBattlesSection({ crewId }: { crewId: string }) {
 
       {isLoading && (
         <View style={s.loaderBox}>
-          <ActivityIndicator color="#06b6d4" />
+          <ActivityIndicator color={c.brand.primary} />
         </View>
       )}
       {error && (
@@ -639,7 +649,7 @@ function CrewBattlesSection({ crewId }: { crewId: string }) {
 
       {data && data.length === 0 && (
         <View style={s.battleEmptyCard}>
-          <Feather name="zap" size={20} color="#94a3b8" />
+          <Feather name="zap" size={20} color={c.text.muted} />
           <Text style={s.battleEmptyText}>아직 대결이 없어요</Text>
         </View>
       )}
@@ -665,6 +675,9 @@ function CrewBattlesSection({ crewId }: { crewId: string }) {
 }
 
 function BattleCard({ battle, crewId, past }: { battle: Battle; crewId: string; past?: boolean }) {
+  const c = useThemeColors();
+  const s = useMemo(() => makeStyles(c), [c]);
+
   const router = useRouter();
   const status = effectiveStatus(battle);
   const isCrewVs = battle.battle_type === 'crew_vs_crew';
@@ -701,7 +714,7 @@ function BattleCard({ battle, crewId, past }: { battle: Battle; crewId: string; 
                 {isCrewVs ? '크루전' : '개인전'}
               </Text>
             </View>
-            <Feather name="chevron-right" size={15} color="#cbd5e1" />
+            <Feather name="chevron-right" size={15} color={c.border.strong} />
           </View>
           
           <Text style={s.battleTitleText} numberOfLines={1}>
@@ -718,7 +731,7 @@ function BattleCard({ battle, crewId, past }: { battle: Battle; crewId: string; 
           )}
           
           <View style={s.battleDateRow}>
-            <Feather name="calendar" size={10} color="#94a3b8" />
+            <Feather name="calendar" size={10} color={c.text.muted} />
             <Text style={s.battleDateText}>
               {battle.starts_at.slice(5, 10).replace('-', '.')} ~ {battle.ends_at.slice(5, 10).replace('-', '.')}
             </Text>
@@ -742,6 +755,9 @@ function formatMeetupShort(iso: string): string {
 }
 
 function CrewMeetupsSection({ crewId }: { crewId: string }) {
+  const c = useThemeColors();
+  const s = useMemo(() => makeStyles(c), [c]);
+
   const router = useRouter();
   const { data, isLoading, error } = useCrewMeetups(crewId);
 
@@ -780,7 +796,7 @@ function CrewMeetupsSection({ crewId }: { crewId: string }) {
 
       {data && data.upcoming.length === 0 && data.past.length === 0 && (
         <View style={s.battleEmptyCard}>
-          <Feather name="calendar" size={20} color="#94a3b8" />
+          <Feather name="calendar" size={20} color={c.text.muted} />
           <Text style={s.battleEmptyText}>예정된 모임이 없어요</Text>
         </View>
       )}
@@ -806,6 +822,9 @@ function CrewMeetupsSection({ crewId }: { crewId: string }) {
 }
 
 function CrewMeetupCard({ meetup, past }: { meetup: PostRow; past?: boolean }) {
+  const c = useThemeColors();
+  const s = useMemo(() => makeStyles(c), [c]);
+
   const router = useRouter();
   const cap = meetup.meetup_capacity;
   const full = cap != null && meetup.participant_count >= cap;
@@ -829,11 +848,11 @@ function CrewMeetupCard({ meetup, past }: { meetup: PostRow; past?: boolean }) {
             <Text style={s.meetupTitleText} numberOfLines={1}>
               {meetup.title || '크루 모임'}
             </Text>
-            <Feather name="chevron-right" size={15} color="#cbd5e1" />
+            <Feather name="chevron-right" size={15} color={c.border.strong} />
           </View>
           
           <View style={s.meetupMetaRow}>
-            <Feather name="clock" size={11} color="#64748b" />
+            <Feather name="clock" size={11} color={c.text.tertiary} />
             <Text style={s.meetupMetaText}>
               {meetup.meetup_at ? formatMeetupShort(meetup.meetup_at) : '날짜 미정'}
             </Text>
@@ -841,7 +860,7 @@ function CrewMeetupCard({ meetup, past }: { meetup: PostRow; past?: boolean }) {
           
           {location && (
             <View style={s.meetupMetaRow}>
-              <Feather name="map-pin" size={11} color="#64748b" />
+              <Feather name="map-pin" size={11} color={c.text.tertiary} />
               <Text style={s.meetupMetaText} numberOfLines={1}>
                 {location}
               </Text>
@@ -850,7 +869,7 @@ function CrewMeetupCard({ meetup, past }: { meetup: PostRow; past?: boolean }) {
           
           <View style={[s.rowCenterSpace, { marginTop: 2 }]}>
             <View style={s.rowCenterGap}>
-              <Feather name="users" size={11} color="#64748b" />
+              <Feather name="users" size={11} color={c.text.tertiary} />
               <Text style={s.meetupMetaText}>
                 {cap != null
                   ? `${meetup.participant_count} / ${cap}명`
@@ -871,6 +890,9 @@ function CrewMeetupCard({ meetup, past }: { meetup: PostRow; past?: boolean }) {
 }
 
 function CrewFeedSection({ crewId }: { crewId: string }) {
+  const c = useThemeColors();
+  const s = useMemo(() => makeStyles(c), [c]);
+
   const router = useRouter();
   const feed = useCrewFeed(crewId);
   const { data: likedSet } = useMyLikes();
@@ -896,7 +918,7 @@ function CrewFeedSection({ crewId }: { crewId: string }) {
 
       {feed.isLoading && (
         <View style={s.loaderBox}>
-          <ActivityIndicator color="#06b6d4" />
+          <ActivityIndicator color={c.brand.primary} />
         </View>
       )}
 
@@ -908,7 +930,7 @@ function CrewFeedSection({ crewId }: { crewId: string }) {
 
       {!feed.isLoading && posts.length === 0 && (
         <View style={s.battleEmptyCard}>
-          <Feather name="message-square" size={20} color="#94a3b8" />
+          <Feather name="message-square" size={20} color={c.text.muted} />
           <Text style={s.battleEmptyText}>크루 첫 글을 남겨보세요</Text>
         </View>
       )}
@@ -940,6 +962,9 @@ function CrewPostCard({
   liked: boolean;
   onPress: () => void;
 }) {
+  const c = useThemeColors();
+  const s = useMemo(() => makeStyles(c), [c]);
+
   const toggle = useToggleLike();
   const author = post.author?.display_name || post.author?.username || '익명';
   const initial = (author[0] ?? '?').toUpperCase();
@@ -969,7 +994,7 @@ function CrewPostCard({
                 {author}
               </Text>
             </View>
-            <Feather name="chevron-right" size={15} color="#cbd5e1" />
+            <Feather name="chevron-right" size={15} color={c.border.strong} />
           </View>
           
           <View style={s.feedContent}>
@@ -1007,7 +1032,7 @@ function CrewPostCard({
             </Pressable>
             
             <View style={s.feedActionPill}>
-              <Feather name="message-circle" size={11} color="#94a3b8" />
+              <Feather name="message-circle" size={11} color={c.text.muted} />
               <Text style={s.feedActionText}>
                 {post.comment_count}
               </Text>
@@ -1032,6 +1057,9 @@ function MemberRow({
   crewId: string;
   isLast: boolean;
 }) {
+  const c = useThemeColors();
+  const s = useMemo(() => makeStyles(c), [c]);
+
   const router = useRouter();
   const kick = useKickMember();
   const name = member.user?.display_name || member.user?.username || '익명';
@@ -1093,7 +1121,7 @@ function MemberRow({
             <Pressable onPress={handleKick} hitSlop={6}>
               {({ pressed: kpressed }) => (
                 <View style={[s.kickBtn, kpressed && s.btnPressed]}>
-                  <Feather name="user-x" size={15} color="#ef4444" />
+                  <Feather name="user-x" size={15} color={c.status.danger} />
                 </View>
               )}
             </Pressable>
@@ -1105,6 +1133,9 @@ function MemberRow({
 }
 
 function CrewStatsStrip({ crewId }: { crewId: string }) {
+  const c = useThemeColors();
+  const s = useMemo(() => makeStyles(c), [c]);
+
   const { data, isLoading } = useCrewHomeStats(crewId);
   if (isLoading || !data) return null;
   return (
@@ -1136,6 +1167,9 @@ function CrewStatsStrip({ crewId }: { crewId: string }) {
 const GRADE_AXIS = Array.from({ length: 11 }, (_, i) => ({ vGrade: `V${i}`, vNum: i }));
 
 function CrewGradeChart({ crewId }: { crewId: string }) {
+  const c = useThemeColors();
+  const s = useMemo(() => makeStyles(c), [c]);
+
   const { data, isLoading } = useCrewGradeDistribution(crewId);
   if (isLoading || !data) return null;
 
@@ -1196,6 +1230,9 @@ function AnnouncementsSection({
   meId: string | undefined;
   onCompose: () => void;
 }) {
+  const c = useThemeColors();
+  const s = useMemo(() => makeStyles(c), [c]);
+
   const { data, isLoading, error } = useCrewAnnouncements(crewId);
   const items = data ?? [];
 
@@ -1217,7 +1254,7 @@ function AnnouncementsSection({
 
       {isLoading && (
         <View style={s.loaderBox}>
-          <ActivityIndicator color="#06b6d4" />
+          <ActivityIndicator color={c.brand.primary} />
         </View>
       )}
 
@@ -1229,7 +1266,7 @@ function AnnouncementsSection({
 
       {!isLoading && items.length === 0 && (
         <View style={s.battleEmptyCard}>
-          <Feather name="volume-2" size={20} color="#94a3b8" />
+          <Feather name="volume-2" size={20} color={c.text.muted} />
           <Text style={s.battleEmptyText}>아직 공지가 없어요</Text>
         </View>
       )}
@@ -1252,6 +1289,9 @@ function AnnouncementCard({
   announcement: CrewAnnouncement;
   meId: string | undefined;
 }) {
+  const c = useThemeColors();
+  const s = useMemo(() => makeStyles(c), [c]);
+
   const [expanded, setExpanded] = useState(false);
   const del = useDeleteAnnouncement();
   const author = announcement.author?.display_name || announcement.author?.username || '익명';
@@ -1316,7 +1356,7 @@ function AnnouncementCard({
               <Pressable onPress={handleDelete} hitSlop={8}>
                 {({ pressed }) => (
                   <View style={[s.announceDeleteBtn, pressed && s.btnPressed]}>
-                    <Feather name="trash-2" size={13} color="#94a3b8" />
+                    <Feather name="trash-2" size={13} color={c.text.muted} />
                   </View>
                 )}
               </Pressable>
@@ -1339,6 +1379,9 @@ function AnnouncementComposer({
   canPin: boolean;
   onClose: () => void;
 }) {
+  const c = useThemeColors();
+  const s = useMemo(() => makeStyles(c), [c]);
+
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
   const [pinned, setPinned] = useState(false);
@@ -1371,7 +1414,7 @@ function AnnouncementComposer({
           <Pressable onPress={onClose} hitSlop={8}>
             {({ pressed }) => (
               <View style={[s.headerIconBtn, pressed && s.btnPressed]}>
-                <Feather name="x" size={22} color="#0f172a" />
+                <Feather name="x" size={22} color={c.text.primary} />
               </View>
             )}
           </Pressable>
@@ -1386,7 +1429,7 @@ function AnnouncementComposer({
             value={title}
             onChangeText={setTitle}
             placeholder="공지 제목"
-            placeholderTextColor="#94a3b8"
+            placeholderTextColor={c.text.muted}
             maxLength={80}
           />
 
@@ -1396,7 +1439,7 @@ function AnnouncementComposer({
             value={body}
             onChangeText={setBody}
             placeholder="크루원에게 알릴 내용"
-            placeholderTextColor="#94a3b8"
+            placeholderTextColor={c.text.muted}
             multiline
             textAlignVertical="top"
             maxLength={2000}
@@ -1442,14 +1485,15 @@ function AnnouncementComposer({
   );
 }
 
-const s = StyleSheet.create({
+function makeStyles(c: ThemeColors) {
+  return StyleSheet.create({
   safeContainer: {
     flex: 1,
-    backgroundColor: '#ffffff', // Trendy light slate bg
+    backgroundColor: c.bg.card, // Trendy light slate bg
   },
   safeCenter: {
     flex: 1,
-    backgroundColor: '#f8fafc',
+    backgroundColor: c.bg.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1466,10 +1510,10 @@ const s = StyleSheet.create({
     paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: '#f1f5f9',
-    backgroundColor: '#ffffff',
+    backgroundColor: c.bg.card,
   },
   headerTitle: {
-    color: '#0f172a',
+    color: c.text.primary,
     fontSize: 16,
     fontWeight: '900',
     letterSpacing: -0.3,
@@ -1480,7 +1524,7 @@ const s = StyleSheet.create({
     borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#ffffff',
+    backgroundColor: c.bg.card,
   },
   btnPressed: {
     opacity: 0.65,
@@ -1491,7 +1535,7 @@ const s = StyleSheet.create({
     transform: [{ scale: 0.985 }],
   },
   errorText: {
-    color: '#ef4444',
+    color: c.status.danger,
     fontSize: 14,
     fontWeight: '700',
     marginBottom: 16,
@@ -1499,14 +1543,14 @@ const s = StyleSheet.create({
   },
   backBtn: {
     borderWidth: 1,
-    borderColor: '#cbd5e1',
+    borderColor: c.border.strong,
     borderRadius: 12,
     paddingHorizontal: 18,
     paddingVertical: 10,
-    backgroundColor: '#ffffff',
+    backgroundColor: c.bg.card,
   },
   backBtnText: {
-    color: '#334155',
+    color: c.text.secondary,
     fontSize: 13,
     fontWeight: '700',
   },
@@ -1516,7 +1560,7 @@ const s = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 16,
     paddingBottom: 16,
-    backgroundColor: '#ffffff',
+    backgroundColor: c.bg.card,
   },
   profileAvatarRing: {
     width: 64,
@@ -1525,7 +1569,7 @@ const s = StyleSheet.create({
     borderWidth: 1.5,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#ffffff',
+    backgroundColor: c.bg.card,
     padding: 2,
   },
   profileAvatarInner: {
@@ -1558,7 +1602,7 @@ const s = StyleSheet.create({
     justifyContent: 'space-between',
   },
   profileName: {
-    color: '#0f172a',
+    color: c.text.primary,
     fontSize: 20,
     fontWeight: '900',
     flex: 1,
@@ -1570,7 +1614,7 @@ const s = StyleSheet.create({
     borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#ecfeff',
+    backgroundColor: c.bg.accent,
     borderWidth: 1,
     borderColor: '#a5f3fc',
   },
@@ -1582,7 +1626,7 @@ const s = StyleSheet.create({
   },
   profileMemberCount: {
     fontSize: 13,
-    color: '#64748b',
+    color: c.text.tertiary,
     fontWeight: '700',
   },
   recruitingBadge: {
@@ -1597,18 +1641,18 @@ const s = StyleSheet.create({
     fontWeight: '800',
   },
   profileDescriptionBox: {
-    backgroundColor: '#ffffff',
+    backgroundColor: c.bg.card,
     paddingHorizontal: 20,
     paddingBottom: 16,
   },
   profileDescriptionText: {
-    color: '#0f172a',
+    color: c.text.primary,
     fontSize: 13,
     lineHeight: 20,
     fontWeight: '600',
   },
   profileGymText: {
-    color: '#64748b',
+    color: c.text.tertiary,
     fontSize: 12,
     marginTop: 6,
     fontWeight: '700',
@@ -1617,7 +1661,7 @@ const s = StyleSheet.create({
   /* Tab Bar Styles */
   tabBarContainer: {
     flexDirection: 'row',
-    backgroundColor: '#ffffff',
+    backgroundColor: c.bg.card,
     borderBottomWidth: 1,
     borderBottomColor: '#f1f5f9',
     paddingHorizontal: 8,
@@ -1631,10 +1675,10 @@ const s = StyleSheet.create({
   tabText: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#94a3b8',
+    color: c.text.muted,
   },
   tabTextActive: {
-    color: '#0f172a',
+    color: c.text.primary,
     fontWeight: '800',
   },
   tabIndicator: {
@@ -1661,7 +1705,7 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    backgroundColor: '#ecfeff',
+    backgroundColor: c.bg.accent,
     borderWidth: 1,
     borderColor: '#cffafe',
     borderRadius: 16,
@@ -1674,12 +1718,12 @@ const s = StyleSheet.create({
     color: '#0891b2',
   },
   inviteCard: {
-    backgroundColor: '#ffffff',
+    backgroundColor: c.bg.card,
     borderRadius: 24,
     padding: 20,
     overflow: 'hidden',
     position: 'relative',
-    shadowColor: '#0f172a',
+    shadowColor: c.shadow.color,
     shadowOpacity: 0.05,
     shadowRadius: 16,
     shadowOffset: { width: 0, height: 6 },
@@ -1705,7 +1749,7 @@ const s = StyleSheet.create({
     letterSpacing: 2,
   },
   inviteCardSublabel: {
-    color: '#94a3b8',
+    color: c.text.muted,
     fontSize: 10,
     fontWeight: '700',
   },
@@ -1713,14 +1757,14 @@ const s = StyleSheet.create({
     height: 1,
     borderStyle: 'dashed',
     borderWidth: 0.5,
-    borderColor: '#e2e8f0',
+    borderColor: c.border.subtle,
     marginVertical: 12,
   },
   inviteCodeBox: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#f8fafc',
+    backgroundColor: c.bg.primary,
     borderRadius: 16,
     paddingHorizontal: 16,
     paddingVertical: 12,
@@ -1762,11 +1806,11 @@ const s = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: '900',
-    color: '#0f172a',
+    color: c.text.primary,
     letterSpacing: -0.5,
   },
   sectionTitleCount: {
-    color: '#06b6d4',
+    color: c.brand.primary,
     fontSize: 14,
     marginLeft: 4,
   },
@@ -1779,7 +1823,7 @@ const s = StyleSheet.create({
     borderRadius: 9999,
   },
   actionBtnCyan: {
-    backgroundColor: '#ecfeff',
+    backgroundColor: c.bg.accent,
     borderWidth: 1,
     borderColor: '#cffafe',
   },
@@ -1799,12 +1843,12 @@ const s = StyleSheet.create({
     fontWeight: '900',
   },
   memberListCard: {
-    backgroundColor: '#ffffff',
+    backgroundColor: c.bg.card,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: c.border.subtle,
     borderRadius: 24,
     overflow: 'hidden',
-    shadowColor: '#0f172a',
+    shadowColor: c.shadow.color,
     shadowOpacity: 0.04,
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 6 },
@@ -1817,7 +1861,7 @@ const s = StyleSheet.create({
     gap: 12,
     paddingHorizontal: 18,
     paddingVertical: 16,
-    backgroundColor: '#ffffff',
+    backgroundColor: c.bg.card,
   },
   memberRowBorder: {
     borderBottomWidth: 1,
@@ -1839,13 +1883,13 @@ const s = StyleSheet.create({
     flex: 1,
     fontSize: 15,
     fontWeight: '800',
-    color: '#0f172a',
+    color: c.text.primary,
   },
   memberMeTag: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#64748b',
-    backgroundColor: '#f1f5f9',
+    color: c.text.tertiary,
+    backgroundColor: c.bg.subtle,
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 6,
@@ -1886,7 +1930,7 @@ const s = StyleSheet.create({
     borderColor: '#fee2e2',
   },
   errorBoxText: {
-    color: '#ef4444',
+    color: c.status.danger,
     fontSize: 12,
     fontWeight: '700',
   },
@@ -1896,7 +1940,7 @@ const s = StyleSheet.create({
   pastLabelText: {
     fontSize: 11,
     fontWeight: '800',
-    color: '#64748b',
+    color: c.text.tertiary,
     paddingHorizontal: 4,
     marginBottom: 2,
   },
@@ -1911,13 +1955,13 @@ const s = StyleSheet.create({
     justifyContent: 'space-between',
   },
   battleCard: {
-    backgroundColor: '#ffffff',
+    backgroundColor: c.bg.card,
     borderWidth: 1,
-    borderColor: '#f1f5f9',
+    borderColor: c.border.subtle,
     borderRadius: 20,
     padding: 16,
     gap: 10,
-    shadowColor: '#0f172a',
+    shadowColor: c.shadow.color,
     shadowOpacity: 0.03,
     shadowRadius: 10,
     shadowOffset: { width: 0, height: 4 },
@@ -1938,33 +1982,33 @@ const s = StyleSheet.create({
     fontWeight: '900',
   },
   battleTypeText: {
-    color: '#94a3b8',
+    color: c.text.muted,
     fontSize: 10,
     fontWeight: '800',
   },
   battleTitleText: {
     fontSize: 14,
     fontWeight: '800',
-    color: '#0f172a',
+    color: c.text.primary,
     letterSpacing: -0.2,
   },
   battleVSContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: '#f8fafc',
+    backgroundColor: c.bg.primary,
     borderRadius: 8,
     paddingHorizontal: 8,
     paddingVertical: 4,
     alignSelf: 'flex-start',
   },
   battleVSTag: {
-    color: '#06b6d4',
+    color: c.brand.primary,
     fontSize: 10,
     fontWeight: '900',
   },
   battleOpponentText: {
-    color: '#475569',
+    color: c.text.secondary,
     fontSize: 11,
     fontWeight: '700',
   },
@@ -1975,7 +2019,7 @@ const s = StyleSheet.create({
     marginTop: 2,
   },
   battleDateText: {
-    color: '#94a3b8',
+    color: c.text.muted,
     fontSize: 10,
     fontWeight: '700',
   },
@@ -1984,30 +2028,30 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    backgroundColor: '#ffffff',
+    backgroundColor: c.bg.card,
     borderWidth: 1,
-    borderColor: '#f1f5f9',
+    borderColor: c.border.subtle,
     borderRadius: 20,
-    shadowColor: '#0f172a',
+    shadowColor: c.shadow.color,
     shadowOpacity: 0.02,
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 4 },
     elevation: 1,
   },
   battleEmptyText: {
-    color: '#94a3b8',
+    color: c.text.muted,
     fontSize: 12,
     fontWeight: '700',
   },
   meetupCard: {
-    backgroundColor: '#ffffff',
+    backgroundColor: c.bg.card,
     borderWidth: 1,
-    borderColor: '#f1f5f9',
+    borderColor: c.border.subtle,
     borderRadius: 20,
     padding: 16,
     gap: 8,
     borderLeftWidth: 5,
-    shadowColor: '#0f172a',
+    shadowColor: c.shadow.color,
     shadowOpacity: 0.03,
     shadowRadius: 10,
     shadowOffset: { width: 0, height: 4 },
@@ -2028,7 +2072,7 @@ const s = StyleSheet.create({
   meetupTitleText: {
     fontSize: 14,
     fontWeight: '800',
-    color: '#0f172a',
+    color: c.text.primary,
     letterSpacing: -0.2,
   },
   meetupMetaRow: {
@@ -2039,7 +2083,7 @@ const s = StyleSheet.create({
   meetupMetaText: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#475569',
+    color: c.text.secondary,
   },
   meetupFullBadge: {
     paddingHorizontal: 6,
@@ -2052,16 +2096,16 @@ const s = StyleSheet.create({
   meetupFullText: {
     fontSize: 9,
     fontWeight: '800',
-    color: '#ef4444',
+    color: c.status.danger,
   },
   feedCard: {
-    backgroundColor: '#ffffff',
+    backgroundColor: c.bg.card,
     borderWidth: 1,
-    borderColor: '#f1f5f9',
+    borderColor: c.border.subtle,
     borderRadius: 20,
     padding: 16,
     gap: 12,
-    shadowColor: '#0f172a',
+    shadowColor: c.shadow.color,
     shadowOpacity: 0.03,
     shadowRadius: 10,
     shadowOffset: { width: 0, height: 4 },
@@ -2092,7 +2136,7 @@ const s = StyleSheet.create({
   feedAuthorName: {
     fontSize: 12,
     fontWeight: '800',
-    color: '#0f172a',
+    color: c.text.primary,
   },
   feedContent: {
     gap: 5,
@@ -2100,12 +2144,12 @@ const s = StyleSheet.create({
   feedTitle: {
     fontSize: 14,
     fontWeight: '800',
-    color: '#0f172a',
+    color: c.text.primary,
   },
   feedBody: {
     fontSize: 12,
     lineHeight: 18,
-    color: '#475569',
+    color: c.text.secondary,
   },
   feedActionsRow: {
     flexDirection: 'row',
@@ -2117,9 +2161,9 @@ const s = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: '#f8fafc',
+    backgroundColor: c.bg.primary,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: c.border.subtle,
     borderRadius: 8,
     paddingHorizontal: 8,
     paddingVertical: 4,
@@ -2131,10 +2175,10 @@ const s = StyleSheet.create({
   feedActionText: {
     fontSize: 10,
     fontWeight: '900',
-    color: '#64748b',
+    color: c.text.tertiary,
   },
   feedActionTextLiked: {
-    color: '#ef4444',
+    color: c.status.danger,
   },
   leaveBtn: {
     backgroundColor: '#fef2f2',
@@ -2148,7 +2192,7 @@ const s = StyleSheet.create({
     marginHorizontal: 16,
   },
   leaveBtnText: {
-    color: '#ef4444',
+    color: c.status.danger,
     fontSize: 15,
     fontWeight: '800',
   },
@@ -2176,12 +2220,12 @@ const s = StyleSheet.create({
     paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: '#e2e8f0',
-    backgroundColor: '#ffffff',
+    backgroundColor: c.bg.card,
   },
   modalHeaderTitle: {
     fontSize: 16,
     fontWeight: '800',
-    color: '#0f172a',
+    color: c.text.primary,
   },
   modalScrollContent: {
     padding: 20,
@@ -2189,17 +2233,17 @@ const s = StyleSheet.create({
   },
   modalHelpText: {
     fontSize: 13,
-    color: '#64748b',
+    color: c.text.tertiary,
     fontWeight: '600',
     paddingHorizontal: 4,
   },
   candidateListContainer: {
-    backgroundColor: '#ffffff',
+    backgroundColor: c.bg.card,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: c.border.subtle,
     borderRadius: 20,
     overflow: 'hidden',
-    shadowColor: '#0f172a',
+    shadowColor: c.shadow.color,
     shadowOpacity: 0.02,
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 4 },
@@ -2211,10 +2255,10 @@ const s = StyleSheet.create({
     gap: 12,
     paddingHorizontal: 16,
     paddingVertical: 14,
-    backgroundColor: '#ffffff',
+    backgroundColor: c.bg.card,
   },
   candidateRowActive: {
-    backgroundColor: '#ecfeff',
+    backgroundColor: c.bg.accent,
   },
   candidateRowDivider: {
     borderBottomWidth: 1,
@@ -2231,21 +2275,21 @@ const s = StyleSheet.create({
   candidateAvatarText: {
     fontSize: 12,
     fontWeight: '800',
-    color: '#64748b',
+    color: c.text.tertiary,
   },
   candidateNameText: {
     flex: 1,
     fontSize: 14,
     fontWeight: '700',
-    color: '#0f172a',
+    color: c.text.primary,
   },
   candidateRadio: {
     width: 20,
     height: 20,
     borderRadius: 10,
     borderWidth: 1.5,
-    borderColor: '#cbd5e1',
-    backgroundColor: '#ffffff',
+    borderColor: c.border.strong,
+    backgroundColor: c.bg.card,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -2265,8 +2309,8 @@ const s = StyleSheet.create({
     height: 18,
     borderRadius: 4,
     borderWidth: 1.5,
-    borderColor: '#cbd5e1',
-    backgroundColor: '#ffffff',
+    borderColor: c.border.strong,
+    backgroundColor: c.bg.card,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -2275,7 +2319,7 @@ const s = StyleSheet.create({
     backgroundColor: '#06b6d4',
   },
   checkboxLabel: {
-    color: '#334155',
+    color: c.text.secondary,
     fontSize: 13,
     fontWeight: '700',
   },
@@ -2285,7 +2329,7 @@ const s = StyleSheet.create({
     paddingBottom: 24,
     borderTopWidth: 1,
     borderTopColor: '#e2e8f0',
-    backgroundColor: '#ffffff',
+    backgroundColor: c.bg.card,
   },
   confirmBtn: {
     backgroundColor: '#06b6d4',
@@ -2306,22 +2350,22 @@ const s = StyleSheet.create({
   statsStripCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#ffffff',
+    backgroundColor: c.bg.card,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: c.border.subtle,
     padding: 16,
     marginBottom: 24,
-    shadowColor: '#0f172a',
+    shadowColor: c.shadow.color,
     shadowOpacity: 0.03,
     shadowOffset: { width: 0, height: 2 },
     shadowRadius: 6,
     elevation: 1,
   },
   statsStripItem: { flex: 1, alignItems: 'center', gap: 4 },
-  statsStripValue: { fontSize: 22, fontWeight: '900', color: '#0f172a' },
-  statsStripUnit: { fontSize: 14, fontWeight: '700', color: '#64748b' },
-  statsStripLabel: { fontSize: 11, fontWeight: '700', color: '#94a3b8' },
+  statsStripValue: { fontSize: 22, fontWeight: '900', color: c.text.primary },
+  statsStripUnit: { fontSize: 14, fontWeight: '700', color: c.text.tertiary },
+  statsStripLabel: { fontSize: 11, fontWeight: '700', color: c.text.muted },
   statsStripDivider: {
     width: 1,
     height: 36,
@@ -2330,10 +2374,10 @@ const s = StyleSheet.create({
 
   // Grade distribution chart
   gradeChartCard: {
-    backgroundColor: '#ffffff',
+    backgroundColor: c.bg.card,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: c.border.subtle,
     padding: 16,
     paddingBottom: 12,
   },
@@ -2344,7 +2388,7 @@ const s = StyleSheet.create({
     height: 140,
   },
   gradeBarCol: { flex: 1, alignItems: 'center', gap: 4 },
-  gradeBarCount: { fontSize: 10, fontWeight: '800', color: '#64748b' },
+  gradeBarCount: { fontSize: 10, fontWeight: '800', color: c.text.tertiary },
   gradeBarTrack: {
     width: '100%',
     flex: 1,
@@ -2360,9 +2404,9 @@ const s = StyleSheet.create({
   gradeBarLabel: {
     fontSize: 10,
     fontWeight: '700',
-    color: '#64748b',
+    color: c.text.tertiary,
   },
-  gradeBarLabelMe: { color: '#06b6d4', fontWeight: '900' },
+  gradeBarLabelMe: { color: c.brand.primary, fontWeight: '900' },
   gradeMyMarker: {
     backgroundColor: '#06b6d4',
     borderRadius: 4,
@@ -2374,12 +2418,12 @@ const s = StyleSheet.create({
   gradeMyMarkerText: { fontSize: 8, fontWeight: '800', color: '#ffffff' },
 
   announceCard: {
-    backgroundColor: '#ffffff',
+    backgroundColor: c.bg.card,
     borderRadius: 14,
     padding: 14,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
-    shadowColor: '#0f172a',
+    borderColor: c.border.subtle,
+    shadowColor: c.shadow.color,
     shadowOpacity: 0.04,
     shadowOffset: { width: 0, height: 1 },
     shadowRadius: 2,
@@ -2400,7 +2444,7 @@ const s = StyleSheet.create({
   inviteModalTitle: {
     fontSize: 18,
     fontWeight: '800',
-    color: '#0f172a',
+    color: c.text.primary,
   },
   inviteModalOverlay: {
     flex: 1,
@@ -2410,11 +2454,11 @@ const s = StyleSheet.create({
     padding: 20,
   },
   inviteModalContentWrapper: {
-    backgroundColor: '#ffffff',
+    backgroundColor: c.bg.card,
     borderRadius: 28,
     padding: 24,
     width: '100%',
-    shadowColor: '#0f172a',
+    shadowColor: c.shadow.color,
     shadowOpacity: 0.1,
     shadowRadius: 20,
     shadowOffset: { width: 0, height: 10 },
@@ -2432,11 +2476,11 @@ const s = StyleSheet.create({
     flex: 1,
     fontSize: 14,
     fontWeight: '700',
-    color: '#0f172a',
+    color: c.text.primary,
   },
   announceBody: {
     fontSize: 13,
-    color: '#475569',
+    color: c.text.secondary,
     lineHeight: 19,
   },
   announceFooter: {
@@ -2465,7 +2509,7 @@ const s = StyleSheet.create({
   },
   announceMeta: {
     fontSize: 11,
-    color: '#94a3b8',
+    color: c.text.muted,
     fontWeight: '500',
   },
   announceDeleteBtn: {
@@ -2474,29 +2518,30 @@ const s = StyleSheet.create({
     borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#f1f5f9',
+    backgroundColor: c.bg.subtle,
   },
   composerLabel: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#475569',
+    color: c.text.secondary,
     marginBottom: 8,
   },
   composerInput: {
-    backgroundColor: '#ffffff',
+    backgroundColor: c.bg.card,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: c.border.subtle,
     paddingHorizontal: 14,
     paddingVertical: 12,
     fontSize: 14,
-    color: '#0f172a',
+    color: c.text.primary,
   },
   composerTextArea: {
     minHeight: 160,
     paddingTop: 12,
   },
   confirmBtnTextDisabled: {
-    color: '#94a3b8',
+    color: c.text.muted,
   },
-});
+  });
+}

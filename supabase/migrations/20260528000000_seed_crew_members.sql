@@ -42,13 +42,14 @@ begin
     return;
   end if;
 
-  -- 2) 내 크루 찾기 (owner 인 크루)
+  -- 2) 내 크루 찾기 (owner 우선, 없으면 아무 크루)
   select cm.crew_id into crew_id_var
     from crew_members cm
-    where cm.user_id = me_uid and cm.role = 'owner'
+    where cm.user_id = me_uid
+    order by (cm.role = 'owner') desc, cm.joined_at asc
     limit 1;
   if crew_id_var is null then
-    raise notice 'no crew owned — skip';
+    raise notice 'no crew — skip';
     return;
   end if;
 
