@@ -591,8 +591,6 @@ function BadgesSection({ onSelectBadge }: { onSelectBadge: (badge: BadgeDef) => 
         {sortedBadges.map((badge) => {
           const isLocked = !earnedMap.has(badge.key);
           const iconColor = isLocked ? c.text.muted : badge.color;
-          const bgColor = isLocked ? c.bg.subtle : c.bg.card;
-          const borderColor = isLocked ? c.border.subtle : badge.color;
 
           return (
             <Pressable key={badge.key} style={s.badgeItem} onPress={() => handleBadgePress(badge)}>
@@ -600,8 +598,7 @@ function BadgesSection({ onSelectBadge }: { onSelectBadge: (badge: BadgeDef) => 
                 <View style={[s.badgeItemInner, pressed && { opacity: 0.6 }]}>
                   <View style={[
                     s.badgeIconWrap,
-                    { backgroundColor: bgColor, borderColor: borderColor },
-                    isLocked && { opacity: 0.7 },
+                    isLocked && { opacity: 0.45 },
                   ]}>
                     <BadgeIcon icon={badge.icon} color={iconColor} size={22} />
                     {isLocked && (
@@ -1882,17 +1879,8 @@ function makeStyles(c: ThemeColors) {
     borderColor: c.bg.card,
   },
   badgeIconWrap: {
-    width: 46,
-    height: 46,
-    borderRadius: 23,
-    borderWidth: 1.5,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOpacity: 0.06,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 3 },
-    elevation: 3,
   },
   badgeEmoji: {
     fontSize: 22,

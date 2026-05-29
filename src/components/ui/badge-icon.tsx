@@ -69,7 +69,7 @@ export function BadgeIcon({ icon, color, size = 20 }: BadgeIconProps) {
     );
   }
 
-  // 세션 — 'session-N' (달력 안 숫자)
+  // 세션 — 'session-N' (달력 안 숫자, 테두리 X)
   if (icon.startsWith('session-')) {
     const num = icon.split('-')[1];
     const calSize = size * 1.15;
@@ -79,7 +79,6 @@ export function BadgeIcon({ icon, color, size = 20 }: BadgeIconProps) {
         height: size * 1.6,
         borderRadius: size * 0.8,
         backgroundColor: color + '22',
-        borderColor: color,
       }]}>
         <View style={{ width: calSize, height: calSize }}>
           <Feather name="calendar" size={calSize} color={color} />
@@ -119,13 +118,20 @@ export function BadgeIcon({ icon, color, size = 20 }: BadgeIconProps) {
     );
   }
 
-  // V그레이드 / 리드 — 텍스트 인 아이콘
+  // V그레이드 / 리드 — 컬러 원형 배경 + 텍스트
   if (/^V\d/.test(icon) || /^5\.\d/.test(icon)) {
     return (
-      <View style={textIconStyles.outer}>
+      <View style={[textIconStyles.outer, {
+        width: size * 1.6,
+        height: size * 1.6,
+        borderRadius: size * 0.8,
+        backgroundColor: color + '22',
+        borderWidth: 1.5,
+        borderColor: color,
+      }]}>
         <Text style={[textIconStyles.text, {
           color,
-          fontSize: icon.length >= 4 ? size * 0.6 : size * 0.8,
+          fontSize: icon.length >= 4 ? size * 0.55 : size * 0.8,
         }]}>
           {icon}
         </Text>
@@ -212,14 +218,25 @@ export function BadgeIcon({ icon, color, size = 20 }: BadgeIconProps) {
     );
   }
 
-  // 그 외 — Feather icon (소셜 카테고리: 글/댓글/투표/크루/모임/대결)
+  // 그 외 — Feather icon (소셜 카테고리: 글/댓글/투표/크루/모임/대결) — 원형 배경 포함
   const featherName: keyof typeof Feather.glyphMap = [
     'edit-2', 'message-circle', 'pie-chart', 'users', 'flag', 'coffee', 'shield',
     'star', 'award', 'aperture', 'layers', 'calendar', 'clock', 'activity',
     'trending-up', 'zap',
   ].includes(icon) ? (icon as keyof typeof Feather.glyphMap) : 'star';
 
-  return <Feather name={featherName} size={size} color={color} />;
+  return (
+    <View style={{
+      width: size * 1.6,
+      height: size * 1.6,
+      borderRadius: size * 0.8,
+      backgroundColor: color + '22',
+      alignItems: 'center',
+      justifyContent: 'center',
+    }}>
+      <Feather name={featherName} size={size * 0.9} color={color} />
+    </View>
+  );
 }
 
 const medalStyles = StyleSheet.create({
@@ -248,13 +265,10 @@ const sessionStyles = StyleSheet.create({
   outer: {
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1.5,
-    gap: 1,
   },
   text: {
     fontWeight: '900',
     letterSpacing: -0.3,
-    marginTop: 1,
   },
 });
 
