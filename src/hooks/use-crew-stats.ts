@@ -163,22 +163,51 @@ export function useCrewGradeDistribution(crewId: string | undefined) {
 
       if (sessionIds.length === 0) return { buckets: [], myVNum: null };
 
-      // 3) Attempts (sends only, with felt_grade)
+      // 3) Attempts (sends only) + problem.color/gym_id for crowd-V fallback
       const { data: attempts, error: aErr } = await supabase
         .from('attempts')
-        .select('session_id, felt_grade, result')
+        .select('session_id, felt_grade, result, problem:problems(color, gym_id)')
         .in('session_id', sessionIds);
       if (aErr) throw new Error(aErr.message);
 
-      // Per-member max V
+      type AttemptRow = {
+        session_id: string;
+        felt_grade: string | null;
+        result: string;
+        problem: { color: string | null; gym_id: string | null } | null;
+      };
+
+      // crowd V그레이드 lookup — (gym_id, color) → avg_v_grade
+      const gymColorPairs = new Set<string>();
+      for (const a of (attempts ?? []) as AttemptRow[]) {
+        if (a.problem?.gym_id && a.problem.color) {
+          gymColorPairs.add(`${a.problem.gym_id}:${a.problem.color}`);
+        }
+      }
+      const crowdVMap = new Map<string, number>();
+      if (gymColorPairs.size > 0) {
+        const gymIds = Array.from(new Set(Array.from(gymColorPairs).map((p) => p.split(':')[0])));
+        const { data: statsRows } = await supabase
+          .from('gym_color_grade_stats')
+          .select('gym_id, color, avg_v_grade')
+          .in('gym_id', gymIds);
+        for (const r of (statsRows ?? []) as Array<{
+          gym_id: string; color: string; avg_v_grade: number | null;
+        }>) {
+          if (r.avg_v_grade != null) crowdVMap.set(`${r.gym_id}:${r.color}`, r.avg_v_grade);
+        }
+      }
+
+      // Per-member max V — felt_grade 우선, 없으면 crowd 평균
       const memberMax = new Map<string, number>();
-      for (const a of attempts ?? []) {
-        if (!SEND_RESULTS.has(a.result as string)) continue;
-        const fg = a.felt_grade as string | null;
-        if (!fg) continue;
-        const n = vGradeToNum(fg);
+      for (const a of (attempts ?? []) as AttemptRow[]) {
+        if (!SEND_RESULTS.has(a.result)) continue;
+        let n = vGradeToNum(a.felt_grade ?? '');
+        if (n == null && a.problem?.gym_id && a.problem.color) {
+          n = crowdVMap.get(`${a.problem.gym_id}:${a.problem.color}`) ?? null;
+        }
         if (n == null) continue;
-        const uid = sessionToUser.get(a.session_id as string);
+        const uid = sessionToUser.get(a.session_id);
         if (!uid) continue;
         const prev = memberMax.get(uid);
         if (prev == null || n > prev) memberMax.set(uid, n);
