@@ -43,11 +43,13 @@ import {
 } from '@/hooks/use-memberships';
 import { currentMonth, monthRange } from '@/lib/date-ranges';
 import { supabase } from '@/lib/supabase';
-import { useThemePref, type ThemePref } from '@/lib/theme';
+import { useThemeColors, useThemePref, type ThemeColors, type ThemePref } from '@/lib/theme';
 
 
 export default function ProfileScreen() {
   const router = useRouter();
+  const c = useThemeColors();
+  const s = React.useMemo(() => makeStyles(c), [c]);
   const { data: profile } = useProfile();
   // 마페이지 카드는 "이번 달" 스코프. 전체 통계는 /stats 라우트로 이동.
   const monthAnchor = React.useMemo(() => currentMonth(), []);
@@ -73,12 +75,12 @@ export default function ProfileScreen() {
             style={({ pressed }) => [s.headerBtn, pressed && { opacity: 0.6 }]}
             hitSlop={6}
           >
-            <Feather name="menu" size={20} color="#0f172a" />
+            <Feather name="menu" size={20} color={c.text.primary} />
           </Pressable>
         </View>
       </View>
 
-      <ScrollView style={{ flex: 1, backgroundColor: '#f8fafc' }} contentContainerStyle={s.scrollContent}>
+      <ScrollView style={{ flex: 1, backgroundColor: c.bg.primary }} contentContainerStyle={s.scrollContent}>
         {/* Profile Card */}
         <View style={s.profileCard}>
           <View style={s.avatarContainer}>
@@ -111,7 +113,7 @@ export default function ProfileScreen() {
                 hitSlop={6}
               >
                 <View style={s.instaTag}>
-                  <Feather name="instagram" size={12} color="#06b6d4" />
+                  <Feather name="instagram" size={12} color={c.brand.primary} />
                   <Text style={s.instaTagText}>
                     @{profile.instagram_handle}
                   </Text>
@@ -124,7 +126,7 @@ export default function ProfileScreen() {
                 hitSlop={6}
               >
                 <View style={s.instaConnectBtn}>
-                  <Feather name="plus" size={12} color="#94a3b8" />
+                  <Feather name="plus" size={12} color={c.text.muted} />
                   <Text style={s.instaConnectText}>Instagram 연결</Text>
                 </View>
               </Pressable>
@@ -151,14 +153,14 @@ export default function ProfileScreen() {
             >
               <View style={s.allStatsLink}>
                 <Text style={s.allStatsLinkText}>전체 통계</Text>
-                <Feather name="chevron-right" size={14} color="#475569" />
+                <Feather name="chevron-right" size={14} color={c.text.secondary} />
               </View>
             </Pressable>
           </View>
 
           {isLoading && (
             <View style={s.loaderWrap}>
-              <ActivityIndicator color="#06b6d4" />
+              <ActivityIndicator color={c.brand.primary} />
             </View>
           )}
 
@@ -197,7 +199,7 @@ export default function ProfileScreen() {
                   요약 카드까지만 — 본인 빠른 확인용. 빈 상태만 안내. */}
               {stats.gyms.length === 0 && (
                 <View style={s.emptyStatsCard}>
-                  <Feather name="activity" size={24} color="#94a3b8" />
+                  <Feather name="activity" size={24} color={c.text.muted} />
                   <Text style={s.emptyStatsTitle}>아직 운동 기록이 없어요</Text>
                   <Text style={s.emptyStatsSubtitle}>기록 탭에서 첫 세션을 추가해보세요</Text>
                 </View>
@@ -268,6 +270,8 @@ function FootProfileCard({
   profile: Profile | undefined;
   onEdit: () => void;
 }) {
+  const c = useThemeColors();
+  const s = React.useMemo(() => makeStyles(c), [c]);
   const chips = profile
     ? ([
         profile.foot_length_mm != null ? `${profile.foot_length_mm}mm` : null,
@@ -316,6 +320,8 @@ function FootProfileCard({
 }
 
 function NotificationBell() {
+  const c = useThemeColors();
+  const s = React.useMemo(() => makeStyles(c), [c]);
   const router = useRouter();
   const { data: count = 0 } = useUnreadCount();
   return (
@@ -324,7 +330,7 @@ function NotificationBell() {
       style={({ pressed }) => [s.headerBtn, pressed && { opacity: 0.6 }]}
       hitSlop={6}
     >
-      <Feather name="bell" size={20} color="#0f172a" />
+      <Feather name="bell" size={20} color={c.text.primary} />
       {count > 0 && (
         <View style={s.bellBadge}>
           <Text style={s.bellBadgeText}>{count > 99 ? '99+' : count}</Text>
@@ -349,6 +355,8 @@ function SummaryMetric({
   value: number;
   icon: 'calendar' | 'check-circle' | 'award';
 }) {
+  const c = useThemeColors();
+  const s = React.useMemo(() => makeStyles(c), [c]);
   const accent = METRIC_ACCENT[icon] ?? '#475569';
   return (
     <View style={s.metricCard}>
@@ -394,6 +402,8 @@ function BodyInfoStrip({
   climbingStartDate: string | null;
   onEdit: () => void;
 }) {
+  const c = useThemeColors();
+  const s = React.useMemo(() => makeStyles(c), [c]);
   const hasAny =
     heightCm != null ||
     reachCm != null ||
@@ -406,7 +416,7 @@ function BodyInfoStrip({
           onPress={onEdit}
           style={({ pressed }) => [s.bodyStripEmptyBtn, pressed && { opacity: 0.7 }]}
         >
-          <Feather name="plus" size={14} color="#94a3b8" />
+          <Feather name="plus" size={14} color={c.text.muted} />
           <Text style={s.bodyStripEmptyText}>
             키 · 몸무게 · 리치 · 클라이밍 시작일 추가
           </Text>
@@ -425,22 +435,22 @@ function BodyInfoStrip({
       >
         <View style={s.bodyStripCard}>
           <BodyMetricPill
-            icon={<MaterialCommunityIcons name="arrow-up-down" size={15} color="#475569" />}
+            icon={<MaterialCommunityIcons name="arrow-up-down" size={15} color={c.text.secondary} />}
             value={heightCm != null ? String(heightCm) : '-'}
             unit={heightCm != null ? 'cm' : ''}
           />
           <BodyMetricPill
-            icon={<MaterialCommunityIcons name="arrow-left-right" size={15} color="#475569" />}
+            icon={<MaterialCommunityIcons name="arrow-left-right" size={15} color={c.text.secondary} />}
             value={reachCm != null ? String(reachCm) : '-'}
             unit={reachCm != null ? 'cm' : ''}
           />
           <BodyMetricPill
-            icon={<MaterialCommunityIcons name="weight" size={15} color="#475569" />}
+            icon={<MaterialCommunityIcons name="weight" size={15} color={c.text.secondary} />}
             value={weightKg != null ? String(weightKg) : '-'}
             unit={weightKg != null ? 'kg' : ''}
           />
           <BodyMetricPill
-            icon={<MaterialCommunityIcons name="trending-up" size={15} color="#475569" />}
+            icon={<MaterialCommunityIcons name="trending-up" size={15} color={c.text.secondary} />}
             value={
               climbingStartDate
                 ? formatClimbingDuration(climbingStartDate)
@@ -465,6 +475,8 @@ function BodyMetricPill({
   unit?: string;
   sub?: string | null;
 }) {
+  const c = useThemeColors();
+  const s = React.useMemo(() => makeStyles(c), [c]);
   return (
     <View style={s.bodyPill}>
       <View style={s.bodyPillRow}>
@@ -495,6 +507,8 @@ const MOCK_BADGES = [
 ];
 
 function BadgesSection() {
+  const c = useThemeColors();
+  const s = React.useMemo(() => makeStyles(c), [c]);
   const unlockedCount = MOCK_BADGES.filter(b => b.unlocked).length;
   const totalCount = MOCK_BADGES.length;
 
@@ -544,7 +558,7 @@ function BadgesSection() {
                       </View>
                     )}
                   </View>
-                  <Text style={[s.badgeTitle, isLocked && { color: '#94a3b8' }]} numberOfLines={2}>
+                  <Text style={[s.badgeTitle, isLocked && { color: c.text.muted }]} numberOfLines={2}>
                     {badge.title}
                   </Text>
                 </View>
@@ -558,6 +572,8 @@ function BadgesSection() {
 }
 
 function CrewsSection() {
+  const c = useThemeColors();
+  const s = React.useMemo(() => makeStyles(c), [c]);
   const router = useRouter();
   const { data, isLoading, error } = useMyCrews();
 
@@ -572,7 +588,7 @@ function CrewsSection() {
             hitSlop={6}
           >
             <View style={s.crewOutlineBtn}>
-              <Feather name="key" size={12} color="#06b6d4" />
+              <Feather name="key" size={12} color={c.brand.primary} />
               <Text style={s.crewOutlineBtnText}>코드 가입</Text>
             </View>
           </Pressable>
@@ -591,7 +607,7 @@ function CrewsSection() {
 
       {isLoading && (
         <View style={s.loaderWrap}>
-          <ActivityIndicator color="#06b6d4" />
+          <ActivityIndicator color={c.brand.primary} />
         </View>
       )}
 
@@ -603,7 +619,7 @@ function CrewsSection() {
 
       {data && data.length === 0 && (
         <View style={s.emptyStatsCard}>
-          <Feather name="users" size={24} color="#94a3b8" />
+          <Feather name="users" size={24} color={c.text.muted} />
           <Text style={s.emptyStatsTitle}>아직 크루가 없어요</Text>
           <Text style={s.emptyStatsSubtitle}>
             크루를 만들거나 친구의 초대코드로 가입해보세요
@@ -637,6 +653,8 @@ function getCrewAvatarColors(name: string) {
 }
 
 function CrewCard({ crew }: { crew: CrewSummary }) {
+  const c = useThemeColors();
+  const s = React.useMemo(() => makeStyles(c), [c]);
   const router = useRouter();
   const name = crew.name ?? '크루';
   const firstChar = name.length > 0 ? name.charAt(0).toUpperCase() : '?';
@@ -671,7 +689,7 @@ function CrewCard({ crew }: { crew: CrewSummary }) {
               </View>
               {crew.home_gym && (
                 <View style={s.crewGymBadge}>
-                  <Feather name="map-pin" size={10} color="#64748b" />
+                  <Feather name="map-pin" size={10} color={c.text.tertiary} />
                   <Text style={s.crewGymText} numberOfLines={1}>
                     {crew.home_gym.name}
                   </Text>
@@ -680,7 +698,7 @@ function CrewCard({ crew }: { crew: CrewSummary }) {
             </View>
           </View>
           
-          <Feather name="chevron-right" size={18} color="#cbd5e1" />
+          <Feather name="chevron-right" size={18} color={c.border.strong} />
         </View>
       )}
     </Pressable>
@@ -688,6 +706,8 @@ function CrewCard({ crew }: { crew: CrewSummary }) {
 }
 
 function MembershipsSection() {
+  const c = useThemeColors();
+  const s = React.useMemo(() => makeStyles(c), [c]);
   const router = useRouter();
   const { data, isLoading, error } = useMemberships();
 
@@ -724,7 +744,7 @@ function MembershipsSection() {
 
       {isLoading && (
         <View style={s.loaderWrap}>
-          <ActivityIndicator color="#06b6d4" />
+          <ActivityIndicator color={c.brand.primary} />
         </View>
       )}
 
@@ -736,7 +756,7 @@ function MembershipsSection() {
 
       {data && active.length === 0 && expired.length === 0 && (
         <View style={s.emptyMembershipCard}>
-          <Feather name="credit-card" size={24} color="#94a3b8" />
+          <Feather name="credit-card" size={24} color={c.text.muted} />
           <Text style={s.emptyMembershipTitle}>등록된 회원권이 없어요</Text>
           <Text style={s.emptyMembershipSubtitle}>
             우측 상단 + 추가 버튼으로 등록하세요
@@ -793,6 +813,8 @@ function MembershipCard({
   membership: MembershipRow;
   expired?: boolean;
 }) {
+  const c = useThemeColors();
+  const s = React.useMemo(() => makeStyles(c), [c]);
   const router = useRouter();
   const usePass = useUsePass();
   const gymLabel = membership.gym
@@ -999,6 +1021,8 @@ function formatMembershipRightStat(m: MembershipRow, expired?: boolean): string 
 
 // ─── Shoes section ───────────────────────────────────────────
 function ShoesSection() {
+  const c = useThemeColors();
+  const s = React.useMemo(() => makeStyles(c), [c]);
   const router = useRouter();
   const { data: profile } = useProfile();
   const { data, isLoading, error } = useShoes();
@@ -1017,7 +1041,7 @@ function ShoesSection() {
             hitSlop={8}
             style={({ pressed }) => [{ opacity: pressed ? 0.5 : 1 }]}
           >
-            <Feather name="info" size={14} color="#94a3b8" />
+            <Feather name="info" size={14} color={c.text.muted} />
           </Pressable>
         </View>
         <Pressable
@@ -1041,7 +1065,7 @@ function ShoesSection() {
 
       {isLoading && (
         <View style={s.loaderWrap}>
-          <ActivityIndicator color="#06b6d4" />
+          <ActivityIndicator color={c.brand.primary} />
         </View>
       )}
 
@@ -1054,7 +1078,7 @@ function ShoesSection() {
       {data && data.length === 0 && (
         <View style={s.shoeRackContainer}>
           <View style={s.emptyShelfSlot}>
-            <Feather name="package" size={28} color="#cbd5e1" />
+            <Feather name="package" size={28} color={c.border.strong} />
             <Text style={s.emptyShelfText}>첫 암벽화 등록하기</Text>
             <Text style={s.emptyShelfSub}>핏·평점을 남기면 비슷한 발형 사용자와 비교돼요</Text>
             <Pressable onPress={() => router.push('/shoes/new')}>
@@ -1118,6 +1142,8 @@ const STATUS_LABEL_LOCAL: Record<ShoeStatus, string> = {
 };
 
 function ShoeCard({ shoe }: { shoe: ClimbingShoe }) {
+  const c = useThemeColors();
+  const s = React.useMemo(() => makeStyles(c), [c]);
   const router = useRouter();
   const hasRatings = MINI_BAR_KEYS.some((k) => shoe[k.field] != null);
   return (
@@ -1130,7 +1156,7 @@ function ShoeCard({ shoe }: { shoe: ClimbingShoe }) {
       <View style={s.shoeCard}>
         <View style={s.shoeCardTop}>
           <View style={s.shoeThumb}>
-            <Feather name="package" size={20} color="#94a3b8" />
+            <Feather name="package" size={20} color={c.text.muted} />
           </View>
           <View style={s.shoeCardBody}>
             {shoe.brand && <Text style={s.shoeBrand}>{shoe.brand}</Text>}
@@ -1200,7 +1226,7 @@ function ShoeCard({ shoe }: { shoe: ClimbingShoe }) {
             >
               {({ pressed }) => (
                 <View style={[s.shoeActionBtn, pressed && { opacity: 0.6 }]}>
-                  <Feather name="edit-2" size={14} color="#475569" />
+                  <Feather name="edit-2" size={14} color={c.text.secondary} />
                 </View>
               )}
             </Pressable>
@@ -1227,6 +1253,8 @@ function ShoeCard({ shoe }: { shoe: ClimbingShoe }) {
 }
 
 function MiniBar({ item, shoe }: { item: typeof MINI_BAR_KEYS[0]; shoe: ClimbingShoe }) {
+  const c = useThemeColors();
+  const s = React.useMemo(() => makeStyles(c), [c]);
   const v = shoe[item.field];
   if (v == null) return <View style={s.miniBarCol} />; // empty placeholder to keep layout
   return (
@@ -1266,6 +1294,8 @@ function ProfileMenuModal({
   onLogout: () => void;
   onEditProfile: () => void;
 }) {
+  const c = useThemeColors();
+  const s = React.useMemo(() => makeStyles(c), [c]);
   const themePref = useThemePref((s) => s.pref);
   const setThemePref = useThemePref((s) => s.setPref);
 
@@ -1323,7 +1353,7 @@ function ProfileMenuModal({
           <MenuButton
             icon="log-out"
             label="로그아웃"
-            color="#ef4444"
+            color={c.status.danger}
             onPress={() => { onClose(); onLogout(); }}
           />
         </View>
@@ -1332,25 +1362,29 @@ function ProfileMenuModal({
   );
 }
 
-function MenuButton({ icon, label, color = '#0f172a', onPress }: any) {
+function MenuButton({ icon, label, color, onPress }: { icon: any; label: string; color?: string; onPress: () => void }) {
+  const c = useThemeColors();
+  const s = React.useMemo(() => makeStyles(c), [c]);
+  const fg = color ?? c.text.primary;
   return (
     <Pressable
       onPress={onPress}
       style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]}
     >
       <View style={s.menuBtn}>
-        <Feather name={icon} size={18} color={color} />
-        <Text style={[s.menuBtnText, { color }]}>{label}</Text>
+        <Feather name={icon} size={18} color={fg} />
+        <Text style={[s.menuBtnText, { color: fg }]}>{label}</Text>
       </View>
     </Pressable>
   );
 }
 
 // ─── Styles ──────────────────────────────────────────────────
-const s = StyleSheet.create({
+function makeStyles(c: ThemeColors) {
+  return StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#ffffff',
+    backgroundColor: c.bg.card,
   },
   header: {
     flexDirection: 'row',
@@ -1359,19 +1393,19 @@ const s = StyleSheet.create({
     paddingHorizontal: 24,
     paddingTop: 16,
     paddingBottom: 14,
-    backgroundColor: '#ffffff',
+    backgroundColor: c.bg.card,
     borderBottomWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: c.border.subtle,
   },
   headerTitle: {
     fontSize: 24,
     fontWeight: '800',
-    color: '#0f172a',
+    color: c.text.primary,
     letterSpacing: -0.5,
   },
   headerSubtitle: {
     fontSize: 12,
-    color: '#64748b',
+    color: c.text.tertiary,
     marginTop: 2,
   },
   headerActions: {
@@ -1385,7 +1419,7 @@ const s = StyleSheet.create({
     borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#f1f5f9',
+    backgroundColor: c.bg.subtle,
   },
   bellBadge: {
     position: 'absolute',
@@ -1423,7 +1457,7 @@ const s = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 12,
-    backgroundColor: '#ffffff',
+    backgroundColor: c.bg.card,
     borderWidth: 1,
     borderColor: '#bae6fd',
     alignItems: 'center',
@@ -1443,10 +1477,10 @@ const s = StyleSheet.create({
     gap: 2,
   },
   footEditChipText: { fontSize: 12, fontWeight: '800', color: '#0891b2' },
-  footEmptyText: { fontSize: 12, color: '#64748b', lineHeight: 17 },
+  footEmptyText: { fontSize: 12, color: c.text.tertiary, lineHeight: 17 },
   footChipsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 4 },
   footMiniChip: {
-    backgroundColor: '#ffffff',
+    backgroundColor: c.bg.card,
     borderWidth: 1,
     borderColor: '#bae6fd',
     paddingHorizontal: 8,
@@ -1455,7 +1489,7 @@ const s = StyleSheet.create({
   },
   footMiniChipText: { fontSize: 11, fontWeight: '700', color: '#0c4a6e' },
 
-  sectionTitleCount: { color: '#06b6d4' },
+  sectionTitleCount: { color: c.brand.primary },
   flex1: { flex: 1 },
   shoeListGap: { gap: 10 },
   shoeEmptyCard: {
@@ -1463,22 +1497,22 @@ const s = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
     padding: 16,
-    backgroundColor: '#ffffff',
+    backgroundColor: c.bg.card,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: c.border.subtle,
     borderStyle: 'dashed',
   },
   shoeEmptyIconBox: {
     width: 44,
     height: 44,
     borderRadius: 12,
-    backgroundColor: '#ecfeff',
+    backgroundColor: c.bg.accent,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  shoeEmptyTitle: { fontSize: 14, fontWeight: '800', color: '#0f172a' },
-  shoeEmptySub: { fontSize: 11, color: '#94a3b8', marginTop: 2 },
+  shoeEmptyTitle: { fontSize: 14, fontWeight: '800', color: c.text.primary },
+  shoeEmptySub: { fontSize: 11, color: c.text.muted, marginTop: 2 },
 
   // Profile Card — 인스타 스타일 (중앙 정렬, 큰 아바타)
   profileCard: {
@@ -1494,7 +1528,7 @@ const s = StyleSheet.create({
     borderRadius: 48,
     borderWidth: 2.5,
     borderColor: '#06b6d4',
-    backgroundColor: '#ffffff',
+    backgroundColor: c.bg.card,
     padding: 3,
     shadowColor: '#06b6d4',
     shadowOpacity: 0.18,
@@ -1511,12 +1545,12 @@ const s = StyleSheet.create({
     width: '100%',
     height: '100%',
     borderRadius: 42,
-    backgroundColor: '#ecfeff',
+    backgroundColor: c.bg.accent,
     alignItems: 'center',
     justifyContent: 'center',
   },
   avatarFallbackText: {
-    color: '#06b6d4',
+    color: c.brand.primary,
     fontSize: 36,
     fontWeight: '800',
   },
@@ -1527,19 +1561,19 @@ const s = StyleSheet.create({
   profileName: {
     fontSize: 22,
     fontWeight: '800',
-    color: '#0f172a',
+    color: c.text.primary,
     letterSpacing: -0.4,
   },
   profileEmail: {
     fontSize: 12,
-    color: '#94a3b8',
+    color: c.text.muted,
   },
   instaTag: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
     marginTop: 4,
-    backgroundColor: '#ecfeff',
+    backgroundColor: c.bg.accent,
     borderWidth: 1,
     borderColor: '#cffafe',
     paddingHorizontal: 10,
@@ -1547,7 +1581,7 @@ const s = StyleSheet.create({
     borderRadius: 999,
   },
   instaTagText: {
-    color: '#06b6d4',
+    color: c.brand.primary,
     fontSize: 12,
     fontWeight: '700',
   },
@@ -1556,15 +1590,15 @@ const s = StyleSheet.create({
     alignItems: 'center',
     gap: 5,
     marginTop: 4,
-    backgroundColor: '#ffffff',
+    backgroundColor: c.bg.card,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: c.border.subtle,
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 999,
   },
   instaConnectText: {
-    color: '#64748b',
+    color: c.text.tertiary,
     fontSize: 12,
     fontWeight: '600',
   },
@@ -1583,10 +1617,10 @@ const s = StyleSheet.create({
     borderWidth: 1.5,
     borderStyle: 'dashed',
     borderColor: '#cffafe',
-    backgroundColor: '#ecfeff',
+    backgroundColor: c.bg.accent,
   },
   bodyStripEmptyText: {
-    color: '#06b6d4',
+    color: c.brand.primary,
     fontSize: 13,
     fontWeight: '700',
   },
@@ -1598,9 +1632,9 @@ const s = StyleSheet.create({
   bodyPill: {
     flexGrow: 1,
     minWidth: '22%',
-    backgroundColor: '#ffffff',
+    backgroundColor: c.bg.card,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: c.border.subtle,
     borderRadius: 12,
     paddingVertical: 10,
     paddingHorizontal: 12,
@@ -1615,18 +1649,18 @@ const s = StyleSheet.create({
   bodyPillVal: {
     fontSize: 15,
     fontWeight: '800',
-    color: '#0f172a',
+    color: c.text.primary,
     letterSpacing: -0.3,
   },
   bodyPillUnit: {
     fontSize: 11,
     fontWeight: '600',
-    color: '#94a3b8',
+    color: c.text.muted,
     marginLeft: -2,
   },
   bodyPillSub: {
     fontSize: 10,
-    color: '#64748b',
+    color: c.text.tertiary,
     fontWeight: '600',
   },
 
@@ -1638,7 +1672,7 @@ const s = StyleSheet.create({
   sectionTitle: {
     fontSize: 16,
     fontWeight: '800',
-    color: '#0f172a',
+    color: c.text.primary,
     marginBottom: 12,
     paddingHorizontal: 4,
   },
@@ -1655,18 +1689,18 @@ const s = StyleSheet.create({
     backgroundColor: '#fff5f5',
   },
   errorText: {
-    color: '#ef4444',
+    color: c.status.danger,
     fontWeight: '600',
   },
   summaryCard: {
-    backgroundColor: '#ffffff',
+    backgroundColor: c.bg.card,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: c.border.subtle,
     borderRadius: 18,
     paddingVertical: 18,
     paddingHorizontal: 14,
     marginBottom: 16,
-    shadowColor: '#0f172a',
+    shadowColor: c.shadow.color,
     shadowOpacity: 0.05,
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 6 },
@@ -1697,18 +1731,18 @@ const s = StyleSheet.create({
   metricLabel: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#94a3b8',
+    color: c.text.muted,
   },
   metricVal: {
     fontSize: 22,
     fontWeight: '900',
-    color: '#0f172a',
+    color: c.text.primary,
     letterSpacing: -0.5,
   },
   emptyStatsCard: {
-    backgroundColor: '#ffffff',
+    backgroundColor: c.bg.card,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: c.border.subtle,
     borderRadius: 20,
     padding: 24,
     alignItems: 'center',
@@ -1718,11 +1752,11 @@ const s = StyleSheet.create({
   emptyStatsTitle: {
     fontSize: 14,
     fontWeight: '800',
-    color: '#0f172a',
+    color: c.text.primary,
   },
   emptyStatsSubtitle: {
     fontSize: 11,
-    color: '#64748b',
+    color: c.text.tertiary,
     fontWeight: '600',
   },
   gymListContainer: {
@@ -1731,15 +1765,15 @@ const s = StyleSheet.create({
 
   // Badges Section
   badgesContainer: {
-    backgroundColor: '#ffffff',
+    backgroundColor: c.bg.card,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: c.border.subtle,
     borderRadius: 16,
     padding: 16,
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 14,
-    shadowColor: '#0f172a',
+    shadowColor: c.shadow.color,
     shadowOpacity: 0.02,
     shadowRadius: 10,
     shadowOffset: { width: 0, height: 4 },
@@ -1791,7 +1825,7 @@ const s = StyleSheet.create({
   badgeTitle: {
     fontSize: 10,
     fontWeight: '700',
-    color: '#475569',
+    color: c.text.secondary,
     textAlign: 'center',
     lineHeight: 12,
   },
@@ -1810,7 +1844,7 @@ const s = StyleSheet.create({
   membershipTitle: {
     fontSize: 16,
     fontWeight: '800',
-    color: '#0f172a',
+    color: c.text.primary,
     paddingHorizontal: 4,
   },
   addMembershipBtn: {
@@ -1833,9 +1867,9 @@ const s = StyleSheet.create({
     fontWeight: '800',
   },
   emptyMembershipCard: {
-    backgroundColor: '#ffffff',
+    backgroundColor: c.bg.card,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: c.border.subtle,
     borderRadius: 20,
     padding: 24,
     alignItems: 'center',
@@ -1845,11 +1879,11 @@ const s = StyleSheet.create({
   emptyMembershipTitle: {
     fontSize: 14,
     fontWeight: '800',
-    color: '#0f172a',
+    color: c.text.primary,
   },
   emptyMembershipSubtitle: {
     fontSize: 11,
-    color: '#64748b',
+    color: c.text.tertiary,
     fontWeight: '600',
   },
   membershipList: {
@@ -1862,18 +1896,18 @@ const s = StyleSheet.create({
   expiredLabel: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#94a3b8',
+    color: c.text.muted,
     paddingHorizontal: 4,
   },
 
   // Membership Card Styles
   mCard: {
-    backgroundColor: '#ffffff',
+    backgroundColor: c.bg.card,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: c.border.subtle,
     borderRadius: 16,
     overflow: 'hidden',
-    shadowColor: '#0f172a',
+    shadowColor: c.shadow.color,
     shadowOpacity: 0.04,
     shadowRadius: 10,
     shadowOffset: { width: 0, height: 4 },
@@ -1886,7 +1920,7 @@ const s = StyleSheet.create({
     gap: 12,
   },
   mCardExpired: {
-    backgroundColor: '#f8fafc',
+    backgroundColor: c.bg.primary,
     opacity: 0.7,
     shadowOpacity: 0,
     elevation: 0,
@@ -1907,7 +1941,7 @@ const s = StyleSheet.create({
     borderLeftColor: '#6366f1',
   },
   mIconBoxPasses: {
-    backgroundColor: '#ecfeff',
+    backgroundColor: c.bg.accent,
   },
   mIconBoxPeriod: {
     backgroundColor: '#e0e7ff',
@@ -1919,7 +1953,7 @@ const s = StyleSheet.create({
     width: 0,
     height: 44,
     borderWidth: 0.8,
-    borderColor: '#e2e8f0',
+    borderColor: c.border.subtle,
     borderStyle: 'dashed',
     marginHorizontal: 4,
   },
@@ -1930,9 +1964,9 @@ const s = StyleSheet.create({
     width: 20,
     height: 20,
     borderRadius: 10,
-    backgroundColor: '#f8fafc',
+    backgroundColor: c.bg.primary,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: c.border.subtle,
     zIndex: 10,
   },
   ticketCutoutBottom: {
@@ -1942,9 +1976,9 @@ const s = StyleSheet.create({
     width: 20,
     height: 20,
     borderRadius: 10,
-    backgroundColor: '#f8fafc',
+    backgroundColor: c.bg.primary,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: c.border.subtle,
     zIndex: 10,
   },
   mCardContent: {
@@ -1958,12 +1992,12 @@ const s = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 12,
-    backgroundColor: '#f1f5f9',
+    backgroundColor: c.bg.subtle,
     alignItems: 'center',
     justifyContent: 'center',
   },
   mIconBoxMuted: {
-    backgroundColor: '#f1f5f9',
+    backgroundColor: c.bg.subtle,
   },
   mCardBody: {
     flex: 1,
@@ -1977,7 +2011,7 @@ const s = StyleSheet.create({
     flexWrap: 'wrap',
   },
   mBadge: {
-    backgroundColor: '#ecfeff',
+    backgroundColor: c.bg.accent,
     borderWidth: 1,
     borderColor: '#cffafe',
     paddingHorizontal: 8,
@@ -1987,7 +2021,7 @@ const s = StyleSheet.create({
   mBadgeText: {
     fontSize: 10,
     fontWeight: '800',
-    color: '#06b6d4',
+    color: c.brand.primary,
   },
   mBadgePeriod: {
     backgroundColor: '#e0e7ff',
@@ -2003,7 +2037,7 @@ const s = StyleSheet.create({
     color: '#4f46e5',
   },
   mCountBadge: {
-    backgroundColor: '#ecfeff',
+    backgroundColor: c.bg.accent,
     borderWidth: 1,
     borderColor: '#cffafe',
     paddingHorizontal: 8,
@@ -2016,9 +2050,9 @@ const s = StyleSheet.create({
     color: '#0891b2',
   },
   mCountBadgeExpired: {
-    backgroundColor: '#f1f5f9',
+    backgroundColor: c.bg.subtle,
     borderWidth: 1,
-    borderColor: '#cbd5e1',
+    borderColor: c.border.strong,
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 8,
@@ -2026,12 +2060,12 @@ const s = StyleSheet.create({
   mCountBadgeTextExpired: {
     fontSize: 10,
     fontWeight: '800',
-    color: '#64748b',
+    color: c.text.tertiary,
   },
   mBadgeExpired: {
-    backgroundColor: '#f1f5f9',
+    backgroundColor: c.bg.subtle,
     borderWidth: 1,
-    borderColor: '#cbd5e1',
+    borderColor: c.border.strong,
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 8,
@@ -2039,7 +2073,7 @@ const s = StyleSheet.create({
   mBadgeTextExpired: {
     fontSize: 10,
     fontWeight: '800',
-    color: '#64748b',
+    color: c.text.tertiary,
   },
   mBadgeUrgent: {
     backgroundColor: '#ffe4e6',
@@ -2052,26 +2086,26 @@ const s = StyleSheet.create({
   mBadgeTextUrgent: {
     fontSize: 10,
     fontWeight: '800',
-    color: '#ef4444',
+    color: c.status.danger,
   },
   mGymText: {
     fontSize: 15,
     fontWeight: '800',
-    color: '#0f172a',
+    color: c.text.primary,
   },
   mGymTextExpired: {
     fontSize: 15,
     fontWeight: '800',
-    color: '#64748b',
+    color: c.text.tertiary,
   },
   mSubtitleText: {
     fontSize: 12,
-    color: '#64748b',
+    color: c.text.tertiary,
     marginTop: 4,
     fontWeight: '600',
   },
   mSubtitleTextUrgent: {
-    color: '#ef4444',
+    color: c.status.danger,
   },
   mRightCol: {
     width: 58,
@@ -2082,7 +2116,7 @@ const s = StyleSheet.create({
   mRightStatText: {
     fontSize: 15,
     fontWeight: '800',
-    color: '#0f172a',
+    color: c.text.primary,
     letterSpacing: -0.3,
   },
   usePassBtn: {
@@ -2120,7 +2154,7 @@ const s = StyleSheet.create({
   allStatsLinkText: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#475569',
+    color: c.text.secondary,
   },
 
   // Shoes section
@@ -2163,10 +2197,10 @@ const s = StyleSheet.create({
     borderRadius: 10,
     borderWidth: 1,
     borderColor: '#cffafe',
-    backgroundColor: '#ecfeff',
+    backgroundColor: c.bg.accent,
   },
   crewOutlineBtnText: {
-    color: '#06b6d4',
+    color: c.brand.primary,
     fontSize: 12,
     fontWeight: '800',
   },
@@ -2175,14 +2209,14 @@ const s = StyleSheet.create({
     gap: 16,
   },
   emptyShelfSlot: {
-    backgroundColor: '#ffffff',
+    backgroundColor: c.bg.card,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: c.border.subtle,
     borderRadius: 24,
     padding: 32,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#0f172a',
+    shadowColor: c.shadow.color,
     shadowOpacity: 0.03,
     shadowRadius: 10,
     shadowOffset: { width: 0, height: 4 },
@@ -2192,22 +2226,22 @@ const s = StyleSheet.create({
   emptyShelfText: {
     fontSize: 15,
     fontWeight: '800',
-    color: '#0f172a',
+    color: c.text.primary,
     marginTop: 8,
   },
   emptyShelfSub: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#94a3b8',
+    color: c.text.muted,
     textAlign: 'center',
   },
   shoeCard: {
-    backgroundColor: '#ffffff',
+    backgroundColor: c.bg.card,
     borderWidth: 1,
-    borderColor: '#f1f5f9',
+    borderColor: c.border.subtle,
     borderRadius: 24,
     padding: 16,
-    shadowColor: '#0f172a',
+    shadowColor: c.shadow.color,
     shadowOpacity: 0.04,
     shadowRadius: 16,
     shadowOffset: { width: 0, height: 8 },
@@ -2219,17 +2253,17 @@ const s = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 12,
-    backgroundColor: '#f1f5f9',
+    backgroundColor: c.bg.subtle,
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
   },
   shoeCardBody: { flex: 1, minWidth: 0, gap: 4 },
-  shoeBrand: { fontSize: 11, fontWeight: '700', color: '#94a3b8' },
+  shoeBrand: { fontSize: 11, fontWeight: '700', color: c.text.muted },
   shoeModelName: {
     fontSize: 15,
     fontWeight: '900',
-    color: '#0f172a',
+    color: c.text.primary,
     letterSpacing: -0.3,
   },
   primaryChip: {
@@ -2244,15 +2278,15 @@ const s = StyleSheet.create({
   },
   primaryChipText: { fontSize: 10, fontWeight: '800', color: '#92400e' },
   sizePill: {
-    backgroundColor: '#f1f5f9',
+    backgroundColor: c.bg.subtle,
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 8,
   },
-  sizePillText: { fontSize: 11, fontWeight: '900', color: '#0f172a' },
+  sizePillText: { fontSize: 11, fontWeight: '900', color: c.text.primary },
   overallRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   overallStar: { fontSize: 13, color: '#10b981' },
-  overallNum: { fontSize: 13, fontWeight: '900', color: '#0f172a' },
+  overallNum: { fontSize: 13, fontWeight: '900', color: c.text.primary },
   shoeChipsRow: { flexDirection: 'row', gap: 6, marginTop: 2, flexWrap: 'wrap' },
   tagChipActive: {
     borderWidth: 1,
@@ -2265,13 +2299,13 @@ const s = StyleSheet.create({
   tagChipActiveText: { fontSize: 10, fontWeight: '800', color: '#047857' },
   tagChip: {
     borderWidth: 1,
-    borderColor: '#e2e8f0',
-    backgroundColor: '#ffffff',
+    borderColor: c.border.subtle,
+    backgroundColor: c.bg.card,
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 6,
   },
-  tagChipText: { fontSize: 10, fontWeight: '700', color: '#475569' },
+  tagChipText: { fontSize: 10, fontWeight: '700', color: c.text.secondary },
   shoeActionsCol: { gap: 6 },
   shoeActionBtn: {
     width: 28,
@@ -2279,7 +2313,7 @@ const s = StyleSheet.create({
     borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#f1f5f9',
+    backgroundColor: c.bg.subtle,
   },
   miniBarGrid: {
     flexDirection: 'column',
@@ -2299,7 +2333,7 @@ const s = StyleSheet.create({
   miniBarLabel: {
     fontSize: 9,
     fontWeight: '700',
-    color: '#475569',
+    color: c.text.secondary,
     width: 32,
   },
   miniBarTrack: {
@@ -2310,12 +2344,12 @@ const s = StyleSheet.create({
     overflow: 'hidden',
   },
   miniBarFill: { height: '100%', backgroundColor: '#10b981', borderRadius: 3 },
-  miniBarValue: { fontSize: 9, fontWeight: '800', color: '#0f172a', minWidth: 10, textAlign: 'right' },
+  miniBarValue: { fontSize: 9, fontWeight: '800', color: c.text.primary, minWidth: 10, textAlign: 'right' },
   shoeIcon: {
     width: 40,
     height: 40,
     borderRadius: 12,
-    backgroundColor: '#f1f5f9',
+    backgroundColor: c.bg.subtle,
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
@@ -2323,14 +2357,14 @@ const s = StyleSheet.create({
   shoeTitle: {
     fontSize: 14,
     fontWeight: '800',
-    color: '#0f172a',
+    color: c.text.primary,
     letterSpacing: -0.2,
   },
   shoeMetaRow: { flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' },
   shoeMetaText: {
     fontSize: 11,
     fontWeight: '600',
-    color: '#94a3b8',
+    color: c.text.muted,
   },
   shoeStatusBadge: {
     borderWidth: 1,
@@ -2350,7 +2384,7 @@ const s = StyleSheet.create({
     backgroundColor: 'rgba(15, 23, 42, 0.4)',
   },
   modalContent: {
-    backgroundColor: '#ffffff',
+    backgroundColor: c.bg.card,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     paddingHorizontal: 24,
@@ -2368,7 +2402,7 @@ const s = StyleSheet.create({
   modalTitle: {
     fontSize: 18,
     fontWeight: '800',
-    color: '#0f172a',
+    color: c.text.primary,
     marginBottom: 16,
   },
   menuBtn: {
@@ -2394,12 +2428,12 @@ const s = StyleSheet.create({
   crewCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#ffffff',
+    backgroundColor: c.bg.card,
     borderWidth: 1,
-    borderColor: '#f1f5f9',
+    borderColor: c.border.subtle,
     borderRadius: 24,
     padding: 16,
-    shadowColor: '#0f172a',
+    shadowColor: c.shadow.color,
     shadowOpacity: 0.04,
     shadowRadius: 16,
     shadowOffset: { width: 0, height: 6 },
@@ -2427,7 +2461,7 @@ const s = StyleSheet.create({
   crewTitle: {
     fontSize: 16,
     fontWeight: '900',
-    color: '#0f172a',
+    color: c.text.primary,
     letterSpacing: -0.3,
   },
   crewMetaRow: {
@@ -2452,9 +2486,9 @@ const s = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: '#f8fafc',
+    backgroundColor: c.bg.primary,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: c.border.subtle,
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 10,
@@ -2462,6 +2496,7 @@ const s = StyleSheet.create({
   crewGymText: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#64748b',
+    color: c.text.tertiary,
   }
-});
+  });
+}
