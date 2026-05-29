@@ -1329,17 +1329,10 @@ function ProfileMenuModal({
   const s = React.useMemo(() => makeStyles(c), [c]);
   const themePref = useThemePref((s) => s.pref);
   const setThemePref = useThemePref((s) => s.setPref);
-
-  function handleTheme() {
-    Alert.alert('테마', '화면 색깔 모드를 선택하세요', [
-      { text: '시스템 따라가기', onPress: () => setThemePref('auto') },
-      { text: '라이트', onPress: () => setThemePref('light') },
-      { text: '다크', onPress: () => setThemePref('dark') },
-      { text: '취소', style: 'cancel' },
-    ]);
-  }
+  const [themeSheetOpen, setThemeSheetOpen] = useState(false);
 
   return (
+    <>
     <Sheet visible={visible} onClose={onClose} variant="bottom" title="설정 및 메뉴">
       <MenuButton
         icon="edit-3"
@@ -1349,7 +1342,7 @@ function ProfileMenuModal({
       <MenuButton
         icon="moon"
         label={`테마 · ${THEME_PREF_LABEL[themePref]}`}
-        onPress={() => { onClose(); handleTheme(); }}
+        onPress={() => { onClose(); setThemeSheetOpen(true); }}
       />
       <MenuButton
         icon="bell"
@@ -1376,6 +1369,37 @@ function ProfileMenuModal({
         onPress={() => { onClose(); onLogout(); }}
       />
     </Sheet>
+
+    <Sheet
+      visible={themeSheetOpen}
+      onClose={() => setThemeSheetOpen(false)}
+      variant="bottom"
+      title="테마"
+      subtitle="화면 색깔 모드를 선택하세요"
+    >
+      {(['auto', 'light', 'dark'] as const).map((opt) => {
+        const active = themePref === opt;
+        const icon: 'monitor' | 'sun' | 'moon' = opt === 'auto' ? 'monitor' : opt === 'light' ? 'sun' : 'moon';
+        return (
+          <Pressable
+            key={opt}
+            onPress={() => { setThemePref(opt); setThemeSheetOpen(false); }}
+            style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]}
+          >
+            <View style={[s.themeOptionRow, active && s.themeOptionRowActive]}>
+              <View style={[s.themeOptionIconBox, active && s.themeOptionIconBoxActive]}>
+                <Feather name={icon} size={16} color={active ? c.brand.onPrimary : c.text.secondary} />
+              </View>
+              <Text style={[s.themeOptionLabel, active && s.themeOptionLabelActive]}>
+                {THEME_PREF_LABEL[opt]}
+              </Text>
+              {active && <Feather name="check" size={18} color={c.brand.primary} />}
+            </View>
+          </Pressable>
+        );
+      })}
+    </Sheet>
+    </>
   );
 }
 
@@ -2445,8 +2469,40 @@ function makeStyles(c: ThemeColors) {
   },
   modalDivider: {
     height: 1,
-    backgroundColor: '#e2e8f0',
+    backgroundColor: c.border.subtle,
     marginVertical: 8,
+  },
+  themeOptionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    borderRadius: 14,
+    marginBottom: 4,
+  },
+  themeOptionRowActive: {
+    backgroundColor: c.bg.accent,
+  },
+  themeOptionIconBox: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: c.bg.subtle,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  themeOptionIconBoxActive: {
+    backgroundColor: c.brand.primary,
+  },
+  themeOptionLabel: {
+    flex: 1,
+    fontSize: 15,
+    fontWeight: '600',
+    color: c.text.primary,
+  },
+  themeOptionLabelActive: {
+    fontWeight: '800',
   },
 
   // Crew Section Styles
