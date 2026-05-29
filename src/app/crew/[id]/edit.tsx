@@ -49,6 +49,7 @@ export default function EditCrewScreen() {
   const [gymId, setGymId] = useState<string | null>(null);
   const [region, setRegion] = useState<CrewRegion | null>(null);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [isRecruiting, setIsRecruiting] = useState(false);
   const [showGymModal, setShowGymModal] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [prefilled, setPrefilled] = useState(false);
@@ -60,6 +61,7 @@ export default function EditCrewScreen() {
     setGymId(crew.home_gym?.id ?? null);
     setRegion(crew.region ?? null);
     setImageUrl(crew.image_url ?? null);
+    setIsRecruiting(crew.is_recruiting);
     setPrefilled(true);
   }, [crew, prefilled]);
 
@@ -112,6 +114,7 @@ export default function EditCrewScreen() {
         homeGymId: gymId,
         imageUrl: imageUrl,
         region: region,
+        isRecruiting: isRecruiting,
       });
       router.back();
     } catch (e) {
@@ -261,6 +264,25 @@ export default function EditCrewScreen() {
               </View>
             )}
           </Pressable>
+
+          <Text style={[s.label, { marginTop: 18 }]}>공개 모집</Text>
+          <Pressable onPress={() => setIsRecruiting((v) => !v)}>
+            {({ pressed }) => (
+              <View style={[s.recruitToggle, pressed && { opacity: 0.85 }]}>
+                <View style={{ flex: 1, gap: 3 }}>
+                  <Text style={s.recruitToggleTitle}>
+                    {isRecruiting ? '공개 모집 중' : '공개 모집 안 함'}
+                  </Text>
+                  <Text style={s.recruitToggleSub}>
+                    켜면 커뮤니티 / 크루 탐색에 노출되고 누구나 가입 요청을 보낼 수 있어요.
+                  </Text>
+                </View>
+                <View style={[s.toggleTrack, isRecruiting && s.toggleTrackOn]}>
+                  <View style={[s.toggleThumb, isRecruiting && s.toggleThumbOn]} />
+                </View>
+              </View>
+            )}
+          </Pressable>
         </ScrollView>
 
         <View style={s.footer}>
@@ -369,6 +391,46 @@ function makeStyles(c: ThemeColors) {
   },
   textArea: { minHeight: 96, paddingTop: 12 },
   charCount: { fontSize: 11, color: c.text.muted, textAlign: 'right', marginTop: 4 },
+  recruitToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    backgroundColor: c.bg.subtle,
+    borderRadius: 12,
+    padding: 14,
+  },
+  recruitToggleTitle: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: c.text.primary,
+  },
+  recruitToggleSub: {
+    fontSize: 11,
+    color: c.text.tertiary,
+    fontWeight: '600',
+    lineHeight: 15,
+  },
+  toggleTrack: {
+    width: 42,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: c.border.strong,
+    padding: 2,
+    justifyContent: 'center',
+  },
+  toggleTrackOn: {
+    backgroundColor: c.brand.primary,
+  },
+  toggleThumb: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: c.bg.card,
+    alignSelf: 'flex-start',
+  },
+  toggleThumbOn: {
+    alignSelf: 'flex-end',
+  },
   regionGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   regionChip: {
     paddingHorizontal: 12,

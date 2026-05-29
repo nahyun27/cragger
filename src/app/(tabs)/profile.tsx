@@ -1621,7 +1621,7 @@ function makeStyles(c: ThemeColors) {
     lineHeight: 12,
   },
   scrollContent: {
-    paddingBottom: 40,
+    paddingBottom: 100,
   },
 
   footCard: {
@@ -2659,7 +2659,7 @@ function makeStyles(c: ThemeColors) {
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     paddingHorizontal: 24,
-    paddingBottom: 40,
+    paddingBottom: 100,
     paddingTop: 12,
   },
   modalDragHandle: {

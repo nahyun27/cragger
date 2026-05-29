@@ -40,6 +40,7 @@ export type CrewSummary = {
   member_count: number;
   created_at: string;
   region: CrewRegion | null;
+  is_recruiting: boolean;
 };
 
 export type CrewMember = {
@@ -55,7 +56,26 @@ export type CrewDetail = CrewSummary & {
 };
 
 const CREW_COLS =
-  'id, name, description, invite_code, owner_id, home_gym_id, image_url, member_count, created_at, region, home_gym:gyms(id, name, branch)';
+  'id, name, description, invite_code, owner_id, home_gym_id, image_url, member_count, created_at, region, is_recruiting, home_gym:gyms(id, name, branch)';
+
+// ── 공개 모집 크루 ────────────────────────────────────────────
+export function useRecruitingCrews(limit?: number) {
+  return useQuery({
+    queryKey: ['crews', 'recruiting', limit ?? null] as const,
+    staleTime: 60_000,
+    queryFn: async (): Promise<CrewSummary[]> => {
+      let q = supabase
+        .from('crews')
+        .select(CREW_COLS)
+        .eq('is_recruiting', true)
+        .order('created_at', { ascending: false });
+      if (limit != null) q = q.limit(limit);
+      const { data, error } = await q;
+      if (error) throw new Error(error.message);
+      return (data ?? []) as unknown as CrewSummary[];
+    },
+  });
+}
 
 // ── 내 크루 목록 ──────────────────────────────────────────────
 export function useMyCrews() {
@@ -248,6 +268,7 @@ export type UpdateCrewArgs = {
   homeGymId?: string | null;
   imageUrl?: string | null;
   region?: CrewRegion | null;
+  isRecruiting?: boolean;
 };
 
 export function useUpdateCrew() {
@@ -260,6 +281,7 @@ export function useUpdateCrew() {
       if (args.homeGymId !== undefined) patch.home_gym_id = args.homeGymId;
       if (args.region !== undefined) patch.region = args.region;
       if (args.imageUrl !== undefined) patch.image_url = args.imageUrl;
+      if (args.isRecruiting !== undefined) patch.is_recruiting = args.isRecruiting;
       const { error } = await supabase.from('crews').update(patch).eq('id', args.crewId);
       if (error) throw new Error(error.message);
     },

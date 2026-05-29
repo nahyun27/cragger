@@ -52,7 +52,9 @@ import { effectiveStatus, useBattles, type Battle } from '@/hooks/use-battles';
 import {
   useAcceptJoinRequest,
   useCrewJoinRequests,
+  useMyJoinRequests,
   useRejectJoinRequest,
+  useRequestJoinCrewById,
   type CrewJoinRequest,
 } from '@/hooks/use-crew-requests';
 import { Sheet } from '@/components/ui/sheet';
@@ -307,19 +309,24 @@ export default function CrewDetailScreen() {
           </View>
         )}
 
-        {/* Tab Bar */}
-        <View style={s.tabBarContainer}>
-          {(['home', 'news', 'activity', 'members'] as TabState[]).map((tab) => {
-             const labels: Record<TabState, string> = { home: '홈', news: '소식', activity: '활동', members: '멤버' };
-             const isActive = activeTab === tab;
-             return (
-               <Pressable key={tab} style={s.tabItem} onPress={() => setActiveTab(tab)}>
-                 <Text style={[s.tabText, isActive && s.tabTextActive]}>{labels[tab]}</Text>
-                 {isActive && <View style={s.tabIndicator} />}
-               </Pressable>
-             );
-          })}
-        </View>
+        {/* 비멤버 — 공개 프리뷰 + CTA */}
+        {!isMember && <PublicCrewPreview crewId={data.id} isRecruiting={data.is_recruiting} />}
+
+        {/* Tab Bar — 멤버 전용 */}
+        {isMember && (
+          <View style={s.tabBarContainer}>
+            {(['home', 'news', 'activity', 'members'] as TabState[]).map((tab) => {
+               const labels: Record<TabState, string> = { home: '홈', news: '소식', activity: '활동', members: '멤버' };
+               const isActive = activeTab === tab;
+               return (
+                 <Pressable key={tab} style={s.tabItem} onPress={() => setActiveTab(tab)}>
+                   <Text style={[s.tabText, isActive && s.tabTextActive]}>{labels[tab]}</Text>
+                   {isActive && <View style={s.tabIndicator} />}
+                 </Pressable>
+               );
+            })}
+          </View>
+        )}
 
         {/* Tab Content Area */}
         <View style={s.tabContentArea}>
@@ -1171,6 +1178,102 @@ function MemberRow({
   );
 }
 
+// ── 공개 프리뷰 (비멤버) ───────────────────────────────────
+function PublicCrewPreview({ crewId, isRecruiting }: { crewId: string; isRecruiting: boolean }) {
+  const c = useThemeColors();
+  const s = useMemo(() => makeStyles(c), [c]);
+  const router = useRouter();
+  const [askOpen, setAskOpen] = useState(false);
+  const [message, setMessage] = useState('');
+  const requestJoin = useRequestJoinCrewById();
+  const { data: myRequests = [] } = useMyJoinRequests();
+  const alreadyRequested = myRequests.some((r) => r.crew_id === crewId);
+
+  async function handleSendRequest() {
+    try {
+      await requestJoin.mutateAsync({ crewId, message });
+      setAskOpen(false);
+      setMessage('');
+      customAlert('요청 보냈어요', '크루장이 수락하면 알림이 도착해요.');
+    } catch (e) {
+      customAlert('요청 실패', e instanceof Error ? e.message : '알 수 없는 오류');
+    }
+  }
+
+  return (
+    <View style={s.publicPreview}>
+      {isRecruiting ? (
+        <>
+          <View style={s.publicBadgeRow}>
+            <View style={s.recruitingBadgePill}>
+              <Feather name="user-plus" size={11} color={c.status.success} />
+              <Text style={s.recruitingBadgePillText}>공개 모집 중</Text>
+            </View>
+          </View>
+          {alreadyRequested ? (
+            <View style={s.publicAlreadyChip}>
+              <Feather name="clock" size={12} color={c.text.tertiary} />
+              <Text style={s.publicAlreadyText}>요청 보냄 — 크루장 승인 대기</Text>
+            </View>
+          ) : (
+            <Pressable onPress={() => setAskOpen(true)}>
+              {({ pressed }) => (
+                <View style={[s.publicCtaBtn, pressed && { opacity: 0.85 }]}>
+                  <Feather name="user-plus" size={16} color={c.brand.onPrimary} />
+                  <Text style={s.publicCtaText}>가입 요청 보내기</Text>
+                </View>
+              )}
+            </Pressable>
+          )}
+        </>
+      ) : (
+        <View style={s.publicLockedBox}>
+          <Feather name="lock" size={14} color={c.text.muted} />
+          <Text style={s.publicLockedText}>비공개 크루 — 초대코드로만 가입할 수 있어요</Text>
+          <Pressable onPress={() => router.push('/crew/join' as never)}>
+            {({ pressed }) => (
+              <Text style={[s.publicLockedLink, pressed && { opacity: 0.6 }]}>
+                코드로 가입하기
+              </Text>
+            )}
+          </Pressable>
+        </View>
+      )}
+
+      <Sheet
+        visible={askOpen}
+        onClose={() => setAskOpen(false)}
+        variant="bottom"
+        title="가입 요청"
+        subtitle="크루장에게 짧은 인사를 남겨보세요 (선택)"
+        footer={
+          <Pressable onPress={handleSendRequest} disabled={requestJoin.isPending}>
+            {({ pressed }) => (
+              <View style={[s.publicCtaBtn, pressed && { opacity: 0.85 }]}>
+                {requestJoin.isPending ? (
+                  <ActivityIndicator color={c.brand.onPrimary} />
+                ) : (
+                  <Text style={s.publicCtaText}>요청 보내기</Text>
+                )}
+              </View>
+            )}
+          </Pressable>
+        }
+      >
+        <TextInput
+          placeholder="간단히 자기소개해보세요 (최대 100자)"
+          placeholderTextColor={c.text.muted}
+          value={message}
+          onChangeText={(t) => setMessage(t.slice(0, 100))}
+          multiline
+          maxLength={100}
+          style={s.publicMessageInput}
+        />
+      </Sheet>
+    </View>
+  );
+}
+
 // ── 가입 요청 섹션 (크루장 전용) ────────────────────────────
 function JoinRequestsSection({ crewId }: { crewId: string }) {
   const c = useThemeColors();
@@ -1883,6 +1986,88 @@ function makeStyles(c: ThemeColors) {
     fontSize: 13,
     color: c.text.tertiary,
     fontWeight: '700',
+  },
+  publicPreview: {
+    paddingHorizontal: 20,
+    paddingTop: 8,
+    paddingBottom: 16,
+    gap: 12,
+  },
+  publicBadgeRow: {
+    flexDirection: 'row',
+    gap: 6,
+  },
+  recruitingBadgePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: c.status.successBg,
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  recruitingBadgePillText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: c.status.success,
+  },
+  publicCtaBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: c.brand.primary,
+    paddingVertical: 14,
+    borderRadius: 14,
+  },
+  publicCtaText: {
+    color: c.brand.onPrimary,
+    fontSize: 15,
+    fontWeight: '800',
+  },
+  publicAlreadyChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: c.bg.subtle,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 12,
+  },
+  publicAlreadyText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: c.text.secondary,
+  },
+  publicLockedBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: c.bg.subtle,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderRadius: 12,
+    flexWrap: 'wrap',
+  },
+  publicLockedText: {
+    flex: 1,
+    fontSize: 12,
+    fontWeight: '600',
+    color: c.text.secondary,
+  },
+  publicLockedLink: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: c.brand.primary,
+  },
+  publicMessageInput: {
+    backgroundColor: c.bg.subtle,
+    borderRadius: 12,
+    padding: 14,
+    color: c.text.primary,
+    fontSize: 14,
+    minHeight: 80,
+    textAlignVertical: 'top',
   },
   regionChip: {
     flexDirection: 'row',

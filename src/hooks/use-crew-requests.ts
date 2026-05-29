@@ -119,6 +119,43 @@ export function useRequestJoinCrew() {
   });
 }
 
+// ── 공개 모집 크루에 직접 요청 (코드 없이) ──────────────────────
+export function useRequestJoinCrewById() {
+  const queryClient = useQueryClient();
+  const { session: authSession } = useAuth();
+  return useMutation({
+    mutationFn: async (args: { crewId: string; message?: string }) => {
+      const userId = authSession?.user.id;
+      if (!userId) throw new Error('Not authenticated');
+
+      // 이미 멤버인지 체크
+      const { data: existing } = await supabase
+        .from('crew_members')
+        .select('user_id')
+        .eq('crew_id', args.crewId)
+        .eq('user_id', userId)
+        .maybeSingle();
+      if (existing) throw new Error('이미 가입한 크루입니다');
+
+      const { error: insErr } = await supabase
+        .from('crew_join_requests')
+        .insert({
+          crew_id: args.crewId,
+          user_id: userId,
+          message: args.message?.trim() || null,
+          status: 'pending',
+        });
+      if (insErr) {
+        if (insErr.code === '23505') throw new Error('이미 요청을 보냈어요. 크루장 승인 대기 중입니다.');
+        throw new Error(insErr.message);
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['crew-requests'] });
+    },
+  });
+}
+
 // ── 수락 / 거절 / 취소 ────────────────────────────────────────
 export function useAcceptJoinRequest() {
   const queryClient = useQueryClient();

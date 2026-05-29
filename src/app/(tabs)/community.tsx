@@ -21,6 +21,7 @@ import {
   type PostRow,
   type PostType,
 } from '@/hooks/use-community';
+import { useRecruitingCrews, type CrewSummary } from '@/hooks/use-crews';
 import { useThemeColors, type ThemeColors } from '@/lib/theme';
 
 type FilterKey = 'all' | PostType;
@@ -112,6 +113,61 @@ function describeMeetup(post: PostRow): {
     statusColor: { backgroundColor: statusBg },
     statusTextColor: { color: statusFg },
   };
+}
+
+// ── 공개 모집 크루 가로 스크롤 ──────────────────────────────────
+function RecruitingCrewsStrip() {
+  const c = useThemeColors();
+  const s = useMemo(() => makeStyles(c), [c]);
+  const router = useRouter();
+  const { data } = useRecruitingCrews(10);
+  if (!data || data.length === 0) return null;
+  return (
+    <View style={s.recruitStrip}>
+      <View style={s.recruitStripHeader}>
+        <Text style={s.recruitStripTitle}>공개 모집 중인 크루</Text>
+        <Pressable onPress={() => router.push('/crews/explore' as never)} hitSlop={6}>
+          {({ pressed }) => (
+            <Text style={[s.recruitStripMore, pressed && { opacity: 0.6 }]}>전체 보기</Text>
+          )}
+        </Pressable>
+      </View>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={s.recruitScroll}
+      >
+        {data.map((crew) => (
+          <RecruitingCrewMiniCard key={crew.id} crew={crew} />
+        ))}
+      </ScrollView>
+    </View>
+  );
+}
+
+function RecruitingCrewMiniCard({ crew }: { crew: CrewSummary }) {
+  const c = useThemeColors();
+  const s = useMemo(() => makeStyles(c), [c]);
+  const router = useRouter();
+  const firstChar = crew.name.length > 0 ? crew.name.charAt(0).toUpperCase() : '?';
+  return (
+    <Pressable
+      onPress={() => router.push({ pathname: '/crew/[id]', params: { id: crew.id } } as never)}
+      style={({ pressed }) => [s.recruitCard, pressed && { opacity: 0.85 }]}
+    >
+      <View style={s.recruitCardAvatar}>
+        {crew.image_url ? (
+          <Image source={{ uri: crew.image_url }} style={s.recruitCardAvatarImg} />
+        ) : (
+          <Text style={s.recruitCardAvatarText}>{firstChar}</Text>
+        )}
+      </View>
+      <Text style={s.recruitCardName} numberOfLines={1}>{crew.name}</Text>
+      <Text style={s.recruitCardMeta} numberOfLines={1}>
+        {[crew.region, `${crew.member_count}명`].filter(Boolean).join(' · ')}
+      </Text>
+    </Pressable>
+  );
 }
 
 function getAvatarBgColor(name: string) {
@@ -227,6 +283,9 @@ export default function CommunityScreen() {
           </Pressable>
         </View>
       )}
+
+      {/* Recruiting crews — 전체 필터일 때만 노출 */}
+      {filter === 'all' && <RecruitingCrewsStrip />}
 
       {/* Feed List */}
       {posts.length > 0 && (
@@ -431,6 +490,71 @@ function makeStyles(c: ThemeColors) {
     container: {
       flex: 1,
       backgroundColor: c.bg.card,
+    },
+    recruitStrip: {
+      paddingTop: 14,
+      paddingBottom: 10,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: c.border.subtle,
+      backgroundColor: c.bg.card,
+    },
+    recruitStripHeader: {
+      flexDirection: 'row',
+      alignItems: 'baseline',
+      justifyContent: 'space-between',
+      paddingHorizontal: 20,
+      marginBottom: 10,
+    },
+    recruitStripTitle: {
+      fontSize: 14,
+      fontWeight: '800',
+      color: c.text.primary,
+      letterSpacing: -0.2,
+    },
+    recruitStripMore: {
+      fontSize: 12,
+      fontWeight: '700',
+      color: c.brand.primary,
+    },
+    recruitScroll: {
+      paddingHorizontal: 20,
+      gap: 10,
+    },
+    recruitCard: {
+      width: 120,
+      backgroundColor: c.bg.subtle,
+      borderRadius: 14,
+      padding: 12,
+      alignItems: 'center',
+      gap: 6,
+    },
+    recruitCardAvatar: {
+      width: 44,
+      height: 44,
+      borderRadius: 22,
+      backgroundColor: c.bg.card,
+      alignItems: 'center',
+      justifyContent: 'center',
+      overflow: 'hidden',
+    },
+    recruitCardAvatarImg: { width: '100%', height: '100%' },
+    recruitCardAvatarText: {
+      fontSize: 16,
+      fontWeight: '900',
+      color: c.text.secondary,
+    },
+    recruitCardName: {
+      fontSize: 12,
+      fontWeight: '800',
+      color: c.text.primary,
+      textAlign: 'center',
+      width: '100%',
+    },
+    recruitCardMeta: {
+      fontSize: 10,
+      fontWeight: '700',
+      color: c.text.tertiary,
+      textAlign: 'center',
     },
     header: {
       flexDirection: 'row',
