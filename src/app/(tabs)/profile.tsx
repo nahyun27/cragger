@@ -569,7 +569,9 @@ function BadgesSection({
         `${badge.hint}\n\n(아직 획득하지 못했어요)`,
         undefined,
         undefined,
-        <BadgeIcon icon={badge.icon} color={c.text.muted} size={36} />,
+        <View style={{ opacity: 0.35 }}>
+          <BadgeIcon icon={badge.icon} color={c.text.muted} size={36} />
+        </View>,
       );
     }
   }
