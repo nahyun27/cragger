@@ -20,7 +20,7 @@ import { useProfile } from '@/hooks/use-profile';
 import { useRecentSessions } from '@/hooks/use-recent-sessions';
 import { useUserStats } from '@/hooks/use-user-stats';
 import { SessionRow } from '@/components/session/session-row';
-import { useThemeColors, type ThemeColors } from '@/lib/theme';
+import { useThemeColors, useThemePref, useEffectiveScheme, type ThemeColors } from '@/lib/theme';
 
 const KO_WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
 
@@ -61,7 +61,8 @@ function formatRelativeTime(iso: string): string {
 export default function HomeScreen() {
   const router = useRouter();
   const c = useThemeColors();
-  const s = useMemo(() => makeStyles(c), [c]);
+  const isDark = useEffectiveScheme() === 'dark';
+  const s = useMemo(() => makeStyles(c, isDark), [c, isDark]);
   const profileQ = useProfile();
   const weekQ = useHomeStats();
   const recentQ = useRecentSessions(3);
@@ -160,7 +161,7 @@ export default function HomeScreen() {
             
             <View style={s.recordBannerRight}>
               <View style={s.recordBannerButton}>
-                <Feather name="plus" size={18} color={c.text.primary} />
+                <Feather name="plus" size={18} color="#ffffff" />
               </View>
             </View>
           </View>
@@ -202,7 +203,7 @@ export default function HomeScreen() {
               <View style={s.metricGridDivider} />
               <View style={s.metricItem}>
                 <Text style={s.metricLabel}>최고 난이도</Text>
-                <Text style={[s.metricVal, { color: '#7c3aed' }]}>
+                <Text style={[s.metricVal, { color: isDark ? '#a78bfa' : '#7c3aed' }]}>
                   {weekQ.data.maxVGrade ?? '-'}
                 </Text>
               </View>
@@ -365,7 +366,8 @@ export default function HomeScreen() {
 function FavoriteGymsSection() {
   const router = useRouter();
   const c = useThemeColors();
-  const s = useMemo(() => makeStyles(c), [c]);
+  const isDark = useEffectiveScheme() === 'dark';
+  const s = useMemo(() => makeStyles(c, isDark), [c, isDark]);
   const { data: favorites, isLoading } = useFavoriteGyms();
 
   if (isLoading) {
@@ -473,7 +475,8 @@ function SectionHeader({
   onAction?: () => void;
 }) {
   const c = useThemeColors();
-  const s = useMemo(() => makeStyles(c), [c]);
+  const isDark = useEffectiveScheme() === 'dark';
+  const s = useMemo(() => makeStyles(c, isDark), [c, isDark]);
   return (
     <View style={s.sectionHeader}>
       <Text style={s.sectionTitle}>{title}</Text>
@@ -493,7 +496,7 @@ function SectionHeader({
 
 
 // ─── Styles ──────────────────────────────────────────────────
-function makeStyles(c: ThemeColors) {
+function makeStyles(c: ThemeColors, isDark: boolean) {
   return StyleSheet.create({
   container: {
     flex: 1,
@@ -544,7 +547,7 @@ function makeStyles(c: ThemeColors) {
     height: 44,
     borderRadius: 22,
     borderWidth: 2,
-    borderColor: '#ffffff',
+    borderColor: c.bg.card,
     backgroundColor: c.bg.subtle,
     shadowColor: c.shadow.color,
     shadowOpacity: 0.1,
@@ -562,7 +565,7 @@ function makeStyles(c: ThemeColors) {
     height: '100%',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#cffafe',
+    backgroundColor: c.bg.accent,
   },
   avatarFallbackText: {
     fontSize: 18,
@@ -579,7 +582,7 @@ function makeStyles(c: ThemeColors) {
     opacity: 0.95,
   },
   recordBannerCard: {
-    backgroundColor: '#0f172a',
+    backgroundColor: isDark ? '#1e293b' : '#0f172a',
     borderRadius: 24,
     padding: 20,
     flexDirection: 'row',
@@ -587,8 +590,8 @@ function makeStyles(c: ThemeColors) {
     justifyContent: 'space-between',
     position: 'relative',
     overflow: 'hidden',
-    shadowColor: '#4f46e5',
-    shadowOpacity: 0.2,
+    shadowColor: c.shadow.color,
+    shadowOpacity: c.shadow.opacity,
     shadowRadius: 15,
     shadowOffset: { width: 0, height: 8 },
     elevation: 6,
@@ -629,7 +632,7 @@ function makeStyles(c: ThemeColors) {
     letterSpacing: -0.4,
   },
   recordBannerSubtitle: {
-    color: c.text.muted,
+    color: '#94a3b8',
     fontSize: 11,
     fontWeight: '600',
     lineHeight: 15,
@@ -642,10 +645,10 @@ function makeStyles(c: ThemeColors) {
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: c.bg.card,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#000000',
+    shadowColor: c.shadow.color,
     shadowOpacity: 0.1,
     shadowRadius: 4,
     shadowOffset: { width: 0, height: 2 },
@@ -920,7 +923,7 @@ function makeStyles(c: ThemeColors) {
     marginTop: 6,
   },
   topGymVisitTag: {
-    backgroundColor: '#cffafe',
+    backgroundColor: c.bg.accent,
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 6,
@@ -967,7 +970,7 @@ function makeStyles(c: ThemeColors) {
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: '#e0f2fe',
+    backgroundColor: c.bg.accent,
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
@@ -979,7 +982,7 @@ function makeStyles(c: ThemeColors) {
   compactAvatarText: {
     fontSize: 12,
     fontWeight: '800',
-    color: '#0369a1',
+    color: c.brand.primaryDeep,
   },
   communityAuthorName: {
     fontSize: 12,
@@ -1160,7 +1163,7 @@ function makeStyles(c: ThemeColors) {
     backgroundColor: c.bg.accent,
   },
   favGymTagTextAccent: {
-    color: '#0891b2',
+    color: c.brand.primaryDeep,
   },
   });
 }

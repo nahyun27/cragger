@@ -15,6 +15,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 
+import { Sheet } from '@/components/ui/sheet';
+
 import { ShoeSizeGuide } from '@/components/shoes/shoe-size-guide';
 import { useMyCrews, type CrewSummary } from '@/hooks/use-crews';
 import {
@@ -1338,56 +1340,42 @@ function ProfileMenuModal({
   }
 
   return (
-    <Modal
-      transparent
-      visible={visible}
-      animationType="slide"
-      onRequestClose={onClose}
-    >
-      <View style={s.modalOverlay}>
-        <Pressable style={s.modalBackdrop} onPress={onClose} />
-        <View style={s.modalContent}>
-          <View style={s.modalDragHandle} />
+    <Sheet visible={visible} onClose={onClose} variant="bottom" title="설정 및 메뉴">
+      <MenuButton
+        icon="edit-3"
+        label="프로필 편집"
+        onPress={() => { onClose(); onEditProfile(); }}
+      />
+      <MenuButton
+        icon="moon"
+        label={`테마 · ${THEME_PREF_LABEL[themePref]}`}
+        onPress={() => { onClose(); handleTheme(); }}
+      />
+      <MenuButton
+        icon="bell"
+        label="알림 설정"
+        onPress={() => { onClose(); Alert.alert('알림 설정', '준비 중인 기능입니다.'); }}
+      />
+      <MenuButton
+        icon="lock"
+        label="개인정보 처리방침"
+        onPress={() => { onClose(); Alert.alert('안내', '준비 중인 기능입니다.'); }}
+      />
+      <MenuButton
+        icon="help-circle"
+        label="고객센터 / 문의하기"
+        onPress={() => { onClose(); Alert.alert('고객센터', '준비 중인 기능입니다.'); }}
+      />
 
-          <Text style={s.modalTitle}>설정 및 메뉴</Text>
+      <View style={s.modalDivider} />
 
-          <MenuButton
-            icon="edit-3"
-            label="프로필 편집"
-            onPress={() => { onClose(); onEditProfile(); }}
-          />
-          <MenuButton
-            icon="moon"
-            label={`테마 · ${THEME_PREF_LABEL[themePref]}`}
-            onPress={() => { onClose(); handleTheme(); }}
-          />
-          <MenuButton
-            icon="bell"
-            label="알림 설정"
-            onPress={() => { onClose(); Alert.alert('알림 설정', '준비 중인 기능입니다.'); }}
-          />
-          <MenuButton
-            icon="lock"
-            label="개인정보 처리방침"
-            onPress={() => { onClose(); Alert.alert('안내', '준비 중인 기능입니다.'); }}
-          />
-          <MenuButton
-            icon="help-circle"
-            label="고객센터 / 문의하기"
-            onPress={() => { onClose(); Alert.alert('고객센터', '준비 중인 기능입니다.'); }}
-          />
-
-          <View style={s.modalDivider} />
-
-          <MenuButton
-            icon="log-out"
-            label="로그아웃"
-            color={c.status.danger}
-            onPress={() => { onClose(); onLogout(); }}
-          />
-        </View>
-      </View>
-    </Modal>
+      <MenuButton
+        icon="log-out"
+        label="로그아웃"
+        color={c.status.danger}
+        onPress={() => { onClose(); onLogout(); }}
+      />
+    </Sheet>
   );
 }
 
