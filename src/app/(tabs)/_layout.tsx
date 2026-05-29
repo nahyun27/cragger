@@ -3,7 +3,6 @@ import { Tabs } from 'expo-router';
 import React from 'react';
 
 import { useThemeColors } from '@/lib/theme';
-import { SimpleHomeIcon } from '@/components/ui/simple-home-icon';
 
 export default function TabLayout() {
   const c = useThemeColors();
@@ -33,7 +32,7 @@ export default function TabLayout() {
         options={{
           title: '홈',
           tabBarIcon: ({ color, size, focused }) => (
-            <SimpleHomeIcon size={size} color={color} focused={focused} />
+            <Ionicons name={focused ? 'home' : 'home-outline'} size={size} color={color} />
           ),
         }}
       />
@@ -42,7 +41,7 @@ export default function TabLayout() {
         options={{
           title: '기록',
           tabBarIcon: ({ color, size, focused }) => (
-            <Ionicons name={focused ? 'journal' : 'journal-outline'} size={size} color={color} />
+            <Ionicons name={focused ? 'create' : 'create-outline'} size={size} color={color} />
           ),
         }}
       />
@@ -51,7 +50,7 @@ export default function TabLayout() {
         options={{
           title: '암장',
           tabBarIcon: ({ color, size, focused }) => (
-            <Ionicons name={focused ? 'location' : 'location-outline'} size={size} color={color} />
+            <Ionicons name={focused ? 'business' : 'business-outline'} size={size} color={color} />
           ),
         }}
       />
