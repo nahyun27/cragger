@@ -214,9 +214,15 @@ function checkBadge(key: string, d: UserBadgeData): boolean {
     case 'session_50':    return d.totalSessions >= 50;
     case 'session_100':   return d.totalSessions >= 100;
     // 그레이드 (볼더링 felt_grade)
+    case 'first_v0':      return d.maxV >= 0;
+    case 'first_v1':      return d.maxV >= 1;
+    case 'first_v2':      return d.maxV >= 2;
     case 'first_v3':      return d.maxV >= 3;
+    case 'first_v4':      return d.maxV >= 4;
     case 'first_v5':      return d.maxV >= 5;
+    case 'first_v6':      return d.maxV >= 6;
     case 'first_v7':      return d.maxV >= 7;
+    case 'first_v8':      return d.maxV >= 8;
     case 'first_v9':      return d.maxV >= 9;
     // 리드 (route_grade)
     case 'first_lead_510':return d.maxLead >= 10;
