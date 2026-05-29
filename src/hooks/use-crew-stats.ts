@@ -213,9 +213,10 @@ export function useCrewGradeDistribution(crewId: string | undefined) {
         if (prev == null || n > prev) memberMax.set(uid, n);
       }
 
-      // Grade buckets — count members per integer V grade
+      // 기록 없는 멤버 = V0 default
       const bucketMap = new Map<number, number>();
-      for (const [, maxV] of memberMax) {
+      for (const uid of memberIds) {
+        const maxV = memberMax.get(uid) ?? 0;
         const rounded = Math.round(maxV);
         bucketMap.set(rounded, (bucketMap.get(rounded) ?? 0) + 1);
       }
@@ -223,7 +224,7 @@ export function useCrewGradeDistribution(crewId: string | undefined) {
         .map(([vNum, count]) => ({ vGrade: `V${vNum}`, vNum, count }))
         .sort((a, b) => a.vNum - b.vNum);
 
-      const myVNum = meId ? (memberMax.get(meId) ?? null) : null;
+      const myVNum = meId ? (memberMax.get(meId) ?? 0) : null;
 
       return { buckets, myVNum: myVNum != null ? Math.round(myVNum) : null };
     },

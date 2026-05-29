@@ -8,7 +8,6 @@ import {
   Modal,
   Pressable,
   ScrollView,
-  Share,
   Text,
   TextInput,
   View,
@@ -16,6 +15,7 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
+import * as Clipboard from 'expo-clipboard';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 
@@ -127,16 +127,12 @@ export default function CrewDetailScreen() {
 
   async function handleCopyCode() {
     if (!data) return;
-    // Sheet 가 떠있는 상태에서 다른 modal 을 스택하면 dismiss 후 터치가 막히는 RN 이슈.
-    // → Sheet 닫고 native Share sheet 으로 공유(=복사 가능).
+    await Clipboard.setStringAsync(data.invite_code);
+    // Sheet 닫은 다음 알림 — 모달 스택 충돌 회피.
     setShowInviteCode(false);
-    try {
-      await Share.share({
-        message: `크루 초대코드: ${data.invite_code}`,
-      });
-    } catch {
-      // 사용자 취소 / 시스템 거부 — 무시
-    }
+    setTimeout(() => {
+      customAlert('복사됨', `초대코드 ${data.invite_code} 가 클립보드에 복사됐어요.`);
+    }, 250);
   }
 
   function handleLeave() {
@@ -350,7 +346,7 @@ export default function CrewDetailScreen() {
               onClose={() => setShowInviteCode(false)}
               variant="center"
               title="멤버십 초대코드"
-              subtitle="탭하면 공유 시트가 열려요 (복사 포함)"
+              subtitle="탭하면 복사돼요"
             >
               <View style={[s.inviteCard, { borderColor: colors.border, marginHorizontal: 0, marginBottom: 0 }]}>
                 <View style={[s.inviteBgDeco, { backgroundColor: colors.bg }]} />
@@ -361,8 +357,8 @@ export default function CrewDetailScreen() {
                         {data.invite_code}
                       </Text>
                       <View style={[s.copyBadge, { backgroundColor: colors.text, shadowColor: colors.text }]}>
-                        <Feather name="share-2" size={12} color="#ffffff" />
-                        <Text style={s.copyBadgeText}>공유</Text>
+                        <Feather name="copy" size={12} color="#ffffff" />
+                        <Text style={s.copyBadgeText}>복사</Text>
                       </View>
                     </View>
                   )}
