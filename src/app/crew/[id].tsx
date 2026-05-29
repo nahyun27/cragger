@@ -90,7 +90,7 @@ export default function CrewDetailScreen() {
   const c = useThemeColors();
   const s = useMemo(() => makeStyles(c), [c]);
 
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, tab: initialTab } = useLocalSearchParams<{ id: string; tab?: string }>();
   const router = useRouter();
   const { session: authSession } = useAuth();
   const meId = authSession?.user.id;
@@ -102,7 +102,11 @@ export default function CrewDetailScreen() {
   const [showInviteCode, setShowInviteCode] = useState(false);
 
   type TabState = 'home' | 'news' | 'activity' | 'members';
-  const [activeTab, setActiveTab] = useState<TabState>('home');
+  const validInitial: TabState =
+    initialTab === 'news' || initialTab === 'activity' || initialTab === 'members'
+      ? initialTab
+      : 'home';
+  const [activeTab, setActiveTab] = useState<TabState>(validInitial);
 
   if (isLoading) {
     return (

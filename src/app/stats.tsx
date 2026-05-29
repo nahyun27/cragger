@@ -77,14 +77,14 @@ export default function StatsScreen() {
           style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
         >
           <View style={s.backBtn}>
-            <Feather name="arrow-left" size={22} color={c.text.primary} />
+            <Feather name="arrow-left" size={24} color={c.text.primary} />
           </View>
         </Pressable>
         <Text style={s.headerTitle}>전체 통계</Text>
         <View style={{ width: 38 }} />
       </View>
 
-      <ScrollView contentContainerStyle={s.scrollContent}>
+      <ScrollView style={{ backgroundColor: c.bg.primary }} contentContainerStyle={s.scrollContent}>
         {/* 1) 추이 — scope 무관 항상 최근 6개월 */}
         {deep && deep.monthly.some((m) => m.sessionCount > 0 || m.sendCount > 0) && (
           <MonthlyTrendCard deep={{ monthly: deep.monthly }} title="최근 6개월 추이" />
@@ -467,30 +467,30 @@ function Divider() {
 
 function makeStyles(c: ThemeColors) {
   return StyleSheet.create({
-  container: { flex: 1, backgroundColor: c.bg.primary },
+  container: { flex: 1, backgroundColor: c.bg.card },
 
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 12,
-    paddingVertical: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
     backgroundColor: c.bg.card,
     borderBottomWidth: 1,
     borderColor: c.border.subtle,
   },
   backBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 10,
+    width: 40,
+    height: 40,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
   },
   headerTitle: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '800',
     color: c.text.primary,
-    letterSpacing: -0.3,
+    letterSpacing: -0.4,
   },
 
   toggleWrap: {

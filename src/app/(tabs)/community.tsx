@@ -442,13 +442,13 @@ function makeStyles(c: ThemeColors) {
       backgroundColor: c.bg.card,
     },
     headerTitle: {
-      fontSize: 24,
+      fontSize: 26,
       fontWeight: '800',
       color: c.text.primary,
-      letterSpacing: -0.5,
+      letterSpacing: -0.6,
     },
     headerSubtitle: {
-      fontSize: 12,
+      fontSize: 13,
       color: c.text.tertiary,
       marginTop: 2,
     },
@@ -508,7 +508,7 @@ function makeStyles(c: ThemeColors) {
       borderColor: c.border.subtle,
     },
     chipText: {
-      fontSize: 13,
+      fontSize: 14,
       fontWeight: '700',
       letterSpacing: -0.2,
     },
@@ -556,15 +556,15 @@ function makeStyles(c: ThemeColors) {
       borderColor: c.border.subtle,
     },
     emptyTitle: {
-      fontSize: 16,
+      fontSize: 18,
       fontWeight: '800',
       color: c.text.primary,
     },
     emptySubtitle: {
-      fontSize: 12,
+      fontSize: 14,
       color: c.text.tertiary,
       textAlign: 'center',
-      lineHeight: 18,
+      lineHeight: 20,
     },
     emptyBtn: {
       marginTop: 8,
@@ -575,7 +575,7 @@ function makeStyles(c: ThemeColors) {
     },
     emptyBtnText: {
       color: c.brand.onPrimary,
-      fontSize: 13,
+      fontSize: 14,
       fontWeight: '700',
     },
     listContent: {
@@ -621,18 +621,18 @@ function makeStyles(c: ThemeColors) {
     avatarImage: { width: '100%', height: '100%' },
     avatarTextVal: {
       fontWeight: '800',
-      fontSize: 14,
+      fontSize: 15,
     },
     userText: {
       justifyContent: 'center',
     },
     userName: {
-      fontSize: 14,
+      fontSize: 15,
       fontWeight: '700',
       color: c.text.primary,
     },
     timeText: {
-      fontSize: 10,
+      fontSize: 11,
       color: c.text.muted,
       marginTop: 2,
     },
@@ -643,21 +643,21 @@ function makeStyles(c: ThemeColors) {
       borderRadius: 10,
     },
     badgeText: {
-      fontSize: 10,
+      fontSize: 11,
       fontWeight: '800',
       letterSpacing: 0.2,
     },
     cardTitle: {
-      fontSize: 15,
+      fontSize: 17,
       fontWeight: '800',
       color: c.text.primary,
-      lineHeight: 20,
+      lineHeight: 24,
       marginBottom: 6,
     },
     cardBody: {
-      fontSize: 13,
+      fontSize: 15,
       color: c.text.secondary,
-      lineHeight: 18,
+      lineHeight: 22,
       marginBottom: 12,
     },
     cardImageWrapper: {
@@ -683,7 +683,7 @@ function makeStyles(c: ThemeColors) {
       marginBottom: 8,
     },
     locationText: {
-      fontSize: 11,
+      fontSize: 12,
       fontWeight: '700',
       color: c.text.secondary,
     },
@@ -705,7 +705,7 @@ function makeStyles(c: ThemeColors) {
       flexShrink: 0,
     },
     metricCountText: {
-      fontSize: 12,
+      fontSize: 13,
       fontWeight: '700',
       color: c.text.tertiary,
     },
@@ -730,7 +730,7 @@ function makeStyles(c: ThemeColors) {
     },
     meetupInfoText: {
       flex: 1,
-      fontSize: 12,
+      fontSize: 13,
       fontWeight: '700',
       color: c.status.warning,
     },
@@ -740,7 +740,7 @@ function makeStyles(c: ThemeColors) {
       borderRadius: 6,
     },
     meetupStatusText: {
-      fontSize: 10,
+      fontSize: 11,
       fontWeight: '800',
     },
   });

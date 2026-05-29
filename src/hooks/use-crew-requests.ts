@@ -20,10 +20,15 @@ export type CrewJoinRequest = {
     display_name: string | null;
     avatar_url: string | null;
   } | null;
+  crew: {
+    id: string;
+    name: string;
+    image_url: string | null;
+  } | null;
 };
 
 const REQUEST_COLS =
-  'id, crew_id, user_id, message, status, created_at, decided_at, decided_by, user:profiles!crew_join_requests_user_id_fkey(id, username, display_name, avatar_url)';
+  'id, crew_id, user_id, message, status, created_at, decided_at, decided_by, user:profiles!crew_join_requests_user_id_fkey(id, username, display_name, avatar_url), crew:crews(id, name, image_url)';
 
 // ── 내 pending 요청 목록 ─────────────────────────────────────
 export function useMyJoinRequests() {

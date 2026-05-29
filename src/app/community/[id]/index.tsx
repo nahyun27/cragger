@@ -263,7 +263,7 @@ export default function PostDetailScreen() {
       </View>
 
       <KeyboardAvoidingView
-        style={{ flex: 1 }}
+        style={{ flex: 1, backgroundColor: c.bg.primary }}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <ScrollView style={{ flex: 1 }} contentContainerStyle={s.scrollContent}>
@@ -872,7 +872,7 @@ function makeStyles(c: ThemeColors) {
   return StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: c.bg.primary,
+    backgroundColor: c.bg.card,
   },
   loadingContainer: {
     flex: 1,
@@ -911,15 +911,15 @@ function makeStyles(c: ThemeColors) {
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingVertical: 14,
     backgroundColor: c.bg.card,
     borderBottomWidth: 1,
     borderColor: c.border.subtle,
   },
   headerAction: {
-    width: 38,
-    height: 38,
-    borderRadius: 10,
+    width: 40,
+    height: 40,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -927,9 +927,10 @@ function makeStyles(c: ThemeColors) {
     flexDirection: 'row',
   },
   headerTitle: {
-    fontSize: 16,
-    fontWeight: '700',
+    fontSize: 18,
+    fontWeight: '800',
     color: c.text.primary,
+    letterSpacing: -0.4,
   },
   scrollContent: {
     padding: 16,
@@ -989,19 +990,19 @@ function makeStyles(c: ThemeColors) {
   avatarImage: { width: '100%', height: '100%' },
   avatarTextVal: {
     fontWeight: '800',
-    fontSize: 15,
+    fontSize: 16,
   },
   authorInfo: {
     flex: 1,
     marginLeft: 12,
   },
   authorName: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '700',
     color: c.text.primary,
   },
   timestamp: {
-    fontSize: 11,
+    fontSize: 12,
     color: c.text.muted,
     marginTop: 2,
   },
@@ -1012,21 +1013,21 @@ function makeStyles(c: ThemeColors) {
     borderRadius: 10,
   },
   badgeText: {
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: '800',
   },
   postTitle: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '800',
     color: c.text.primary,
-    lineHeight: 26,
+    lineHeight: 28,
     marginBottom: 8,
     letterSpacing: -0.4,
   },
   postBody: {
-    fontSize: 14,
+    fontSize: 16,
     color: c.text.secondary,
-    lineHeight: 22,
+    lineHeight: 26,
   },
   imageGrid: {
     gap: 8,
@@ -1055,7 +1056,7 @@ function makeStyles(c: ThemeColors) {
     flexShrink: 0,
   },
   metricText: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '700',
     color: c.text.tertiary,
   },
@@ -1078,13 +1079,13 @@ function makeStyles(c: ThemeColors) {
     color: c.text.secondary,
   },
   commentsTitle: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '800',
     color: c.text.primary,
     marginBottom: 12,
   },
   noCommentsText: {
-    fontSize: 13,
+    fontSize: 14,
     color: c.text.muted,
     textAlign: 'center',
     lineHeight: 20,
@@ -1112,7 +1113,7 @@ function makeStyles(c: ThemeColors) {
   avatarSmallImage: { width: '100%', height: '100%' },
   avatarTextValSmall: {
     fontWeight: '800',
-    fontSize: 11,
+    fontSize: 12,
   },
   commentContent: {
     flex: 1,
@@ -1130,18 +1131,18 @@ function makeStyles(c: ThemeColors) {
     gap: 8,
   },
   commentAuthor: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '700',
     color: c.text.primary,
   },
   commentTime: {
-    fontSize: 10,
+    fontSize: 11,
     color: c.text.muted,
   },
   commentBody: {
-    fontSize: 13,
+    fontSize: 14,
     color: c.text.secondary,
-    lineHeight: 18,
+    lineHeight: 22,
   },
   commentItemReply: {
     marginLeft: 36,
@@ -1160,7 +1161,7 @@ function makeStyles(c: ThemeColors) {
     paddingHorizontal: 2,
   },
   commentActionText: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '700',
     color: c.text.tertiary,
   },
@@ -1170,7 +1171,7 @@ function makeStyles(c: ThemeColors) {
     borderRadius: 12,
     paddingHorizontal: 10,
     paddingVertical: 8,
-    fontSize: 13,
+    fontSize: 14,
     color: c.text.primary,
     backgroundColor: c.bg.card,
     minHeight: 40,
@@ -1216,7 +1217,7 @@ function makeStyles(c: ThemeColors) {
   },
   replyBannerText: {
     flex: 1,
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '700',
     color: c.text.secondary,
   },
@@ -1239,7 +1240,7 @@ function makeStyles(c: ThemeColors) {
     paddingHorizontal: 16,
     paddingTop: 10,
     paddingBottom: 10,
-    fontSize: 14,
+    fontSize: 15,
     color: c.text.primary,
     maxHeight: 100,
     backgroundColor: c.bg.primary,
@@ -1285,7 +1286,7 @@ function makeStyles(c: ThemeColors) {
     gap: 6,
   },
   meetupCardTitle: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '800',
     color: '#b45309',
     letterSpacing: -0.2,
@@ -1306,7 +1307,7 @@ function makeStyles(c: ThemeColors) {
   },
   meetupCardRowText: {
     flex: 1,
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '700',
     color: '#7c2d12',
   },
@@ -1333,7 +1334,7 @@ function makeStyles(c: ThemeColors) {
   },
   meetupJoinBtnPrimaryText: {
     color: '#ffffff',
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '800',
   },
   meetupJoinBtnSecondary: {
@@ -1343,7 +1344,7 @@ function makeStyles(c: ThemeColors) {
   },
   meetupJoinBtnSecondaryText: {
     color: '#b45309',
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '800',
   },
   meetupJoinBtnDisabled: {
@@ -1353,7 +1354,7 @@ function makeStyles(c: ThemeColors) {
   },
   meetupJoinBtnDisabledText: {
     color: c.text.muted,
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '800',
   },
   meetupHostPill: {
@@ -1382,7 +1383,7 @@ function makeStyles(c: ThemeColors) {
     gap: 8,
   },
   meetupParticipantsTitle: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '800',
     color: '#b45309',
   },
@@ -1429,7 +1430,7 @@ function makeStyles(c: ThemeColors) {
     fontWeight: '800',
   },
   participantName: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '700',
     color: c.text.secondary,
     maxWidth: 80,

@@ -23,6 +23,11 @@ import { Sheet } from '@/components/ui/sheet';
 import { ShoeSizeGuide } from '@/components/shoes/shoe-size-guide';
 import { useMyCrews, type CrewSummary } from '@/hooks/use-crews';
 import {
+  useCancelJoinRequest,
+  useMyJoinRequests,
+  type CrewJoinRequest,
+} from '@/hooks/use-crew-requests';
+import {
   useProfile,
   type ArchType,
   type FootShape,
@@ -743,6 +748,68 @@ function CrewsSection() {
           ))}
         </View>
       )}
+
+      <PendingRequestsBlock />
+    </View>
+  );
+}
+
+// 내가 보낸 가입 요청 (pending) — 크루 목록 아래에 표시
+function PendingRequestsBlock() {
+  const c = useThemeColors();
+  const s = React.useMemo(() => makeStyles(c), [c]);
+  const { data: requests = [] } = useMyJoinRequests();
+  if (requests.length === 0) return null;
+  return (
+    <View style={s.pendingReqsBlock}>
+      <View style={s.pendingReqsHeader}>
+        <Feather name="clock" size={12} color={c.text.tertiary} />
+        <Text style={s.pendingReqsLabel}>
+          승인 대기 중 {requests.length}
+        </Text>
+      </View>
+      {requests.map((r) => (
+        <PendingRequestRow key={r.id} request={r} />
+      ))}
+    </View>
+  );
+}
+
+function PendingRequestRow({ request }: { request: CrewJoinRequest }) {
+  const c = useThemeColors();
+  const s = React.useMemo(() => makeStyles(c), [c]);
+  const cancel = useCancelJoinRequest();
+  const crewName = request.crew?.name ?? '크루';
+
+  function handleCancel() {
+    customAlert(`${crewName} 가입 요청을 취소할까요?`, undefined, [
+      { text: '계속 대기', style: 'cancel' },
+      {
+        text: '요청 취소',
+        style: 'destructive',
+        onPress: () =>
+          cancel
+            .mutateAsync(request.id)
+            .catch((e) =>
+              customAlert('실패', e instanceof Error ? e.message : '오류'),
+            ),
+      },
+    ]);
+  }
+
+  return (
+    <View style={s.pendingReqRow}>
+      <View style={{ flex: 1, gap: 2 }}>
+        <Text style={s.pendingReqCrewName} numberOfLines={1}>{crewName}</Text>
+        <Text style={s.pendingReqMeta}>크루장 승인 대기</Text>
+      </View>
+      <Pressable onPress={handleCancel} hitSlop={4}>
+        {({ pressed }) => (
+          <View style={[s.pendingReqCancelBtn, pressed && { opacity: 0.6 }]}>
+            <Text style={s.pendingReqCancelText}>취소</Text>
+          </View>
+        )}
+      </Pressable>
     </View>
   );
 }
@@ -2660,6 +2727,58 @@ function makeStyles(c: ThemeColors) {
   // Crew Section Styles
   crewList: {
     gap: 12,
+  },
+  pendingReqsBlock: {
+    marginTop: 16,
+    paddingTop: 14,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: c.border.subtle,
+    gap: 10,
+  },
+  pendingReqsHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 4,
+  },
+  pendingReqsLabel: {
+    fontSize: 11,
+    color: c.text.tertiary,
+    fontWeight: '700',
+    letterSpacing: 0.2,
+    textTransform: 'uppercase',
+  },
+  pendingReqRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: c.bg.subtle,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderRadius: 12,
+  },
+  pendingReqCrewName: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: c.text.primary,
+  },
+  pendingReqMeta: {
+    fontSize: 11,
+    color: c.text.tertiary,
+    fontWeight: '600',
+  },
+  pendingReqCancelBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    backgroundColor: c.bg.card,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: c.border.subtle,
+  },
+  pendingReqCancelText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: c.text.secondary,
   },
   crewCard: {
     flexDirection: 'row',

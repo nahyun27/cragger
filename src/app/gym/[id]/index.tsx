@@ -84,19 +84,19 @@ export default function GymDetailScreen() {
     .join(' · ');
 
   return (
-    <SafeAreaView className="flex-1 bg-background-primary" edges={['top', 'bottom']}>
+    <SafeAreaView className="flex-1 bg-background-card" edges={['top', 'bottom']}>
       {/* Header */}
-      <View className="flex-row items-center justify-between px-4 py-2 border-b border-border-subtle">
-        <Pressable onPress={() => router.back()} className="p-2 -ml-2 active:opacity-60" hitSlop={8}>
+      <View className="flex-row items-center justify-between px-4 py-[14px] bg-background-card border-b border-border-subtle">
+        <Pressable onPress={() => router.back()} className="w-10 h-10 rounded-xl items-center justify-center -ml-2 active:opacity-60" hitSlop={8}>
           <Feather name="arrow-left" size={24} color={c.text.primary} />
         </Pressable>
-        <Text className="text-text-primary text-base font-bold">암장 정보</Text>
+        <Text className="text-text-primary text-[18px] font-extrabold tracking-[-0.4px]">암장 정보</Text>
         <Pressable
           onPress={() => {
             if (!id) return;
             toggleFavorite.mutate({ gymId: id, currentlyFavorite: favorited });
           }}
-          className="p-2 -mr-2 active:opacity-60"
+          className="w-10 h-10 rounded-xl items-center justify-center -mr-2 active:opacity-60"
           hitSlop={8}
         >
           <Ionicons
@@ -107,7 +107,7 @@ export default function GymDetailScreen() {
         </Pressable>
       </View>
 
-      <ScrollView className="flex-1" contentContainerClassName="p-5 gap-6">
+      <ScrollView className="flex-1 bg-background-primary" contentContainerClassName="p-5 gap-6">
         {/* Title Section */}
         <View className="gap-1.5">
           <View className="flex-row items-baseline gap-2 flex-wrap">
