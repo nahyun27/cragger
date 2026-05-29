@@ -132,7 +132,7 @@ export default function ProfileScreen() {
                   s.selectedBadgeIconWrap,
                   { backgroundColor: selectedBadge.bg, borderColor: selectedBadge.color }
                 ]}>
-                  <BadgeIcon icon={selectedBadge.icon} color={selectedBadge.color} size={30} />
+                  <BadgeIcon icon={selectedBadge.icon} color={selectedBadge.color} size={12} />
                 </View>
               )}
             </View>
@@ -545,12 +545,24 @@ function BadgesSection({ onSelectBadge }: { onSelectBadge: (badge: BadgeDef) => 
     const earnedAt = earnedMap.get(badge.key);
     if (earnedAt) {
       const dateStr = new Date(earnedAt).toLocaleDateString('ko-KR');
-      customAlert(badge.name, `달성일: ${dateStr}\n\n${badge.hint}`, [
-        { text: '닫기', style: 'cancel' },
-        { text: '대표 배지로 설정', onPress: () => onSelectBadge(badge) },
-      ]);
+      customAlert(
+        badge.name,
+        `달성일: ${dateStr}\n\n${badge.hint}`,
+        [
+          { text: '닫기', style: 'cancel' },
+          { text: '대표 배지로 설정', onPress: () => onSelectBadge(badge) },
+        ],
+        undefined,
+        <BadgeIcon icon={badge.icon} color={badge.color} size={36} />,
+      );
     } else {
-      customAlert('미획득 배지', `${badge.hint}\n\n(아직 획득하지 못했어요)`);
+      customAlert(
+        '미획득 배지',
+        `${badge.hint}\n\n(아직 획득하지 못했어요)`,
+        undefined,
+        undefined,
+        <BadgeIcon icon={badge.icon} color={c.text.muted} size={36} />,
+      );
     }
   }
 
@@ -1609,12 +1621,13 @@ function makeStyles(c: ThemeColors) {
     gap: 6,
   },
   selectedBadgeIconWrap: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    borderWidth: 1.5,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
   },
   selectedBadgeTextIcon: {
     fontSize: 10,

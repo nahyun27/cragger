@@ -69,19 +69,22 @@ export function BadgeIcon({ icon, color, size = 20 }: BadgeIconProps) {
     );
   }
 
-  // 세션 — 'session-N'
+  // 세션 — 'session-N' (원형)
   if (icon.startsWith('session-')) {
     const num = icon.split('-')[1];
     return (
       <View style={[sessionStyles.outer, {
         width: size * 1.6,
         height: size * 1.6,
-        borderRadius: size * 0.4,
+        borderRadius: size * 0.8,
         backgroundColor: color + '22',
         borderColor: color,
       }]}>
-        <Feather name="calendar" size={size * 0.55} color={color} />
-        <Text style={[sessionStyles.text, { fontSize: size * 0.5, color }]}>{num}</Text>
+        <Feather name="calendar" size={size * 0.5} color={color} style={{ marginBottom: -1 }} />
+        <Text style={[sessionStyles.text, {
+          fontSize: num.length >= 3 ? size * 0.42 : size * 0.5,
+          color,
+        }]}>{num}</Text>
       </View>
     );
   }
@@ -140,22 +143,59 @@ export function BadgeIcon({ icon, color, size = 20 }: BadgeIconProps) {
     );
   }
 
-  // 색깔 마스터 — 다색 점 4개
+  // 색깔 마스터 — 실제 화가의 팔레트 (둥근 보드 + 엄지 구멍 + 5색 페인트 블롭)
   if (icon === 'palette') {
+    const s = size;
+    const outer = s * 1.6;
+    const dotSize = s * 0.34;
+    const dotR = dotSize / 2;
+    // 5색 페인트 — 원 둘레 시계방향으로 배치 (엄지 구멍 위치 빼고)
+    // 각도: -150° (상단 좌), -100° (상단), -50° (상단 우), 0° (우), 50° (하단 우)
+    const center = outer / 2;
+    const r = s * 0.55;
+    const dots = [
+      { angle: -150, color: '#ef4444' },
+      { angle: -100, color: '#f59e0b' },
+      { angle: -50,  color: '#eab308' },
+      { angle: 0,    color: '#22c55e' },
+      { angle: 50,   color: '#3b82f6' },
+    ];
     return (
-      <View style={[paletteStyles.outer, {
-        width: size * 1.6,
-        height: size * 1.6,
-        borderRadius: size * 0.4,
-      }]}>
-        {['#ef4444', '#22c55e', '#3b82f6', '#a855f7'].map((c, i) => (
-          <View key={i} style={[paletteStyles.dot, {
-            width: size * 0.4,
-            height: size * 0.4,
-            borderRadius: size * 0.2,
-            backgroundColor: c,
-          }]} />
-        ))}
+      <View style={{
+        width: outer,
+        height: outer,
+        borderRadius: outer / 2,
+        backgroundColor: '#fbbf24',
+        borderWidth: StyleSheet.hairlineWidth,
+        borderColor: '#d97706',
+      }}>
+        {/* 엄지 구멍 — 좌하단 안쪽 */}
+        <View style={{
+          position: 'absolute',
+          width: s * 0.55,
+          height: s * 0.55,
+          borderRadius: s * 0.275,
+          backgroundColor: '#fef3c7',
+          top: outer * 0.55,
+          left: outer * 0.18,
+        }} />
+        {/* 페인트 블롭들 */}
+        {dots.map(({ angle, color: dotColor }, i) => {
+          const rad = (angle * Math.PI) / 180;
+          const x = center + r * Math.cos(rad) - dotR;
+          const y = center + r * Math.sin(rad) - dotR;
+          return (
+            <View key={i} style={{
+              position: 'absolute',
+              width: dotSize,
+              height: dotSize,
+              borderRadius: dotR,
+              backgroundColor: dotColor,
+              top: y,
+              left: x,
+            }} />
+          );
+        })}
       </View>
     );
   }
@@ -234,15 +274,3 @@ const rainbowStyles = StyleSheet.create({
   },
 });
 
-const paletteStyles = StyleSheet.create({
-  outer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    backgroundColor: '#f8fafc',
-    padding: 2,
-    gap: 2,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  dot: {},
-});

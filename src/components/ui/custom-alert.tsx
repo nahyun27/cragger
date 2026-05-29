@@ -18,6 +18,7 @@ type AlertState = {
   message?: string;
   buttons?: AlertButton[];
   options?: AlertOptions;
+  icon?: React.ReactNode;  // 헤더 영역에 직접 렌더할 ReactNode (BadgeIcon 등)
 };
 
 let setAlertStateGlobal: React.Dispatch<React.SetStateAction<AlertState>> | null = null;
@@ -27,9 +28,10 @@ export function customAlert(
   message?: string,
   buttons?: AlertButton[],
   options?: AlertOptions,
+  icon?: React.ReactNode,
 ) {
   if (setAlertStateGlobal) {
-    setAlertStateGlobal({ visible: true, title, message, buttons, options });
+    setAlertStateGlobal({ visible: true, title, message, buttons, options, icon });
   } else {
     console.warn('CustomAlert is not mounted.');
   }
@@ -114,7 +116,11 @@ export function CustomAlert() {
       <Animated.View style={[s.overlay, { opacity }]}>
         <Pressable style={StyleSheet.absoluteFill} onPress={handleDismiss} />
         <Animated.View style={[s.alertBox, { transform: [{ scale }] }]}>
-          {headerEmoji ? (
+          {state.icon ? (
+            <View style={s.iconWrap}>
+              <View style={s.customIconHolder}>{state.icon}</View>
+            </View>
+          ) : headerEmoji ? (
             <View style={s.iconWrap}>
               <View style={s.iconCircle}>
                 <Text style={s.iconText}>{headerEmoji}</Text>
@@ -284,6 +290,10 @@ function makeStyles(c: ReturnType<typeof useThemeColors>) {
     },
     iconText: {
       fontSize: 34,
+    },
+    customIconHolder: {
+      alignItems: 'center',
+      justifyContent: 'center',
     },
     content: {
       alignItems: 'center',
