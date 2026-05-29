@@ -42,7 +42,7 @@ export default function TabLayout() {
         options={{
           title: '기록',
           tabBarIcon: ({ color, size, focused }) => (
-            <Ionicons name={focused ? 'calendar-clear' : 'calendar-clear-outline'} size={size} color={color} />
+            <Ionicons name={focused ? 'journal' : 'journal-outline'} size={size} color={color} />
           ),
         }}
       />
@@ -51,7 +51,7 @@ export default function TabLayout() {
         options={{
           title: '암장',
           tabBarIcon: ({ color, size, focused }) => (
-            <Ionicons name={focused ? 'map' : 'map-outline'} size={size} color={color} />
+            <Ionicons name={focused ? 'location' : 'location-outline'} size={size} color={color} />
           ),
         }}
       />
@@ -60,7 +60,7 @@ export default function TabLayout() {
         options={{
           title: '커뮤니티',
           tabBarIcon: ({ color, size, focused }) => (
-            <Ionicons name={focused ? 'people' : 'people-outline'} size={size} color={color} />
+            <Ionicons name={focused ? 'chatbubbles' : 'chatbubbles-outline'} size={size} color={color} />
           ),
         }}
       />
