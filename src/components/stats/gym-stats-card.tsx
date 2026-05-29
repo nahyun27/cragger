@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo} from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { ColorBar } from '@/components/stats/color-bar';
 import type { GymStats } from '@/hooks/use-user-stats';
+import { useThemeColors, type ThemeColors } from '@/lib/theme';
 
 type Props = {
   gym: GymStats;
@@ -10,6 +11,9 @@ type Props = {
 };
 
 export function GymStatsCard({ gym, defaultExpanded = false }: Props) {
+  const c = useThemeColors();
+  const s = useMemo(() => makeStyles(c), [c]);
+
   const [expanded, setExpanded] = useState(defaultExpanded);
   const maxSends = gym.colors.reduce(
     (max, c) => (c.sendCount > max ? c.sendCount : max),
@@ -55,14 +59,15 @@ export function GymStatsCard({ gym, defaultExpanded = false }: Props) {
   );
 }
 
-const s = StyleSheet.create({
+function makeStyles(c: ThemeColors) {
+  return StyleSheet.create({
   card: {
-    backgroundColor: '#ffffff',
+    backgroundColor: c.bg.card,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: c.border.subtle,
     borderRadius: 20,
     overflow: 'hidden',
-    shadowColor: '#0f172a',
+    shadowColor: c.shadow.color,
     shadowOpacity: 0.02,
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 4 },
@@ -76,7 +81,7 @@ const s = StyleSheet.create({
     gap: 12,
   },
   pressedHeader: {
-    backgroundColor: '#f8fafc',
+    backgroundColor: c.bg.primary,
   },
   textContainer: {
     flex: 1,
@@ -84,17 +89,17 @@ const s = StyleSheet.create({
   gymName: {
     fontSize: 15,
     fontWeight: '800',
-    color: '#0f172a',
+    color: c.text.primary,
   },
   visitText: {
     fontSize: 11,
-    color: '#64748b',
+    color: c.text.tertiary,
     fontWeight: '600',
     marginTop: 3,
   },
   toggleIcon: {
     fontSize: 12,
-    color: '#94a3b8',
+    color: c.text.muted,
     fontWeight: '700',
   },
   expandedContent: {
@@ -105,7 +110,8 @@ const s = StyleSheet.create({
   },
   emptyText: {
     fontSize: 12,
-    color: '#94a3b8',
+    color: c.text.muted,
     fontWeight: '600',
   },
-});
+  });
+}

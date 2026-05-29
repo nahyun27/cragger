@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import React from 'react';
 import {
   Modal,
@@ -10,6 +11,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 
+import { useThemeColors, type ThemeColors } from '@/lib/theme';
+
 type Props = {
   visible: boolean;
   onClose: () => void;
@@ -17,6 +20,9 @@ type Props = {
 
 // Static climbing-shoe sizing guide. No data fetch — pure copy.
 export function ShoeSizeGuide({ visible, onClose }: Props) {
+  const c = useThemeColors();
+  const s = useMemo(() => makeStyles(c), [c]);
+
   return (
     <Modal
       visible={visible}
@@ -32,7 +38,7 @@ export function ShoeSizeGuide({ visible, onClose }: Props) {
             hitSlop={8}
             style={({ pressed }) => [s.closeBtn, pressed && { opacity: 0.6 }]}
           >
-            <Feather name="x" size={20} color="#0f172a" />
+            <Feather name="x" size={20} color={c.text.primary} />
           </Pressable>
         </View>
 
@@ -113,10 +119,13 @@ function Section({
   icon: React.ComponentProps<typeof Feather>['name'];
   children: React.ReactNode;
 }) {
+  const c = useThemeColors();
+  const s = useMemo(() => makeStyles(c), [c]);
+
   return (
     <View style={s.section}>
       <View style={s.sectionHeader}>
-        <Feather name={icon} size={14} color="#475569" />
+        <Feather name={icon} size={14} color={c.text.secondary} />
         <Text style={s.sectionTitle}>{title}</Text>
       </View>
       <View style={s.sectionBody}>{children}</View>
@@ -125,6 +134,9 @@ function Section({
 }
 
 function BrandNote({ brand, body }: { brand: string; body: string }) {
+  const c = useThemeColors();
+  const s = useMemo(() => makeStyles(c), [c]);
+
   return (
     <View style={s.brandRow}>
       <Text style={s.brandName}>{brand}</Text>
@@ -134,6 +146,9 @@ function BrandNote({ brand, body }: { brand: string; body: string }) {
 }
 
 function CheckItem({ title, body }: { title: string; body: string }) {
+  const c = useThemeColors();
+  const s = useMemo(() => makeStyles(c), [c]);
+
   return (
     <View style={s.checkRow}>
       <View style={s.checkDot} />
@@ -145,8 +160,9 @@ function CheckItem({ title, body }: { title: string; body: string }) {
   );
 }
 
-const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#ffffff' },
+function makeStyles(c: ThemeColors) {
+  return StyleSheet.create({
+  container: { flex: 1, backgroundColor: c.bg.card },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -154,12 +170,12 @@ const s = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 14,
     borderBottomWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: c.border.subtle,
   },
   headerTitle: {
     fontSize: 17,
     fontWeight: '800',
-    color: '#0f172a',
+    color: c.text.primary,
     letterSpacing: -0.3,
   },
   closeBtn: {
@@ -173,7 +189,7 @@ const s = StyleSheet.create({
   scroll: { padding: 20, paddingBottom: 32, gap: 18 },
   intro: {
     fontSize: 14,
-    color: '#334155',
+    color: c.text.secondary,
     lineHeight: 22,
     fontWeight: '500',
   },
@@ -183,26 +199,26 @@ const s = StyleSheet.create({
   sectionTitle: {
     fontSize: 13,
     fontWeight: '800',
-    color: '#0f172a',
+    color: c.text.primary,
     letterSpacing: -0.2,
   },
   sectionBody: {
-    backgroundColor: '#f8fafc',
+    backgroundColor: c.bg.primary,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: c.border.subtle,
     borderRadius: 14,
     padding: 14,
     gap: 12,
   },
 
   row: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
-  rowText: { flex: 1, fontSize: 13, color: '#334155', lineHeight: 20 },
-  bold: { fontWeight: '800', color: '#0f172a' },
+  rowText: { flex: 1, fontSize: 13, color: c.text.secondary, lineHeight: 20 },
+  bold: { fontWeight: '800', color: c.text.primary },
   levelBadge: {
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 999,
-    backgroundColor: '#ecfeff',
+    backgroundColor: c.bg.accent,
     borderWidth: 1,
     borderColor: '#a5f3fc',
     marginTop: 1,
@@ -210,7 +226,7 @@ const s = StyleSheet.create({
   levelBadgeText: {
     fontSize: 11,
     fontWeight: '800',
-    color: '#0e7490',
+    color: c.brand.primaryDeep,
   },
   levelBadgeAdvanced: {
     backgroundColor: '#fef3c7',
@@ -221,8 +237,8 @@ const s = StyleSheet.create({
   },
 
   brandRow: { gap: 2 },
-  brandName: { fontSize: 13, fontWeight: '800', color: '#0f172a' },
-  brandBody: { fontSize: 12, color: '#475569', lineHeight: 19 },
+  brandName: { fontSize: 13, fontWeight: '800', color: c.text.primary },
+  brandBody: { fontSize: 12, color: c.text.secondary, lineHeight: 19 },
 
   checkRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
   checkDot: {
@@ -232,19 +248,20 @@ const s = StyleSheet.create({
     backgroundColor: '#06b6d4',
     marginTop: 7,
   },
-  checkTitle: { fontSize: 13, fontWeight: '800', color: '#0f172a' },
+  checkTitle: { fontSize: 13, fontWeight: '800', color: c.text.primary },
   checkBody: {
     fontSize: 12,
-    color: '#475569',
+    color: c.text.secondary,
     lineHeight: 19,
     marginTop: 2,
   },
 
   disclaimer: {
     fontSize: 11,
-    color: '#94a3b8',
+    color: c.text.muted,
     lineHeight: 17,
     textAlign: 'center',
     marginTop: 4,
   },
-});
+  });
+}

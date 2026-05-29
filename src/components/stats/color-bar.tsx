@@ -1,7 +1,9 @@
+import { useMemo } from 'react';
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { resolveColorHex, resolveColorLabel } from '@/constants/climb-colors';
+import { useThemeColors, type ThemeColors } from '@/lib/theme';
 
 type Props = {
   color: string;
@@ -14,6 +16,9 @@ type Props = {
 //  - bar fills with the hold's own hex (so color is the chart, not chrome)
 //  - count is bold + tabular-nums, right-aligned in a fixed slot
 export function ColorBar({ color, sendCount, maxSendCount }: Props) {
+  const c = useThemeColors();
+  const s = useMemo(() => makeStyles(c), [c]);
+
   const ratio = maxSendCount === 0 ? 0 : Math.min(1, sendCount / maxSendCount);
   const hex = resolveColorHex(color);
   const label = resolveColorLabel(color);
@@ -44,7 +49,8 @@ export function ColorBar({ color, sendCount, maxSendCount }: Props) {
   );
 }
 
-const s = StyleSheet.create({
+function makeStyles(c: ThemeColors) {
+  return StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   labelCol: {
     width: 62,
@@ -54,11 +60,11 @@ const s = StyleSheet.create({
     flexShrink: 0,
   },
   dot: { width: 14, height: 14, borderRadius: 7 },
-  labelText: { fontSize: 12, fontWeight: '600', color: '#334155' },
+  labelText: { fontSize: 12, fontWeight: '600', color: c.text.secondary },
   track: {
     flex: 1,
     height: 12,
-    backgroundColor: '#f1f5f9',
+    backgroundColor: c.bg.subtle,
     borderRadius: 999,
     overflow: 'hidden',
   },
@@ -68,8 +74,9 @@ const s = StyleSheet.create({
     textAlign: 'right',
     fontSize: 11,
     fontWeight: '800',
-    color: '#0f172a',
+    color: c.text.primary,
     fontVariant: ['tabular-nums'],
     flexShrink: 0,
   },
-});
+  });
+}

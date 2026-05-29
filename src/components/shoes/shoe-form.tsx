@@ -1,5 +1,5 @@
 import DateTimePicker from '@react-native-community/datetimepicker';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useMemo} from 'react';
 import {
   Modal,
   Platform,
@@ -14,6 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 
 import { Section } from '@/components/ui/section';
+import { useThemeColors, type ThemeColors } from '@/lib/theme';
 import {
   FIT_FEATURE_OPTIONS,
   FIT_PERCEPTION_LABEL,
@@ -142,6 +143,9 @@ type Props = {
 };
 
 export function ShoeForm({ value, onChange }: Props) {
+  const c = useThemeColors();
+  const s = useMemo(() => makeStyles(c), [c]);
+
   const [showPicker, setShowPicker] = useState(false);
   const purchasedDate = parseYMD(value.purchasedAt);
 
@@ -162,7 +166,7 @@ export function ShoeForm({ value, onChange }: Props) {
       <Section title="모델명" required>
         <TextInput
           placeholder="예: 드라고, 솔루션 컴프"
-          placeholderTextColor="#94a3b8"
+          placeholderTextColor={c.text.muted}
           value={value.model}
           onChangeText={(t) => onChange({ ...value, model: t.slice(0, 50) })}
           style={s.textInput}
@@ -391,7 +395,7 @@ export function ShoeForm({ value, onChange }: Props) {
                 <Text style={value.purchasedAt ? s.dateTextActive : s.dateTextPlaceholder}>
                   {formatDisplay(value.purchasedAt)}
                 </Text>
-                <Feather name="calendar" size={15} color="#64748b" />
+                <Feather name="calendar" size={15} color={c.text.tertiary} />
               </View>
             )}
           </Pressable>
@@ -476,7 +480,7 @@ export function ShoeForm({ value, onChange }: Props) {
       <Section title="메모">
         <TextInput
           placeholder="다운사이즈 폭 / 사용 빈도 / 발 느낌 등"
-          placeholderTextColor="#94a3b8"
+          placeholderTextColor={c.text.muted}
           value={value.note}
           onChangeText={(t) => onChange({ ...value, note: t.slice(0, 200) })}
           maxLength={200}
@@ -514,7 +518,7 @@ export function ShoeForm({ value, onChange }: Props) {
 
       <Section title="사진">
         <View style={s.photoBanner}>
-          <Feather name="image" size={15} color="#94a3b8" />
+          <Feather name="image" size={15} color={c.text.muted} />
           <Text style={s.photoBannerText}>사진 첨부는 준비 중이에요</Text>
         </View>
       </Section>
@@ -541,6 +545,9 @@ function BrandPicker({
   value: string;
   onChange: (next: string) => void;
 }) {
+  const c = useThemeColors();
+  const s = useMemo(() => makeStyles(c), [c]);
+
   const [open, setOpen] = useState(false);
   const isPreset = (BRAND_PRESETS as readonly string[]).includes(value);
   const isCustom = value !== '' && !isPreset;
@@ -553,7 +560,7 @@ function BrandPicker({
             <Text style={value ? s.dateTextActive : s.dateTextPlaceholder}>
               {value || '브랜드 선택'}
             </Text>
-            <Feather name="chevron-down" size={15} color="#64748b" />
+            <Feather name="chevron-down" size={15} color={c.text.tertiary} />
           </View>
         )}
       </Pressable>
@@ -561,7 +568,7 @@ function BrandPicker({
       {isCustom && (
         <TextInput
           placeholder="브랜드명 직접 입력"
-          placeholderTextColor="#94a3b8"
+          placeholderTextColor={c.text.muted}
           value={value}
           onChangeText={(t) => onChange(t.slice(0, 30))}
           style={[s.textInput, { marginTop: 10 }]}
@@ -580,7 +587,7 @@ function BrandPicker({
             <Pressable onPress={() => setOpen(false)} hitSlop={8}>
               {({ pressed }) => (
                 <View style={[s.sheetCloseBtn, pressed && s.btnPressed]}>
-                  <Feather name="x" size={20} color="#0f172a" />
+                  <Feather name="x" size={20} color={c.text.primary} />
                 </View>
               )}
             </Pressable>
@@ -599,7 +606,7 @@ function BrandPicker({
                   {({ pressed }) => (
                     <View style={[s.sheetRow, pressed && s.btnPressed]}>
                       <View style={s.sheetCheckSlot}>
-                        {active && <Feather name="check" size={16} color="#0f172a" />}
+                        {active && <Feather name="check" size={16} color={c.text.primary} />}
                       </View>
                       <Text style={[s.sheetRowText, active && s.sheetRowTextActive]}>
                         {b}
@@ -618,7 +625,7 @@ function BrandPicker({
               {({ pressed }) => (
                 <View style={[s.sheetRow, pressed && s.btnPressed]}>
                   <View style={s.sheetCheckSlot}>
-                    {isCustom && <Feather name="check" size={16} color="#0f172a" />}
+                    {isCustom && <Feather name="check" size={16} color={c.text.primary} />}
                   </View>
                   <Text style={[s.sheetRowText, isCustom && s.sheetRowTextActive]}>
                     직접입력
@@ -642,6 +649,9 @@ function MultiPillRow({
   selected: string[];
   onToggle: (next: string[]) => void;
 }) {
+  const c = useThemeColors();
+  const s = useMemo(() => makeStyles(c), [c]);
+
   return (
     <View style={s.chipWrap}>
       {options.map((opt) => {
@@ -686,6 +696,9 @@ function RatingBar({
   value: number | null;
   onChange: (v: number) => void;
 }) {
+  const c = useThemeColors();
+  const s = useMemo(() => makeStyles(c), [c]);
+
   const filled = value ?? 0;
   return (
     <View>
@@ -732,6 +745,9 @@ function SizePicker({
   value: string;
   onSelect: (next: string) => void;
 }) {
+  const c = useThemeColors();
+  const s = useMemo(() => makeStyles(c), [c]);
+
   const [open, setOpen] = useState(false);
   const scrollRef = useRef<ScrollView | null>(null);
   const selectedIndex = EU_SIZES.indexOf(value);
@@ -755,7 +771,7 @@ function SizePicker({
             <Text style={value ? s.dateTextActive : s.dateTextPlaceholder}>
               {value || 'EU 사이즈 선택'}
             </Text>
-            <Feather name="chevron-down" size={15} color="#64748b" />
+            <Feather name="chevron-down" size={15} color={c.text.tertiary} />
           </View>
         )}
       </Pressable>
@@ -772,7 +788,7 @@ function SizePicker({
             <Pressable onPress={() => setOpen(false)} hitSlop={8}>
               {({ pressed }) => (
                 <View style={[s.sheetCloseBtn, pressed && s.btnPressed]}>
-                  <Feather name="x" size={20} color="#0f172a" />
+                  <Feather name="x" size={20} color={c.text.primary} />
                 </View>
               )}
             </Pressable>
@@ -791,7 +807,7 @@ function SizePicker({
                   {({ pressed }) => (
                     <View style={[s.sheetRow, pressed && s.btnPressed]}>
                       <View style={s.sheetCheckSlot}>
-                        {active && <Feather name="check" size={16} color="#0f172a" />}
+                        {active && <Feather name="check" size={16} color={c.text.primary} />}
                       </View>
                       <Text style={[s.sheetRowText, active && s.sheetRowTextActive]}>
                         {size}
@@ -808,8 +824,9 @@ function SizePicker({
   );
 }
 
-const s = StyleSheet.create({
-  sheetContainer: { flex: 1, backgroundColor: '#ffffff' },
+function makeStyles(c: ThemeColors) {
+  return StyleSheet.create({
+  sheetContainer: { flex: 1, backgroundColor: c.bg.card },
   sheetHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -819,14 +836,14 @@ const s = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#e2e8f0',
   },
-  sheetTitle: { fontSize: 16, fontWeight: '800', color: '#0f172a' },
+  sheetTitle: { fontSize: 16, fontWeight: '800', color: c.text.primary },
   sheetCloseBtn: {
     width: 36,
     height: 36,
     borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#f1f5f9',
+    backgroundColor: c.bg.subtle,
   },
   sheetList: { paddingVertical: 8, paddingHorizontal: 8 },
   sheetRow: {
@@ -837,7 +854,7 @@ const s = StyleSheet.create({
     borderRadius: 10,
   },
   sheetCheckSlot: { width: 24, alignItems: 'center' },
-  sheetRowText: { fontSize: 16, fontWeight: '500', color: '#0f172a', marginLeft: 4 },
+  sheetRowText: { fontSize: 16, fontWeight: '500', color: c.text.primary, marginLeft: 4 },
   sheetRowTextActive: { fontWeight: '800' },
   scrollView: {
     flex: 1,
@@ -851,24 +868,24 @@ const s = StyleSheet.create({
     flex: 1,
   },
   textInput: {
-    backgroundColor: '#ffffff',
+    backgroundColor: c.bg.card,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: c.border.subtle,
     borderRadius: 14,
     paddingHorizontal: 16,
     paddingVertical: 12,
-    color: '#0f172a',
+    color: c.text.primary,
     fontSize: 14,
     fontWeight: '700',
   },
   textAreaInput: {
-    backgroundColor: '#ffffff',
+    backgroundColor: c.bg.card,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: c.border.subtle,
     borderRadius: 14,
     paddingHorizontal: 16,
     paddingVertical: 14,
-    color: '#0f172a',
+    color: c.text.primary,
     fontSize: 14,
     fontWeight: '700',
     minHeight: 110,
@@ -896,11 +913,11 @@ const s = StyleSheet.create({
   },
   statusChipActive: {
     borderColor: '#06b6d4',
-    backgroundColor: '#ecfeff',
+    backgroundColor: c.bg.accent,
   },
   statusChipInactive: {
-    borderColor: '#e2e8f0',
-    backgroundColor: '#ffffff',
+    borderColor: c.border.subtle,
+    backgroundColor: c.bg.card,
   },
   statusChipText: {
     fontSize: 13,
@@ -910,41 +927,41 @@ const s = StyleSheet.create({
     color: '#0891b2',
   },
   statusChipTextInactive: {
-    color: '#475569',
+    color: c.text.secondary,
   },
   datePickerBox: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#ffffff',
+    backgroundColor: c.bg.card,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: c.border.subtle,
     borderRadius: 14,
     paddingHorizontal: 16,
     paddingVertical: 12,
   },
   dateTextActive: {
-    color: '#0f172a',
+    color: c.text.primary,
     fontSize: 14,
     fontWeight: '700',
   },
   dateTextPlaceholder: {
-    color: '#94a3b8',
+    color: c.text.muted,
     fontSize: 14,
     fontWeight: '700',
   },
   clearBtn: {
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: c.border.subtle,
     borderRadius: 12,
     paddingHorizontal: 14,
     paddingVertical: 12,
-    backgroundColor: '#f8fafc',
+    backgroundColor: c.bg.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },
   clearBtnText: {
-    color: '#64748b',
+    color: c.text.tertiary,
     fontSize: 12,
     fontWeight: '800',
   },
@@ -953,7 +970,7 @@ const s = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 8,
     marginTop: 4,
-    backgroundColor: '#ecfeff',
+    backgroundColor: c.bg.accent,
     borderWidth: 1,
     borderColor: '#cffafe',
     borderRadius: 8,
@@ -970,12 +987,12 @@ const s = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 14,
     borderRadius: 14,
-    backgroundColor: '#f8fafc',
+    backgroundColor: c.bg.primary,
     borderWidth: 1,
-    borderColor: '#f1f5f9',
+    borderColor: c.border.subtle,
   },
   photoBannerText: {
-    color: '#94a3b8',
+    color: c.text.muted,
     fontSize: 11,
     fontWeight: '700',
   },
@@ -991,17 +1008,17 @@ const s = StyleSheet.create({
     borderRadius: 999,
     borderWidth: 1,
   },
-  chipActive: { borderColor: '#06b6d4', backgroundColor: '#ecfeff' },
-  chipInactive: { borderColor: '#e2e8f0', backgroundColor: '#ffffff' },
+  chipActive: { borderColor: '#06b6d4', backgroundColor: c.bg.accent },
+  chipInactive: { borderColor: c.border.subtle, backgroundColor: c.bg.card },
   chipText: { fontSize: 12, fontWeight: '700' },
   chipTextActive: { color: '#0891b2' },
-  chipTextInactive: { color: '#475569' },
+  chipTextInactive: { color: c.text.secondary },
 
   // Big card — wanted fit
   bigCard: {
-    backgroundColor: '#ffffff',
+    backgroundColor: c.bg.card,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: c.border.subtle,
     borderRadius: 14,
     paddingVertical: 16,
     paddingHorizontal: 14,
@@ -1012,11 +1029,11 @@ const s = StyleSheet.create({
   bigCardActive: {
     borderColor: '#06b6d4',
     borderWidth: 2,
-    backgroundColor: '#ecfeff',
+    backgroundColor: c.bg.accent,
   },
-  bigCardLabel: { fontSize: 14, fontWeight: '900', color: '#0f172a', marginBottom: 4 },
+  bigCardLabel: { fontSize: 14, fontWeight: '900', color: c.text.primary, marginBottom: 4 },
   bigCardLabelActive: { color: '#0891b2' },
-  bigCardSub: { fontSize: 11, color: '#64748b' },
+  bigCardSub: { fontSize: 11, color: c.text.tertiary },
 
   // 5-option radio row (fit perception, stiffness, stretch)
   radio5Row: { flexDirection: 'row', gap: 6 },
@@ -1027,8 +1044,8 @@ const s = StyleSheet.create({
     height: 18,
     borderRadius: 9,
     borderWidth: 2,
-    borderColor: '#cbd5e1',
-    backgroundColor: '#ffffff',
+    borderColor: c.border.strong,
+    backgroundColor: c.bg.card,
   },
   radioDotActive: {
     borderColor: '#06b6d4',
@@ -1036,7 +1053,7 @@ const s = StyleSheet.create({
   },
   radio5Label: {
     fontSize: 10,
-    color: '#64748b',
+    color: c.text.tertiary,
     fontWeight: '600',
     textAlign: 'center',
     lineHeight: 13,
@@ -1044,13 +1061,13 @@ const s = StyleSheet.create({
   radio5LabelActive: { color: '#0891b2', fontWeight: '800' },
 
   // Rating bar
-  ratingSubLabel: { fontSize: 12, color: '#94a3b8', marginBottom: 8 },
+  ratingSubLabel: { fontSize: 12, color: c.text.muted, marginBottom: 8 },
   ratingRangeRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginBottom: 4,
   },
-  ratingRangeLabel: { fontSize: 11, color: '#94a3b8', fontWeight: '600' },
+  ratingRangeLabel: { fontSize: 11, color: c.text.muted, fontWeight: '600' },
   ratingBarRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   ratingCellSlot: { flex: 1 },
   ratingCell: {
@@ -1060,8 +1077,8 @@ const s = StyleSheet.create({
   ratingCellActive: { backgroundColor: '#06b6d4' },
   ratingCellInactive: { backgroundColor: '#e2e8f0' },
   ratingValueText: { marginLeft: 8, minWidth: 56, textAlign: 'right' },
-  ratingValueNum: { fontSize: 16, fontWeight: '900', color: '#0f172a' },
-  ratingValueDenom: { fontSize: 12, color: '#94a3b8', fontWeight: '700' },
+  ratingValueNum: { fontSize: 16, fontWeight: '900', color: c.text.primary },
+  ratingValueDenom: { fontSize: 12, color: c.text.muted, fontWeight: '700' },
 
   // Subsection ("성능 평가")
   sectionDivider: {
@@ -1072,7 +1089,7 @@ const s = StyleSheet.create({
   subsectionTitle: {
     fontSize: 14,
     fontWeight: '900',
-    color: '#0f172a',
+    color: c.text.primary,
     marginTop: 4,
   },
 
@@ -1090,7 +1107,7 @@ const s = StyleSheet.create({
   },
   primaryToggleLeft: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   primaryToggleStar: { fontSize: 18 },
-  primaryToggleLabel: { fontSize: 14, fontWeight: '800', color: '#0f172a' },
+  primaryToggleLabel: { fontSize: 14, fontWeight: '800', color: c.text.primary },
   toggleTrack: {
     width: 44,
     height: 26,
@@ -1104,7 +1121,8 @@ const s = StyleSheet.create({
     width: 22,
     height: 22,
     borderRadius: 11,
-    backgroundColor: '#ffffff',
+    backgroundColor: c.bg.card,
   },
   toggleThumbActive: { alignSelf: 'flex-end' },
-});
+  });
+}

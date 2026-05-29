@@ -5,6 +5,7 @@ import { ThemedText } from './themed-text';
 import { ThemedView } from './themed-view';
 
 import { Spacing } from '@/constants/theme';
+import { useThemeColors, type ThemeColors } from '@/lib/theme';
 
 type HintRowProps = {
   title?: string;

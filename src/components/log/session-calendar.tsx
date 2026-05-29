@@ -6,6 +6,7 @@ import { Feather } from '@expo/vector-icons';
 import { useMonthlySessions, type MonthlySession } from '@/hooks/use-monthly-sessions';
 import { GymThumbnail } from '@/components/gym/gym-thumbnail';
 import { SessionRow } from '@/components/session/session-row';
+import { useThemeColors, type ThemeColors } from '@/lib/theme';
 
 LocaleConfig.locales['ko'] = {
   monthNames: [
@@ -70,6 +71,9 @@ function shortName(name: string): string {
 }
 
 export function SessionCalendar() {
+  const c = useThemeColors();
+  const s = useMemo(() => makeStyles(c), [c]);
+
   const today = todayYMD();
   const [visibleYM, setVisibleYM] = useState<{ year: number; month: number }>(() => {
     const d = new Date();
@@ -176,11 +180,11 @@ export function SessionCalendar() {
             <Feather
               name={direction === 'left' ? 'chevron-left' : 'chevron-right'}
               size={20}
-              color="#0f172a"
+              color={c.text.primary}
             />
           )}
           theme={{
-            backgroundColor: '#ffffff',
+            backgroundColor: c.bg.card,
             calendarBackground: '#ffffff',
             textSectionTitleColor: '#94a3b8',
             monthTextColor: '#0f172a',
@@ -242,6 +246,9 @@ export function SessionCalendar() {
 }
 
 function SummaryStat({ label, value }: { label: string; value: string }) {
+  const c = useThemeColors();
+  const s = useMemo(() => makeStyles(c), [c]);
+
   return (
     <View style={s.summaryCol}>
       <Text style={s.summaryLabel}>{label}</Text>
@@ -251,6 +258,9 @@ function SummaryStat({ label, value }: { label: string; value: string }) {
 }
 
 function SummaryStatDivider() {
+  const c = useThemeColors();
+  const s = useMemo(() => makeStyles(c), [c]);
+
   return <View style={s.summaryDivider} />;
 }
 
@@ -267,13 +277,14 @@ function formatLongDate(iso: string): string {
 
 const CELL_HEIGHT = 64;
 
-const s = StyleSheet.create({
+function makeStyles(c: ThemeColors) {
+  return StyleSheet.create({
   wrap: { paddingHorizontal: 16, paddingBottom: 32, gap: 12 },
   calendarCard: {
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: c.border.subtle,
     borderRadius: 18,
-    backgroundColor: '#ffffff',
+    backgroundColor: c.bg.card,
     overflow: 'hidden',
   },
   calendar: {
@@ -292,7 +303,7 @@ const s = StyleSheet.create({
     paddingHorizontal: 1,
   },
   dayCellSelected: {
-    backgroundColor: '#ecfeff',
+    backgroundColor: c.bg.accent,
   },
   dayNum: {
     fontSize: 11,
@@ -308,7 +319,7 @@ const s = StyleSheet.create({
     width: 38,
     height: 38,
     borderRadius: 10,
-    backgroundColor: '#f8fafc',
+    backgroundColor: c.bg.primary,
     opacity: 0.5,
   },
   extraBadge: {
@@ -344,7 +355,7 @@ const s = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 8,
     borderTopWidth: 1,
-    borderColor: '#f1f5f9',
+    borderColor: c.border.subtle,
     backgroundColor: '#fafbfc',
   },
   summaryCol: {
@@ -361,12 +372,12 @@ const s = StyleSheet.create({
   summaryLabel: {
     fontSize: 10,
     fontWeight: '700',
-    color: '#94a3b8',
+    color: c.text.muted,
   },
   summaryVal: {
     fontSize: 15,
     fontWeight: '800',
-    color: '#0f172a',
+    color: c.text.primary,
     letterSpacing: -0.3,
   },
 
@@ -381,13 +392,13 @@ const s = StyleSheet.create({
   selectedHeaderDate: {
     fontSize: 15,
     fontWeight: '800',
-    color: '#0f172a',
+    color: c.text.primary,
     letterSpacing: -0.3,
   },
   selectedHeaderMeta: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#64748b',
+    color: c.text.tertiary,
   },
   loader: { paddingVertical: 16, alignItems: 'center' },
   errorBox: {
@@ -397,15 +408,16 @@ const s = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#fecaca',
   },
-  errorText: { color: '#ef4444', fontSize: 13, fontWeight: '600' },
+  errorText: { color: c.status.danger, fontSize: 13, fontWeight: '600' },
   emptyBox: {
     padding: 18,
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: c.border.subtle,
     alignItems: 'center',
-    backgroundColor: '#ffffff',
+    backgroundColor: c.bg.card,
   },
-  emptyText: { fontSize: 13, color: '#64748b', fontWeight: '600' },
+  emptyText: { fontSize: 13, color: c.text.tertiary, fontWeight: '600' },
   sessions: { gap: 8 },
-});
+  });
+}
