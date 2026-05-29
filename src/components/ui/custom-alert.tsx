@@ -226,7 +226,10 @@ function AlertButtonView({
           : s.btnTextPrimary;
 
   return (
-    <Animated.View style={[s.btnWrap, stacked && s.btnWrapStacked, { transform: [{ scale: pressScale }] }]}>
+    <Animated.View style={[
+      stacked ? s.btnWrapStacked : s.btnWrapRow,
+      { transform: [{ scale: pressScale }] },
+    ]}>
       <Pressable
         onPress={onPress}
         onPressIn={onPressIn}
@@ -325,7 +328,7 @@ function makeStyles(c: ReturnType<typeof useThemeColors>) {
       flexDirection: 'column',
       gap: 8,
     },
-    btnWrap: {
+    btnWrapRow: {
       flex: 1,
     },
     btnWrapStacked: {

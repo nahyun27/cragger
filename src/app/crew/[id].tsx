@@ -239,30 +239,39 @@ export default function CrewDetailScreen() {
                   )}
                 </Pressable>
               )}
+              {isOwner && (
+                <Pressable
+                  onPress={() =>
+                    router.push({ pathname: '/crew/[id]/edit', params: { id: data.id } } as never)
+                  }
+                  hitSlop={8}
+                >
+                  {({ pressed }) => (
+                    <View style={[s.headerKeyBtn, pressed && { opacity: 0.6 }]}>
+                      <Feather name="edit-2" size={14} color={c.brand.primary} />
+                    </View>
+                  )}
+                </Pressable>
+              )}
             </View>
             <View style={s.profileSubRow}>
               <Text style={s.profileMemberCount}>회원 {data.member_count}명</Text>
-              <View style={s.recruitingBadge}>
-                <Text style={s.recruitingBadgeText}>
-                  {isOwner ? '운영자' : '회원 모집중'}
-                </Text>
-              </View>
+              {data.region && (
+                <View style={s.regionChip}>
+                  <Feather name="map-pin" size={10} color={c.brand.primary} />
+                  <Text style={s.regionChipText}>{data.region}</Text>
+                </View>
+              )}
             </View>
           </View>
         </View>
 
-        {(data.description || data.region || data.home_gym) && (
+        {(data.description || data.home_gym) && (
           <View style={s.profileDescriptionBox}>
             {data.description && (
               <Text style={s.profileDescriptionText}>
                 {data.description}
               </Text>
-            )}
-            {data.region && (
-              <View style={s.profileMetaRow}>
-                <Feather name="map-pin" size={12} color={c.text.tertiary} />
-                <Text style={s.profileGymText}>{data.region}</Text>
-              </View>
             )}
             {data.home_gym && (
               <View style={s.profileMetaRow}>
@@ -1483,7 +1492,7 @@ function makeStyles(c: ThemeColors) {
   },
   scrollContent: {
     paddingHorizontal: 20,
-    paddingTop: 10,
+    paddingTop: 0,
     paddingBottom: 40,
   },
   headerRow: {
@@ -1541,7 +1550,6 @@ function makeStyles(c: ThemeColors) {
   profileHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 20,
     paddingTop: 16,
     paddingBottom: 16,
     backgroundColor: c.bg.card,
@@ -1613,6 +1621,20 @@ function makeStyles(c: ThemeColors) {
     color: c.text.tertiary,
     fontWeight: '700',
   },
+  regionChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#e0f2fe', // light blue
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+    gap: 4,
+  },
+  regionChipText: {
+    fontSize: 11,
+    color: c.brand.primary,
+    fontWeight: '800',
+  },
   recruitingBadge: {
     backgroundColor: c.status.danger,
     paddingHorizontal: 8,
@@ -1626,7 +1648,6 @@ function makeStyles(c: ThemeColors) {
   },
   profileDescriptionBox: {
     backgroundColor: c.bg.card,
-    paddingHorizontal: 20,
     paddingBottom: 16,
   },
   profileDescriptionText: {

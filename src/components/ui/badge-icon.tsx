@@ -401,59 +401,68 @@ export function BadgeIcon({ icon, color, size = 20 }: BadgeIconProps) {
     );
   }
 
-  // 색깔 마스터 — 실제 화가의 팔레트 (둥근 보드 + 엄지 구멍 + 5색 페인트 블롭)
+  // 색깔 마스터 — 실제 화가의 팔레트 (키드니/강낭콩 모양 보드 + 실제 구멍 + 5색 페인트 블롭)
   if (icon === 'palette') {
-    const s = size;
-    const outer = s * 1.6;
-    const dotSize = s * 0.34;
-    const dotR = dotSize / 2;
-    const center = outer / 2;
-    const r = s * 0.55;
+    const outer = size * 1.8;
+    
+    // Kidney shape SVG Path on a 100x100 grid with a thumb hole
+    const palettePath = `
+      M 50 10
+      C 80 10, 95 30, 95 55
+      C 95 80, 75 90, 55 90
+      C 30 90, 10 80, 10 60
+      C 10 40, 30 50, 35 35
+      C 40 20, 20 10, 50 10
+      Z
+      M 25 55
+      A 8 8 0 1 0 25 71
+      A 8 8 0 1 0 25 55
+      Z
+    `;
+
     const dots = [
-      { angle: -150, color: '#ef4444' },
-      { angle: -100, color: '#f59e0b' },
-      { angle: -50,  color: '#eab308' },
-      { angle: 0,    color: '#22c55e' },
-      { angle: 50,   color: '#3b82f6' },
+      { x: 45, y: 22, color: '#ef4444' }, // Red
+      { x: 70, y: 25, color: '#f59e0b' }, // Orange
+      { x: 82, y: 45, color: '#eab308' }, // Yellow
+      { x: 75, y: 70, color: '#22c55e' }, // Green
+      { x: 50, y: 80, color: '#3b82f6' }, // Blue
     ];
+    
     return (
       <View style={{
         width: outer, height: outer, alignItems: 'center', justifyContent: 'center',
-        shadowColor: '#d97706', shadowOpacity: 0.4, shadowRadius: 6, shadowOffset: { width: 0, height: 4 }, elevation: 5,
+        shadowColor: '#b45309', shadowOpacity: 0.4, shadowRadius: 6, shadowOffset: { width: 0, height: 4 }, elevation: 5,
       }}>
-        {/* Base Palette */}
-        <View style={{
-          position: 'absolute', width: outer, height: outer, borderRadius: outer / 2, backgroundColor: '#fbbf24',
-        }} />
-        <Svg width={outer} height={outer} viewBox={`0 0 ${outer} ${outer}`} style={{ position: 'absolute' }}>
+        <Svg width={outer} height={outer} viewBox="0 0 100 100" style={{ position: 'absolute' }}>
           <Defs>
             <SvgLinearGradient id="palette-grad" x1="0" y1="0" x2="0" y2="1">
               <Stop offset="0%" stopColor="#ffffff" stopOpacity="0.4" />
               <Stop offset="100%" stopColor="#000000" stopOpacity="0.15" />
             </SvgLinearGradient>
+            <SvgLinearGradient id="wood-grad" x1="0" y1="0" x2="1" y2="1">
+              <Stop offset="0%" stopColor="#fbbf24" />
+              <Stop offset="100%" stopColor="#d97706" />
+            </SvgLinearGradient>
           </Defs>
-          <Circle cx={center} cy={center} r={center} fill="url(#palette-grad)" />
-          {/* Outer edge highlight */}
-          <Circle cx={center} cy={center} r={center - s*0.04} fill="none" stroke="#ffffff" strokeWidth={s*0.06} strokeOpacity={0.5} />
+          {/* Base Palette with Thumb Hole cutout (evenodd) */}
+          <Path d={palettePath} fillRule="evenodd" fill="url(#wood-grad)" />
+          {/* Glossy Overlay */}
+          <Path d={palettePath} fillRule="evenodd" fill="url(#palette-grad)" />
+          {/* Edge Highlight */}
+          <Path d={palettePath} fillRule="evenodd" fill="none" stroke="#ffffff" strokeWidth="1.5" strokeOpacity="0.5" />
+          
+          {/* Inner Thumb Hole Shadow effect (using a stroked circle inside the hole) */}
+          <Circle cx="25" cy="63" r="7.5" fill="none" stroke="#000000" strokeWidth="1.5" strokeOpacity="0.25" />
         </Svg>
-        {/* Thumb hole */}
-        <View style={{
-          position: 'absolute', width: s * 0.55, height: s * 0.55, borderRadius: s * 0.275, backgroundColor: '#fef3c7',
-          top: outer * 0.55, left: outer * 0.18,
-          shadowColor: '#000', shadowOffset: {width: 0, height: 1}, shadowOpacity: 0.4, shadowRadius: 3, elevation: 2,
-        }} />
+        
         {/* Paint Blobs */}
-        {dots.map(({ angle, color: dotColor }, i) => {
-          const rad = (angle * Math.PI) / 180;
-          const px = center + r * Math.cos(rad) - dotR;
-          const py = center + r * Math.sin(rad) - dotR;
-          return (
-            <View key={i} style={{
-              position: 'absolute', width: dotSize, height: dotSize, borderRadius: dotR, backgroundColor: dotColor, top: py, left: px,
-              shadowColor: '#000', shadowOffset: {width: 0, height: 1}, shadowOpacity: 0.3, shadowRadius: 1, elevation: 1,
-            }} />
-          );
-        })}
+        {dots.map(({ x, y, color: dotColor }, i) => (
+          <View key={i} style={{
+            position: 'absolute', width: size * 0.32, height: size * 0.32, borderRadius: size * 0.16, backgroundColor: dotColor, 
+            top: (y / 100) * outer - (size * 0.16), left: (x / 100) * outer - (size * 0.16),
+            shadowColor: '#000', shadowOffset: {width: 0, height: 1}, shadowOpacity: 0.3, shadowRadius: 1, elevation: 1,
+          }} />
+        ))}
       </View>
     );
   }
