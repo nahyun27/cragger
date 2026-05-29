@@ -16,13 +16,13 @@ export type BadgeDef = {
 
 export const BADGES: BadgeDef[] = [
   // ── 기록 (record) ─────────────────────────────────────────
-  { key: 'first_send',    category: 'record', name: '첫 완등',     hint: '완등 1개', icon: 'target', color: '#06b6d4', bg: '#cffafe' },
-  { key: 'send_100',      category: 'record', name: '완등 100',    hint: '완등 100개', icon: 'medal-100', color: '#d97706', bg: '#fef3c7' }, // Gold
-  { key: 'send_500',      category: 'record', name: '완등 500',    hint: '완등 500개', icon: 'award', color: '#c2410c', bg: '#ffedd5' },
-  { key: 'send_1000',     category: 'record', name: '완등 1000',   hint: '완등 1,000개', icon: 'star', color: '#b45309', bg: '#fde68a' },
-  { key: 'session_10',    category: 'record', name: '세션 10',     hint: '세션 10회', icon: 'calendar', color: '#2563eb', bg: '#dbeafe' },
-  { key: 'session_50',    category: 'record', name: '세션 50',     hint: '세션 50회', icon: 'clock', color: '#1d4ed8', bg: '#bfdbfe' },
-  { key: 'session_100',   category: 'record', name: '세션 100',    hint: '세션 100회', icon: 'activity', color: '#1e40af', bg: '#93c5fd' },
+  { key: 'first_send',    category: 'record', name: '첫 완등',     hint: '완등 1개', icon: 'target', color: '#92400e', bg: '#fef3c7' },
+  { key: 'send_100',      category: 'record', name: '완등 100',    hint: '완등 100개', icon: 'medal-100', color: '#6b7280', bg: '#f3f4f6' },
+  { key: 'send_500',      category: 'record', name: '완등 500',    hint: '완등 500개', icon: 'medal-500', color: '#ca8a04', bg: '#fef9c3' },
+  { key: 'send_1000',     category: 'record', name: '완등 1000',   hint: '완등 1,000개', icon: 'medal-1000', color: '#0e7490', bg: '#cffafe' },
+  { key: 'session_10',    category: 'record', name: '세션 10',     hint: '세션 10회', icon: 'session-10', color: '#2563eb', bg: '#dbeafe' },
+  { key: 'session_50',    category: 'record', name: '세션 50',     hint: '세션 50회', icon: 'session-50', color: '#1d4ed8', bg: '#bfdbfe' },
+  { key: 'session_100',   category: 'record', name: '세션 100',    hint: '세션 100회', icon: 'session-100', color: '#1e40af', bg: '#93c5fd' },
 
   // ── 그레이드 (grade) ───────────────────────────────────────
   { key: 'first_v3',      category: 'grade',  name: 'V3 돌파',     hint: 'V3 첫 완등', icon: 'V3', color: '#22c55e', bg: '#dcfce7' },
@@ -34,8 +34,8 @@ export const BADGES: BadgeDef[] = [
   { key: 'first_lead_512',category: 'grade',  name: '5.12 돌파',   hint: '5.12 첫 완등', icon: '5.12', color: '#991b1b', bg: '#fca5a5' },
 
   // ── 색깔 (color) ──────────────────────────────────────────
-  { key: 'rainbow',       category: 'color',  name: '레인보우',    hint: '한 세션에 5색 이상 완등', icon: 'aperture', color: '#0891b2', bg: '#cffafe' },
-  { key: 'color_master',  category: 'color',  name: '컬러 마스터', hint: '한 색깔 20 완등', icon: 'layers', color: '#7c3aed', bg: '#ede9fe' },
+  { key: 'rainbow',       category: 'color',  name: '레인보우',    hint: '한 세션에 5색 이상 완등', icon: 'rainbow', color: '#0891b2', bg: '#cffafe' },
+  { key: 'color_master',  category: 'color',  name: '컬러 마스터', hint: '한 색깔 20 완등', icon: 'palette', color: '#7c3aed', bg: '#ede9fe' },
 
   // ── 소셜 (social) ─────────────────────────────────────────
   { key: 'first_post',    category: 'social', name: '첫 글',       hint: '첫 게시글 작성', icon: 'edit-2', color: '#16a34a', bg: '#dcfce7' },
@@ -47,9 +47,9 @@ export const BADGES: BadgeDef[] = [
   { key: 'first_battle',  category: 'social', name: '첫 대결',     hint: '첫 대결 참여', icon: 'shield', color: '#7c3aed', bg: '#ede9fe' },
 
   // ── 꾸준함 (streak) ───────────────────────────────────────
-  { key: 'streak_3',      category: 'streak', name: '3주 연속',    hint: '3주 연속 등반', icon: 'trending-up', color: '#16a34a', bg: '#dcfce7' },
-  { key: 'streak_7',      category: 'streak', name: '7주 연속',    hint: '7주 연속 등반', icon: 'zap', color: '#15803d', bg: '#bbf7d0' },
-  { key: 'streak_30',     category: 'streak', name: '30주 연속',   hint: '30주 연속 등반', icon: 'activity', color: '#166534', bg: '#86efac' },
+  { key: 'streak_3',      category: 'streak', name: '3주 연속',    hint: '3주 연속 등반', icon: 'streak-3', color: '#16a34a', bg: '#dcfce7' },
+  { key: 'streak_7',      category: 'streak', name: '7주 연속',    hint: '7주 연속 등반', icon: 'streak-7', color: '#f59e0b', bg: '#fef3c7' },
+  { key: 'streak_30',     category: 'streak', name: '30주 연속',   hint: '30주 연속 등반', icon: 'streak-30', color: '#dc2626', bg: '#fee2e2' },
 ];
 
 export const BADGES_BY_KEY: Record<string, BadgeDef> = Object.fromEntries(
