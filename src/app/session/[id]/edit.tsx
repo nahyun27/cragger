@@ -14,6 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 
 import { GRID_COLORS, type GridColor } from '@/components/climb/color-grid';
+import { LeadEntry, type LeadRoute } from '@/components/climb/lead-entry';
 import {
   ColorCountsTable,
   emptyColorCounts,
@@ -72,6 +73,7 @@ export default function EditSessionScreen() {
   const [condition, setCondition] = useState<number | null>(null);
   const [notes, setNotes] = useState('');
   const [colorCounts, setColorCounts] = useState<ColorCountsValue>(emptyColorCounts);
+  const [leadRoutes, setLeadRoutes] = useState<LeadRoute[]>([]);
   const [prefilled, setPrefilled] = useState(false);
 
   const { data: recentColors } = useRecentColorActivity(gymId);
@@ -107,6 +109,8 @@ export default function EditSessionScreen() {
     };
   }, [recentColors, registeredColors]);
 
+  const isLeadSession = data?.discipline === 'lead';
+
   // 첫 fetch 완료 시 한 번만 prefill — 이후 사용자 편집 보존
   useEffect(() => {
     if (prefilled || !data) return;
@@ -114,6 +118,7 @@ export default function EditSessionScreen() {
     setDurationMin(data.duration_min);
     setCondition(data.condition);
     setNotes(data.notes ?? '');
+    // boulder 색깔 prefill
     const next = emptyColorCounts();
     for (const s of data.color_summary) {
       if ((GRID_COLORS as readonly string[]).includes(s.color)) {
@@ -125,6 +130,17 @@ export default function EditSessionScreen() {
       }
     }
     setColorCounts(next);
+    // lead route prefill — breakdown 집계 → 개별 row 복원 (id 는 임시)
+    const routes: LeadRoute[] = [];
+    let counter = 0;
+    for (const ls of data.lead_summary) {
+      const b = ls.breakdown;
+      for (let k = 0; k < b.onsight; k++) routes.push({ id: `e-${counter++}`, grade: ls.grade, result: 'onsight' });
+      for (let k = 0; k < b.flash; k++) routes.push({ id: `e-${counter++}`, grade: ls.grade, result: 'flash' });
+      for (let k = 0; k < b.redpoint; k++) routes.push({ id: `e-${counter++}`, grade: ls.grade, result: 'redpoint' });
+      for (let k = 0; k < b.fall; k++) routes.push({ id: `e-${counter++}`, grade: ls.grade, result: 'fall' });
+    }
+    setLeadRoutes(routes);
     setPrefilled(true);
   }, [data, prefilled]);
 
@@ -135,8 +151,9 @@ export default function EditSessionScreen() {
 
   const canSubmit = useMemo(() => {
     if (!gymId) return false;
+    if (isLeadSession) return leadRoutes.length > 0;
     return Object.values(colorCounts).some((c) => c.tries > 0);
-  }, [gymId, colorCounts]);
+  }, [gymId, colorCounts, leadRoutes, isLeadSession]);
 
   async function handleSubmit() {
     if (!id || !gymId || updateSession.isPending) return;
@@ -147,7 +164,9 @@ export default function EditSessionScreen() {
         durationMin,
         condition,
         notes: notes.trim() ? notes.trim().slice(0, 100) : null,
-        colors: Object.values(colorCounts),
+        ...(isLeadSession
+          ? { leadRoutes }
+          : { colors: Object.values(colorCounts) }),
       });
       router.replace({ pathname: '/session/[id]', params: { id } });
     } catch (e) {
@@ -280,14 +299,20 @@ export default function EditSessionScreen() {
           </View>
         </Section>
 
-        <Section title="색깔별 기록">
-          <ColorCountsTable
-            value={colorCounts}
-            onChange={setColorCounts}
-            colors={colorOrder}
-            primaryCount={primaryCount}
-          />
-        </Section>
+        {isLeadSession ? (
+          <Section title="리드 루트">
+            <LeadEntry value={leadRoutes} onChange={setLeadRoutes} />
+          </Section>
+        ) : (
+          <Section title="색깔별 기록">
+            <ColorCountsTable
+              value={colorCounts}
+              onChange={setColorCounts}
+              colors={colorOrder}
+              primaryCount={primaryCount}
+            />
+          </Section>
+        )}
 
         <Section title="메모">
           <TextInput

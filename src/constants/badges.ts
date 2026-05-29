@@ -37,11 +37,11 @@ export const BADGES: BadgeDef[] = [
   { key: 'first_v7',      category: 'grade',  name: 'V7 클라이머', hint: 'V7 첫 완등', icon: 'V7', color: '#92400e', bg: '#fef3c7' },
   { key: 'first_v8',      category: 'grade',  name: 'V8 클라이머', hint: 'V8 첫 완등', icon: 'V8', color: '#64748b', bg: '#f8fafc' },
   { key: 'first_v9',      category: 'grade',  name: 'V9 클라이머', hint: 'V9 첫 완등', icon: 'V9', color: '#0f172a', bg: '#f1f5f9' },
-  { key: 'first_lead_510',category: 'grade',  name: '5.10 클라이머', hint: '5.10 첫 완등', icon: '5.10', color: '#7c3aed', bg: '#ede9fe' },
-  { key: 'first_lead_511',category: 'grade',  name: '5.11 클라이머', hint: '5.11 첫 완등', icon: '5.11', color: '#7c3aed', bg: '#ede9fe' },
-  { key: 'first_lead_512',category: 'grade',  name: '5.12 클라이머', hint: '5.12 첫 완등', icon: '5.12', color: '#7c3aed', bg: '#ede9fe' },
-  { key: 'first_lead_513',category: 'grade',  name: '5.13 클라이머', hint: '5.13 첫 완등', icon: '5.13', color: '#7c3aed', bg: '#ede9fe' },
-  { key: 'first_lead_514',category: 'grade',  name: '5.14 클라이머', hint: '5.14 첫 완등', icon: '5.14', color: '#7c3aed', bg: '#ede9fe' },
+  { key: 'first_lead_510',category: 'grade',  name: '5.10 클라이머', hint: '5.10 첫 완등', icon: '5.10', color: '#059669', bg: '#d1fae5' },
+  { key: 'first_lead_511',category: 'grade',  name: '5.11 클라이머', hint: '5.11 첫 완등', icon: '5.11', color: '#0d9488', bg: '#ccfbf1' },
+  { key: 'first_lead_512',category: 'grade',  name: '5.12 클라이머', hint: '5.12 첫 완등', icon: '5.12', color: '#0891b2', bg: '#cffafe' },
+  { key: 'first_lead_513',category: 'grade',  name: '5.13 클라이머', hint: '5.13 첫 완등', icon: '5.13', color: '#0284c7', bg: '#e0f2fe' },
+  { key: 'first_lead_514',category: 'grade',  name: '5.14 클라이머', hint: '5.14 첫 완등', icon: '5.14', color: '#3b82f6', bg: '#eff6ff' },
 
   // ── 소셜 (social) ─────────────────────────────────────────
   { key: 'first_post',    category: 'social', name: '첫 글',       hint: '첫 게시글 작성', icon: 'edit-2', color: '#16a34a', bg: '#dcfce7' },

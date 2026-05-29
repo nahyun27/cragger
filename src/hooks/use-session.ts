@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 
 import type { ColorCount } from '@/hooks/use-record-session';
+import type { LeadRoute, LeadResult } from '@/components/climb/lead-entry';
 
 export type SessionRow = {
   id: string;
@@ -171,7 +172,9 @@ export type UpdateSessionArgs = {
   durationMin: number | null;
   condition: number | null;
   notes: string | null;
-  colors: ColorCount[];
+  // boulder 또는 lead — 둘 중 하나
+  colors?: ColorCount[];
+  leadRoutes?: LeadRoute[];
 };
 
 // 수정 흐름:
@@ -185,9 +188,10 @@ export function useUpdateSession() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (args: UpdateSessionArgs) => {
-      const used = args.colors.filter((c) => c.tries > 0);
-      if (used.length === 0) {
-        throw new Error('최소 한 색깔의 시도 수를 1 이상으로 입력하세요');
+      const isLead = (args.leadRoutes?.length ?? 0) > 0;
+      const used = (args.colors ?? []).filter((c) => c.tries > 0);
+      if (!isLead && used.length === 0) {
+        throw new Error('최소 한 색깔(또는 리드 루트) 의 시도를 입력하세요');
       }
 
       // 1. 기존 problem_id 수집 — 이 세션의 attempts에 달린 것만
@@ -242,56 +246,98 @@ export function useUpdateSession() {
       if (e4b) throw new Error(e4b.message);
       const userId = (sessionRow as { user_id: string }).user_id;
 
-      // 5. 새 problems INSERT
-      const { data: newProblems, error: e5 } = await supabase
-        .from('problems')
-        .insert(
-          used.map((c) => ({
-            gym_id: args.gymId,
-            color: c.color,
-            created_by: userId,
-          })),
-        )
-        .select('id, color');
-      if (e5) throw new Error(e5.message);
-
-      const colorToProblemId = new Map<string, string>();
-      for (const p of (newProblems ?? []) as Array<{ id: string; color: string }>) {
-        colorToProblemId.set(p.color, p.id);
-      }
-
-      // 6. 새 attempts INSERT
-      const attemptRows: Array<{
-        session_id: string;
-        problem_id: string;
-        climbing_type: 'boulder';
-        result: 'send' | 'project';
-      }> = [];
-      for (const c of used) {
-        const pid = colorToProblemId.get(c.color);
-        if (!pid) continue;
-        for (let i = 0; i < c.sends; i++) {
+      if (isLead) {
+        // 5L. lead — 같은 grade 묶어서 problem 1개씩
+        const routes = args.leadRoutes!;
+        const uniqueGrades = Array.from(new Set(routes.map((r) => r.grade)));
+        const { data: newProblems, error: e5 } = await supabase
+          .from('problems')
+          .insert(
+            uniqueGrades.map((g) => ({
+              gym_id: args.gymId,
+              route_grade: g,
+              created_by: userId,
+            })),
+          )
+          .select('id, route_grade');
+        if (e5) throw new Error(e5.message);
+        const gradeToProblemId = new Map<string, string>();
+        for (const p of (newProblems ?? []) as Array<{ id: string; route_grade: string }>) {
+          gradeToProblemId.set(p.route_grade, p.id);
+        }
+        // 6L. attempts
+        const attemptRows: Array<{
+          session_id: string;
+          problem_id: string;
+          climbing_type: 'lead';
+          result: LeadResult;
+        }> = [];
+        for (const r of routes) {
+          const pid = gradeToProblemId.get(r.grade);
+          if (!pid) continue;
           attemptRows.push({
             session_id: args.sessionId,
             problem_id: pid,
-            climbing_type: 'boulder',
-            result: 'send',
+            climbing_type: 'lead',
+            result: r.result,
           });
         }
-        const projects = Math.max(0, c.tries - c.sends);
-        for (let i = 0; i < projects; i++) {
-          attemptRows.push({
-            session_id: args.sessionId,
-            problem_id: pid,
-            climbing_type: 'boulder',
-            result: 'project',
-          });
+        if (attemptRows.length > 0) {
+          const { error: e6 } = await supabase.from('attempts').insert(attemptRows);
+          if (e6) throw new Error(e6.message);
         }
-      }
+      } else {
+        // 5B. boulder — 새 problems INSERT
+        const { data: newProblems, error: e5 } = await supabase
+          .from('problems')
+          .insert(
+            used.map((c) => ({
+              gym_id: args.gymId,
+              color: c.color,
+              created_by: userId,
+            })),
+          )
+          .select('id, color');
+        if (e5) throw new Error(e5.message);
 
-      if (attemptRows.length > 0) {
-        const { error: e6 } = await supabase.from('attempts').insert(attemptRows);
-        if (e6) throw new Error(e6.message);
+        const colorToProblemId = new Map<string, string>();
+        for (const p of (newProblems ?? []) as Array<{ id: string; color: string }>) {
+          colorToProblemId.set(p.color, p.id);
+        }
+
+        // 6B. 새 attempts INSERT
+        const attemptRows: Array<{
+          session_id: string;
+          problem_id: string;
+          climbing_type: 'boulder';
+          result: 'send' | 'project';
+        }> = [];
+        for (const c of used) {
+          const pid = colorToProblemId.get(c.color);
+          if (!pid) continue;
+          for (let i = 0; i < c.sends; i++) {
+            attemptRows.push({
+              session_id: args.sessionId,
+              problem_id: pid,
+              climbing_type: 'boulder',
+              result: 'send',
+            });
+          }
+          const projects = Math.max(0, c.tries - c.sends);
+          for (let i = 0; i < projects; i++) {
+            attemptRows.push({
+              session_id: args.sessionId,
+              problem_id: pid,
+              climbing_type: 'boulder',
+              result: 'project',
+            });
+          }
+        }
+
+        if (attemptRows.length > 0) {
+          const { error: e6 } = await supabase.from('attempts').insert(attemptRows);
+          if (e6) throw new Error(e6.message);
+        }
       }
 
       return { sessionId: args.sessionId };

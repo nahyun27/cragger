@@ -111,9 +111,8 @@ export default function SessionDetailScreen() {
 
   const cond = data.condition ? CONDITION_LABEL[data.condition] : null;
   const visibleColors = data.color_summary.filter((c) => c.tries > 0);
-  // 리드 세션은 현재 edit 화면이 boulder 전용 — 진입 시 색깔이 비어 보이게 됨.
-  // 일단 lead/mixed 면 edit 숨김 (v1.1 에서 lead edit 지원).
-  const canEdit = data.discipline === 'boulder' || data.discipline === 'empty';
+  // mixed 는 아직 한 폼에서 못 다뤄서 제외. boulder/lead/empty 만 수정 가능.
+  const canEdit = data.discipline !== 'mixed';
 
   return (
     <SafeAreaView className="flex-1 bg-background-primary" edges={['top', 'bottom']}>
