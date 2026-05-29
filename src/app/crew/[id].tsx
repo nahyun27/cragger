@@ -43,6 +43,7 @@ import {
 } from '@/hooks/use-crew-announcements';
 import { useCrewHomeStats, useCrewGradeDistribution } from '@/hooks/use-crew-stats';
 import { effectiveStatus, useBattles, type Battle } from '@/hooks/use-battles';
+import { Sheet } from '@/components/ui/sheet';
 import { useThemeColors, type ThemeColors } from '@/lib/theme';
 
 function getAvatarBg(name: string) {
@@ -302,41 +303,32 @@ export default function CrewDetailScreen() {
             </View>
           )}
 
-          {/* Invite code modal — header key icon triggers this */}
+          {/* Invite code sheet — header key icon triggers this */}
           {isMember && (
-            <Modal visible={showInviteCode} transparent animationType="fade">
-              <View style={s.inviteModalOverlay}>
-                <View style={s.inviteModalContentWrapper}>
-                  <View style={s.inviteModalHeaderCloseRow}>
-                    <Text style={s.inviteModalTitle}>멤버십 초대코드</Text>
-                    <Pressable onPress={() => setShowInviteCode(false)} hitSlop={10}>
-                      <Feather name="x" size={24} color={c.text.tertiary} />
-                    </Pressable>
-                  </View>
-                  <View style={[s.inviteCard, { borderColor: colors.border, marginHorizontal: 0, marginBottom: 0 }]}>
-                    <View style={[s.inviteBgDeco, { backgroundColor: colors.bg }]} />
-                    <View style={s.inviteCardHeader}>
-                      <Text style={[s.inviteCardLabel, { color: colors.text }]}>MEMBERSHIP KEY</Text>
-                      <Text style={s.inviteCardSublabel}>초대코드를 탭하여 공유해보세요</Text>
+            <Sheet
+              visible={showInviteCode}
+              onClose={() => setShowInviteCode(false)}
+              variant="center"
+              title="멤버십 초대코드"
+              subtitle="초대코드를 탭하여 공유해보세요"
+            >
+              <View style={[s.inviteCard, { borderColor: colors.border, marginHorizontal: 0, marginBottom: 0 }]}>
+                <View style={[s.inviteBgDeco, { backgroundColor: colors.bg }]} />
+                <Pressable onPress={handleCopyCode}>
+                  {({ pressed }) => (
+                    <View style={[s.inviteCodeBox, pressed && s.btnPressed]}>
+                      <Text style={[s.inviteCodeText, { color: colors.text }]}>
+                        {data.invite_code}
+                      </Text>
+                      <View style={[s.copyBadge, { backgroundColor: colors.text, shadowColor: colors.text }]}>
+                        <Feather name="copy" size={12} color="#ffffff" />
+                        <Text style={s.copyBadgeText}>복사</Text>
+                      </View>
                     </View>
-                    <View style={s.inviteDivider} />
-                    <Pressable onPress={handleCopyCode}>
-                      {({ pressed }) => (
-                        <View style={[s.inviteCodeBox, pressed && s.btnPressed]}>
-                          <Text style={[s.inviteCodeText, { color: colors.text }]}>
-                            {data.invite_code}
-                          </Text>
-                          <View style={[s.copyBadge, { backgroundColor: colors.text, shadowColor: colors.text }]}>
-                            <Feather name="copy" size={12} color="#ffffff" />
-                            <Text style={s.copyBadgeText}>복사</Text>
-                          </View>
-                        </View>
-                      )}
-                    </Pressable>
-                  </View>
-                </View>
+                  )}
+                </Pressable>
               </View>
-            </Modal>
+            </Sheet>
           )}
 
           {/* ---- NEWS TAB ---- */}
@@ -507,107 +499,91 @@ function TransferOwnerModal({
   }
 
   return (
-    <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
-      <SafeAreaView style={s.safeContainer} edges={['top']}>
-        {/* Modal Header */}
-        <View style={s.modalHeader}>
-          <Pressable onPress={onClose} hitSlop={8}>
-            {({ pressed }) => (
-              <View style={[s.headerIconBtn, pressed && s.btnPressed]}>
-                <Feather name="x" size={22} color={c.text.primary} />
-              </View>
-            )}
-          </Pressable>
-          <Text style={s.modalHeaderTitle}>크루장 위임</Text>
-          <View style={{ width: 40 }} />
-        </View>
-
-        <ScrollView contentContainerStyle={s.modalScrollContent}>
-          <Text style={s.modalHelpText}>
-            다음 크루장이 될 멤버를 선택하세요.
-          </Text>
-
-          <View style={s.candidateListContainer}>
-            {candidates.map((m, i) => {
-              const active = selected === m.user_id;
-              const name = m.user?.display_name || m.user?.username || '익명';
-              return (
-                <Pressable
-                  key={m.user_id}
-                  onPress={() => setSelected(m.user_id)}
-                >
-                  {({ pressed }) => (
-                    <View style={[
-                      s.candidateRow,
-                      active && s.candidateRowActive,
-                      i !== candidates.length - 1 && s.candidateRowDivider,
-                      pressed && s.btnPressed
-                    ]}>
-                      <View style={[s.candidateAvatar, { backgroundColor: c.bg.subtle }]}>
-                        {m.user?.avatar_url ? (
-                          <Image
-                            source={{ uri: m.user.avatar_url }}
-                            style={s.emblemImage}
-                            resizeMode="cover"
-                          />
-                        ) : (
-                          <Text style={s.candidateAvatarText}>
-                            {(name[0] ?? '?').toUpperCase()}
-                          </Text>
-                        )}
-                      </View>
-                      <Text style={s.candidateNameText} numberOfLines={1}>
-                        {name}
+    <Sheet
+      visible={visible}
+      onClose={onClose}
+      variant="full"
+      title="크루장 위임"
+      subtitle="다음 크루장이 될 멤버를 선택하세요"
+      footer={
+        <Pressable
+          onPress={handleConfirm}
+          disabled={!selected || transfer.isPending}
+        >
+          {({ pressed }) => (
+            <View style={[
+              s.confirmBtn,
+              !selected && s.confirmBtnDisabled,
+              pressed && s.btnPressed,
+            ]}>
+              {transfer.isPending ? (
+                <ActivityIndicator color="white" />
+              ) : (
+                <Text style={[s.confirmBtnText, !selected && s.confirmBtnTextDisabled]}>
+                  {alsoLeave ? '위임 + 나가기' : '위임'}
+                </Text>
+              )}
+            </View>
+          )}
+        </Pressable>
+      }
+    >
+      <View style={s.candidateListContainer}>
+        {candidates.map((m, i) => {
+          const active = selected === m.user_id;
+          const name = m.user?.display_name || m.user?.username || '익명';
+          return (
+            <Pressable
+              key={m.user_id}
+              onPress={() => setSelected(m.user_id)}
+            >
+              {({ pressed }) => (
+                <View style={[
+                  s.candidateRow,
+                  active && s.candidateRowActive,
+                  i !== candidates.length - 1 && s.candidateRowDivider,
+                  pressed && s.btnPressed,
+                ]}>
+                  <View style={[s.candidateAvatar, { backgroundColor: c.bg.subtle }]}>
+                    {m.user?.avatar_url ? (
+                      <Image
+                        source={{ uri: m.user.avatar_url }}
+                        style={s.emblemImage}
+                        resizeMode="cover"
+                      />
+                    ) : (
+                      <Text style={s.candidateAvatarText}>
+                        {(name[0] ?? '?').toUpperCase()}
                       </Text>
-                      <View style={[
-                        s.candidateRadio,
-                        active && s.candidateRadioActive
-                      ]}>
-                        {active && <Feather name="check" size={11} color="#ffffff" />}
-                      </View>
-                    </View>
-                  )}
-                </Pressable>
-              );
-            })}
-          </View>
-
-          <Pressable onPress={() => setAlsoLeave(!alsoLeave)}>
-            {({ pressed }) => (
-              <View style={[s.checkboxContainer, pressed && s.btnPressed]}>
-                <View style={[s.checkbox, alsoLeave && s.checkboxActive]}>
-                  {alsoLeave && <Feather name="check" size={11} color="#ffffff" />}
-                </View>
-                <Text style={s.checkboxLabel}>위임 후 크루 나가기</Text>
-              </View>
-            )}
-          </Pressable>
-        </ScrollView>
-
-        <View style={s.modalFooter}>
-          <Pressable
-            onPress={handleConfirm}
-            disabled={!selected || transfer.isPending}
-          >
-            {({ pressed }) => (
-              <View style={[
-                s.confirmBtn,
-                !selected && s.confirmBtnDisabled,
-                pressed && s.btnPressed
-              ]}>
-                {transfer.isPending ? (
-                  <ActivityIndicator color="white" />
-                ) : (
-                  <Text style={[s.confirmBtnText, !selected && s.confirmBtnTextDisabled]}>
-                    {alsoLeave ? '위임 + 나가기' : '위임'}
+                    )}
+                  </View>
+                  <Text style={s.candidateNameText} numberOfLines={1}>
+                    {name}
                   </Text>
-                )}
-              </View>
-            )}
-          </Pressable>
-        </View>
-      </SafeAreaView>
-    </Modal>
+                  <View style={[
+                    s.candidateRadio,
+                    active && s.candidateRadioActive,
+                  ]}>
+                    {active && <Feather name="check" size={11} color="#ffffff" />}
+                  </View>
+                </View>
+              )}
+            </Pressable>
+          );
+        })}
+      </View>
+
+      <Pressable onPress={() => setAlsoLeave(!alsoLeave)}>
+        {({ pressed }) => (
+          <View style={[s.checkboxContainer, pressed && s.btnPressed]}>
+            <View style={[s.checkbox, alsoLeave && s.checkboxActive]}>
+              {alsoLeave && <Feather name="check" size={11} color="#ffffff" />}
+            </View>
+            <Text style={s.checkboxLabel}>위임 후 크루 나가기</Text>
+          </View>
+        )}
+      </Pressable>
+    </Sheet>
   );
 }
 
@@ -1422,93 +1398,74 @@ function AnnouncementComposer({
   }
 
   return (
-    <Modal
+    <Sheet
       visible={visible}
-      animationType="slide"
-      presentationStyle="pageSheet"
-      onRequestClose={onClose}
+      onClose={onClose}
+      variant="full"
+      title="공지 작성"
+      footer={
+        <Pressable onPress={handleSubmit} disabled={!canSubmit}>
+          {({ pressed }) => (
+            <View
+              style={[
+                s.confirmBtn,
+                !canSubmit && s.confirmBtnDisabled,
+                pressed && s.btnPressed,
+              ]}
+            >
+              {create.isPending ? (
+                <ActivityIndicator color="white" />
+              ) : (
+                <Text style={[s.confirmBtnText, !canSubmit && s.confirmBtnTextDisabled]}>
+                  공지 올리기
+                </Text>
+              )}
+            </View>
+          )}
+        </Pressable>
+      }
     >
-      <View style={[s.safeContainer, { backgroundColor: c.bg.primary }]}>
-        <View style={s.modalHeader}>
-          <Text style={s.modalHeaderTitle}>공지 작성</Text>
-          <Pressable onPress={onClose} hitSlop={12} style={{ zIndex: 10 }}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <View style={s.composerInputWrap}>
+          <Text style={s.composerLabel}>제목</Text>
+          <TextInput
+            style={s.composerInput}
+            value={title}
+            onChangeText={setTitle}
+            placeholder="공지 제목"
+            placeholderTextColor={c.text.muted}
+            maxLength={80}
+          />
+        </View>
+
+        <View style={s.composerInputWrap}>
+          <Text style={s.composerLabel}>내용</Text>
+          <TextInput
+            style={[s.composerInput, s.composerTextArea]}
+            value={body}
+            onChangeText={setBody}
+            placeholder="크루원에게 알릴 중요한 내용을 적어주세요"
+            placeholderTextColor={c.text.muted}
+            multiline
+            textAlignVertical="top"
+            maxLength={2000}
+          />
+        </View>
+
+        {canPin && (
+          <Pressable onPress={() => setPinned((v) => !v)} style={s.pinToggleBtn}>
             {({ pressed }) => (
-              <View style={[s.headerIconBtn, pressed && s.btnPressed, { backgroundColor: c.bg.subtle }]}>
-                <Feather name="x" size={20} color={c.text.primary} />
+              <View style={[s.checkboxContainer, pressed && s.btnPressed]}>
+                <View style={[s.checkbox, pinned && s.checkboxActive]}>
+                  {pinned && <Feather name="check" size={12} color="#ffffff" />}
+                </View>
+                <Text style={s.checkboxLabel}>이 공지를 상단에 고정하기</Text>
               </View>
             )}
           </Pressable>
-        </View>
-
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          style={{ flex: 1 }}
-        >
-          <ScrollView contentContainerStyle={s.modalScrollContent} keyboardShouldPersistTaps="handled">
-            <View style={s.composerInputWrap}>
-              <Text style={s.composerLabel}>제목</Text>
-              <TextInput
-                style={s.composerInput}
-                value={title}
-                onChangeText={setTitle}
-                placeholder="공지 제목"
-                placeholderTextColor={c.text.muted}
-                maxLength={80}
-              />
-            </View>
-
-            <View style={s.composerInputWrap}>
-              <Text style={s.composerLabel}>내용</Text>
-              <TextInput
-                style={[s.composerInput, s.composerTextArea]}
-                value={body}
-                onChangeText={setBody}
-                placeholder="크루원에게 알릴 중요한 내용을 적어주세요"
-                placeholderTextColor={c.text.muted}
-                multiline
-                textAlignVertical="top"
-                maxLength={2000}
-              />
-            </View>
-
-            {canPin && (
-              <Pressable onPress={() => setPinned((v) => !v)} style={s.pinToggleBtn}>
-                {({ pressed }) => (
-                  <View style={[s.checkboxContainer, pressed && s.btnPressed]}>
-                    <View style={[s.checkbox, pinned && s.checkboxActive]}>
-                      {pinned && <Feather name="check" size={12} color="#ffffff" />}
-                    </View>
-                    <Text style={s.checkboxLabel}>이 공지를 상단에 고정하기</Text>
-                  </View>
-                )}
-              </Pressable>
-            )}
-          </ScrollView>
-
-          <View style={s.modalFooter}>
-            <Pressable onPress={handleSubmit} disabled={!canSubmit}>
-              {({ pressed }) => (
-                <View
-                  style={[
-                    s.confirmBtn,
-                    !canSubmit && s.confirmBtnDisabled,
-                    pressed && s.btnPressed,
-                  ]}
-                >
-                  {create.isPending ? (
-                    <ActivityIndicator color="white" />
-                  ) : (
-                    <Text style={[s.confirmBtnText, !canSubmit && s.confirmBtnTextDisabled]}>
-                      공지 올리기
-                    </Text>
-                  )}
-                </View>
-              )}
-            </Pressable>
-          </View>
-        </KeyboardAvoidingView>
-      </View>
-    </Modal>
+        )}
+      </KeyboardAvoidingView>
+    </Sheet>
   );
 }
 
