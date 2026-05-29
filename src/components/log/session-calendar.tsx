@@ -6,7 +6,7 @@ import { Feather } from '@expo/vector-icons';
 import { useMonthlySessions, type MonthlySession } from '@/hooks/use-monthly-sessions';
 import { GymThumbnail } from '@/components/gym/gym-thumbnail';
 import { SessionRow } from '@/components/session/session-row';
-import { useThemeColors, type ThemeColors } from '@/lib/theme';
+import { useThemeColors, useEffectiveScheme, type ThemeColors } from '@/lib/theme';
 
 LocaleConfig.locales['ko'] = {
   monthNames: [
@@ -73,6 +73,7 @@ function shortName(name: string): string {
 export function SessionCalendar() {
   const c = useThemeColors();
   const s = useMemo(() => makeStyles(c), [c]);
+  const isDark = useEffectiveScheme() === 'dark';
 
   const today = todayYMD();
   const [visibleYM, setVisibleYM] = useState<{ year: number; month: number }>(() => {
@@ -170,6 +171,7 @@ export function SessionCalendar() {
     <View style={s.wrap}>
       <View style={s.calendarCard}>
         <Calendar
+          key={isDark ? 'dark' : 'light'}
           current={`${visibleYM.year}-${pad2(visibleYM.month)}-01`}
           onDayPress={(d: DateData) => setSelectedDate(d.dateString)}
           onMonthChange={(d: DateData) => setVisibleYM({ year: d.year, month: d.month })}

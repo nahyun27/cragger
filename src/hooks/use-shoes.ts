@@ -145,9 +145,9 @@ const COLUMNS =
   'id, user_id, brand, model, size, status, purchased_at, image_url, note, created_at, updated_at, ownership_status, wanted_fit, fit_perception, stiffness, stretch, usages, fit_features, is_primary, rating_overall, rating_edging, rating_smearing, rating_toehook, rating_heelhook, rating_sensitivity, rating_comfort, rating_durability, rating_value, rating_design';
 
 // ── List ────────────────────────────────────────────────────
-export function useShoes() {
+export function useShoes(targetUserId?: string) {
   const { session: authSession } = useAuth();
-  const userId = authSession?.user.id;
+  const userId = targetUserId || authSession?.user.id;
   return useQuery({
     queryKey: ['shoes', userId] as const,
     enabled: !!userId,

@@ -77,6 +77,23 @@ export function useMyCrews() {
   });
 }
 
+export function useUserCrews(targetUserId: string | undefined) {
+  return useQuery({
+    queryKey: ['crews', 'user', targetUserId] as const,
+    enabled: !!targetUserId,
+    queryFn: async (): Promise<CrewSummary[]> => {
+      const { data, error } = await supabase
+        .from('crew_members')
+        .select(`crew:crews(${CREW_COLS})`)
+        .eq('user_id', targetUserId!)
+        .order('joined_at', { ascending: false });
+      if (error) throw new Error(error.message);
+      const rows = (data ?? []) as Array<{ crew: CrewSummary | null }>;
+      return rows.map((r) => r.crew).filter((c): c is CrewSummary => c !== null);
+    },
+  });
+}
+
 // ── 크루 상세 + 멤버 ─────────────────────────────────────────
 export function useCrewDetail(crewId: string | undefined) {
   const { session: authSession } = useAuth();

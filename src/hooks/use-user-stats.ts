@@ -74,9 +74,9 @@ export type UserStatsRange = {
   to?: string;   // exclusive
 };
 
-export function useUserStats(range: UserStatsRange = {}) {
+export function useUserStats(range: UserStatsRange = {}, targetUserId?: string) {
   const { session: authSession } = useAuth();
-  const userId = authSession?.user.id;
+  const userId = targetUserId || authSession?.user.id;
   const { from, to } = range;
   return useQuery({
     queryKey: ['user-stats', userId, from ?? null, to ?? null] as const,

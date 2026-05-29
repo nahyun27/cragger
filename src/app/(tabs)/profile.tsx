@@ -43,39 +43,12 @@ import {
   useUsePass,
   type MembershipRow,
 } from '@/hooks/use-memberships';
+import { useAuth } from '@/lib/auth-context';
 import { currentMonth, monthRange } from '@/lib/date-ranges';
 import { supabase } from '@/lib/supabase';
 import { useThemeColors, useThemePref, useEffectiveScheme, type ThemeColors, type ThemePref } from '@/lib/theme';
-
-export type Badge = {
-  id: string;
-  title: string;
-  type: 'icon' | 'text';
-  iconName?: string;
-  text?: string;
-  color: string;
-  bg: string;
-  unlocked: boolean;
-  hint: string;
-  unlockedDate?: string;
-};
-
-export const MOCK_BADGES: Badge[] = [
-  { id: '1', title: '완등 1000문제', type: 'icon', iconName: 'award', color: '#3b82f6', bg: '#eff6ff', unlocked: true, hint: '1000문제 완등 시 획득', unlockedDate: '2026.05.20' },
-  { id: '2', title: '원정 50회', type: 'icon', iconName: 'map-pin', color: '#10b981', bg: '#ecfdf5', unlocked: true, hint: '다른 암장 50회 방문 시 획득', unlockedDate: '2026.05.15' },
-  { id: '3', title: '게시판 첫 글', type: 'icon', iconName: 'edit-2', color: '#f59e0b', bg: '#fffbeb', unlocked: true, hint: '게시판에 첫 글 작성 시 획득', unlockedDate: '2026.05.01' },
-  { id: '4', title: 'V6 클라이머', type: 'text', text: 'V6', color: '#a855f7', bg: '#faf5ff', unlocked: true, hint: 'V6 난이도 완등 시 획득', unlockedDate: '2026.05.18' },
-  { id: '5', title: '완등 500문제', type: 'icon', iconName: 'star', color: '#f59e0b', bg: '#fffbeb', unlocked: true, hint: '500문제 완등 시 획득', unlockedDate: '2026.03.10' },
-  { id: '6', title: 'V5 클라이머', type: 'text', text: 'V5', color: '#4f46e5', bg: '#e0e7ff', unlocked: true, hint: 'V5 난이도 완등 시 획득', unlockedDate: '2026.02.05' },
-  { id: '7', title: 'V4 클라이머', type: 'text', text: 'V4', color: '#3b82f6', bg: '#eff6ff', unlocked: true, hint: 'V4 난이도 완등 시 획득', unlockedDate: '2026.01.12' },
-  { id: '8', title: 'V3 클라이머', type: 'text', text: 'V3', color: '#22c55e', bg: '#f0fdf4', unlocked: true, hint: 'V3 난이도 완등 시 획득', unlockedDate: '2025.11.20' },
-  { id: '9', title: 'V2 클라이머', type: 'text', text: 'V2', color: '#eab308', bg: '#fefce8', unlocked: true, hint: 'V2 난이도 완등 시 획득', unlockedDate: '2025.10.10' },
-  { id: '10', title: 'V1 클라이머', type: 'text', text: 'V1', color: '#f97316', bg: '#fff7ed', unlocked: true, hint: 'V1 난이도 완등 시 획득', unlockedDate: '2025.09.05' },
-  { id: '11', title: 'V0 클라이머', type: 'text', text: 'V0', color: '#ef4444', bg: '#fef2f2', unlocked: true, hint: 'V0 난이도 완등 시 획득', unlockedDate: '2025.08.01' },
-  { id: '12', title: 'V7 클라이머', type: 'text', text: 'V7', color: '#92400e', bg: '#fef3c7', unlocked: false, hint: 'V7 난이도 완등 시 획득' },
-  { id: '13', title: 'V8 클라이머', type: 'text', text: 'V8', color: '#64748b', bg: '#f8fafc', unlocked: false, hint: 'V8 난이도 완등 시 획득' },
-  { id: '14', title: 'V9 클라이머', type: 'text', text: 'V9', color: '#0f172a', bg: '#f1f5f9', unlocked: false, hint: 'V9 난이도 완등 시 획득' },
-];
+import { BADGES, BADGES_BY_KEY, type BadgeDef } from '@/constants/badges';
+import { useBadgeCheck, useUserBadges } from '@/hooks/use-badges';
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -90,7 +63,26 @@ export default function ProfileScreen() {
   );
   const { data: stats, isLoading, error } = useUserStats(thisMonthRange);
   const [menuVisible, setMenuVisible] = useState(false);
-  const [selectedBadge, setSelectedBadge] = useState<Badge | null>(null);
+  const [selectedBadge, setSelectedBadge] = useState<BadgeDef | null>(null);
+
+  // 마이페이지 진입 시 1회 뱃지 체크. 신규 획득 있으면 토스트.
+  const badgeCheck = useBadgeCheck();
+  React.useEffect(() => {
+    badgeCheck.mutate(undefined, {
+      onSuccess: ({ newlyEarned }) => {
+        if (newlyEarned.length === 0) return;
+        const msg = newlyEarned
+          .map((b) => `${b.icon}  ${b.name}`)
+          .join('\n');
+        Alert.alert(
+          newlyEarned.length === 1 ? '🏅 새 뱃지 획득!' : `🏅 새 뱃지 ${newlyEarned.length}개!`,
+          msg,
+        );
+      },
+    });
+    // 마운트 시 1회. badgeCheck.mutate identity 변화는 무시.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const username = profile?.username ?? '...';
   const firstChar = username && username.length > 0 ? username.charAt(0).toUpperCase() : '?';
@@ -138,11 +130,9 @@ export default function ProfileScreen() {
                   s.selectedBadgeIconWrap,
                   { backgroundColor: selectedBadge.bg, borderColor: selectedBadge.color }
                 ]}>
-                  {selectedBadge.type === 'text' ? (
-                    <Text style={[s.selectedBadgeTextIcon, { color: selectedBadge.color }]}>{selectedBadge.text}</Text>
-                  ) : selectedBadge.type === 'icon' ? (
-                    <Feather name={selectedBadge.iconName as any} size={14} color={selectedBadge.color} />
-                  ) : null}
+                  <Text style={[s.selectedBadgeTextIcon, { color: selectedBadge.color }]}>
+                    {selectedBadge.icon}
+                  </Text>
                 </View>
               )}
             </View>
@@ -535,26 +525,45 @@ function BodyMetricPill({
   );
 }
 
-function BadgesSection({ onSelectBadge }: { onSelectBadge: (badge: Badge) => void }) {
+function BadgesSection({ onSelectBadge }: { onSelectBadge: (badge: BadgeDef) => void }) {
   const c = useThemeColors();
   const s = React.useMemo(() => makeStyles(c), [c]);
-  const unlockedCount = MOCK_BADGES.filter(b => b.unlocked).length;
-  const totalCount = MOCK_BADGES.length;
+  const { session: authSession } = useAuth();
+  const meId = authSession?.user.id;
+  const { data: earnedRows } = useUserBadges(meId);
 
-  const handleBadgePress = (badge: Badge) => {
-    if (badge.unlocked) {
-      Alert.alert(
-        badge.title, 
-        `달성일: ${badge.unlockedDate}\n\n${badge.hint}`,
-        [
-          { text: '닫기', style: 'cancel' },
-          { text: '대표 배지로 설정', onPress: () => onSelectBadge(badge) }
-        ]
-      );
+  const earnedMap = React.useMemo(() => {
+    const m = new Map<string, string>();
+    for (const r of earnedRows ?? []) m.set(r.badge_key, r.earned_at);
+    return m;
+  }, [earnedRows]);
+
+  const unlockedCount = earnedMap.size;
+  const totalCount = BADGES.length;
+
+  function handleBadgePress(badge: BadgeDef) {
+    const earnedAt = earnedMap.get(badge.key);
+    if (earnedAt) {
+      const dateStr = new Date(earnedAt).toLocaleDateString('ko-KR');
+      Alert.alert(badge.name, `달성일: ${dateStr}\n\n${badge.hint}`, [
+        { text: '닫기', style: 'cancel' },
+        { text: '대표 배지로 설정', onPress: () => onSelectBadge(badge) },
+      ]);
     } else {
-      Alert.alert('미획득 배지', `${badge.hint}\n\n(아직 획득하지 못했습니다)`);
+      Alert.alert('미획득 배지', `${badge.hint}\n\n(아직 획득하지 못했어요)`);
     }
-  };
+  }
+
+  // 획득 먼저, 미획득 뒤 — 같은 카테고리 내 순서 유지.
+  const sortedBadges = React.useMemo(() => {
+    const earned: BadgeDef[] = [];
+    const locked: BadgeDef[] = [];
+    for (const b of BADGES) {
+      if (earnedMap.has(b.key)) earned.push(b);
+      else locked.push(b);
+    }
+    return [...earned, ...locked];
+  }, [earnedMap]);
 
   return (
     <View style={s.sectionContainer}>
@@ -567,27 +576,22 @@ function BadgesSection({ onSelectBadge }: { onSelectBadge: (badge: Badge) => voi
         </View>
       </View>
       <View style={s.badgesContainer}>
-        {MOCK_BADGES.map((badge) => {
-          const isLocked = !badge.unlocked;
+        {sortedBadges.map((badge) => {
+          const isLocked = !earnedMap.has(badge.key);
           const iconColor = isLocked ? c.text.muted : badge.color;
           const bgColor = isLocked ? c.bg.subtle : c.bg.card;
           const borderColor = isLocked ? c.border.subtle : badge.color;
 
           return (
-            <Pressable key={badge.id} style={s.badgeItem} onPress={() => handleBadgePress(badge)}>
+            <Pressable key={badge.key} style={s.badgeItem} onPress={() => handleBadgePress(badge)}>
               {({ pressed }) => (
                 <View style={[s.badgeItemInner, pressed && { opacity: 0.6 }]}>
                   <View style={[
                     s.badgeIconWrap,
                     { backgroundColor: bgColor, borderColor: borderColor },
-                    isLocked && { opacity: 0.7 }
+                    isLocked && { opacity: 0.7 },
                   ]}>
-                    {badge.type === 'text' ? (
-                      <Text style={[s.badgeTextIcon, { color: iconColor }]}>{badge.text}</Text>
-                    ) : badge.type === 'icon' ? (
-                      <Feather name={badge.iconName as any} size={20} color={iconColor} />
-                    ) : null}
-                    
+                    <Text style={[s.badgeTextIcon, { color: iconColor }]}>{badge.icon}</Text>
                     {isLocked && (
                       <View style={s.badgeLockBadge}>
                         <Feather name="lock" size={8} color={c.bg.card} />
@@ -595,7 +599,7 @@ function BadgesSection({ onSelectBadge }: { onSelectBadge: (badge: Badge) => voi
                     )}
                   </View>
                   <Text style={[s.badgeTitle, isLocked && { color: c.text.muted }]} numberOfLines={2}>
-                    {badge.title}
+                    {badge.name}
                   </Text>
                 </View>
               )}

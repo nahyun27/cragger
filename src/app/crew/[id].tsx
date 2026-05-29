@@ -11,6 +11,8 @@ import {
   TextInput,
   View,
   StyleSheet,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
@@ -255,14 +257,18 @@ export default function CrewDetailScreen() {
               </Text>
             )}
             {data.region && (
-              <Text style={s.profileGymText}>
-                🗺️ {data.region}
-              </Text>
+              <View style={s.profileMetaRow}>
+                <Feather name="map-pin" size={12} color={c.text.tertiary} />
+                <Text style={s.profileGymText}>{data.region}</Text>
+              </View>
             )}
             {data.home_gym && (
-              <Text style={s.profileGymText}>
-                📍 {data.home_gym.name} {data.home_gym.branch || ''}
-              </Text>
+              <View style={s.profileMetaRow}>
+                <Feather name="home" size={12} color={c.text.tertiary} />
+                <Text style={s.profileGymText}>
+                  {data.home_gym.name} {data.home_gym.branch || ''}
+                </Text>
+              </View>
             )}
           </View>
         )}
@@ -1415,79 +1421,92 @@ function AnnouncementComposer({
   }
 
   return (
-    <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
-      <SafeAreaView style={s.safeContainer} edges={['top']}>
+    <Modal
+      visible={visible}
+      animationType="slide"
+      presentationStyle="pageSheet"
+      onRequestClose={onClose}
+    >
+      <View style={[s.safeContainer, { backgroundColor: c.bg.primary }]}>
         <View style={s.modalHeader}>
-          <Pressable onPress={onClose} hitSlop={8}>
+          <Text style={s.modalHeaderTitle}>공지 작성</Text>
+          <Pressable onPress={onClose} hitSlop={12} style={{ zIndex: 10 }}>
             {({ pressed }) => (
-              <View style={[s.headerIconBtn, pressed && s.btnPressed]}>
-                <Feather name="x" size={22} color={c.text.primary} />
+              <View style={[s.headerIconBtn, pressed && s.btnPressed, { backgroundColor: c.bg.subtle }]}>
+                <Feather name="x" size={20} color={c.text.primary} />
               </View>
             )}
           </Pressable>
-          <Text style={s.modalHeaderTitle}>공지 작성</Text>
-          <View style={{ width: 40 }} />
         </View>
 
-        <ScrollView contentContainerStyle={s.modalScrollContent} keyboardShouldPersistTaps="handled">
-          <Text style={s.composerLabel}>제목</Text>
-          <TextInput
-            style={s.composerInput}
-            value={title}
-            onChangeText={setTitle}
-            placeholder="공지 제목"
-            placeholderTextColor={c.text.muted}
-            maxLength={80}
-          />
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          style={{ flex: 1 }}
+        >
+          <ScrollView contentContainerStyle={s.modalScrollContent} keyboardShouldPersistTaps="handled">
+            <View style={s.composerInputWrap}>
+              <Text style={s.composerLabel}>제목</Text>
+              <TextInput
+                style={s.composerInput}
+                value={title}
+                onChangeText={setTitle}
+                placeholder="공지 제목"
+                placeholderTextColor={c.text.muted}
+                maxLength={80}
+              />
+            </View>
 
-          <Text style={[s.composerLabel, { marginTop: 16 }]}>내용</Text>
-          <TextInput
-            style={[s.composerInput, s.composerTextArea]}
-            value={body}
-            onChangeText={setBody}
-            placeholder="크루원에게 알릴 내용"
-            placeholderTextColor={c.text.muted}
-            multiline
-            textAlignVertical="top"
-            maxLength={2000}
-          />
+            <View style={s.composerInputWrap}>
+              <Text style={s.composerLabel}>내용</Text>
+              <TextInput
+                style={[s.composerInput, s.composerTextArea]}
+                value={body}
+                onChangeText={setBody}
+                placeholder="크루원에게 알릴 중요한 내용을 적어주세요"
+                placeholderTextColor={c.text.muted}
+                multiline
+                textAlignVertical="top"
+                maxLength={2000}
+              />
+            </View>
 
-          {canPin && (
-            <Pressable onPress={() => setPinned((v) => !v)} style={{ marginTop: 16 }}>
-              {({ pressed }) => (
-                <View style={[s.checkboxContainer, pressed && s.btnPressed]}>
-                  <View style={[s.checkbox, pinned && s.checkboxActive]}>
-                    {pinned && <Feather name="check" size={11} color="#ffffff" />}
+            {canPin && (
+              <Pressable onPress={() => setPinned((v) => !v)} style={s.pinToggleBtn}>
+                {({ pressed }) => (
+                  <View style={[s.checkboxContainer, pressed && s.btnPressed]}>
+                    <View style={[s.checkbox, pinned && s.checkboxActive]}>
+                      {pinned && <Feather name="check" size={12} color="#ffffff" />}
+                    </View>
+                    <Text style={s.checkboxLabel}>이 공지를 상단에 고정하기</Text>
                   </View>
-                  <Text style={s.checkboxLabel}>상단 고정</Text>
+                )}
+              </Pressable>
+            )}
+          </ScrollView>
+
+          <View style={s.modalFooter}>
+            <Pressable onPress={handleSubmit} disabled={!canSubmit}>
+              {({ pressed }) => (
+                <View
+                  style={[
+                    s.confirmBtn,
+                    !canSubmit && s.confirmBtnDisabled,
+                    pressed && s.btnPressed,
+                  ]}
+                >
+                  {create.isPending ? (
+                    <ActivityIndicator color="white" />
+                  ) : (
+                    <Text style={[s.confirmBtnText, !canSubmit && s.confirmBtnTextDisabled]}>
+                      공지 올리기
+                    </Text>
+                  )}
                 </View>
               )}
             </Pressable>
-          )}
-        </ScrollView>
-
-        <View style={s.modalFooter}>
-          <Pressable onPress={handleSubmit} disabled={!canSubmit}>
-            {({ pressed }) => (
-              <View
-                style={[
-                  s.confirmBtn,
-                  !canSubmit && s.confirmBtnDisabled,
-                  pressed && s.btnPressed,
-                ]}
-              >
-                {create.isPending ? (
-                  <ActivityIndicator color="white" />
-                ) : (
-                  <Text style={[s.confirmBtnText, !canSubmit && s.confirmBtnTextDisabled]}>
-                    공지 올리기
-                  </Text>
-                )}
-              </View>
-            )}
-          </Pressable>
-        </View>
-      </SafeAreaView>
+          </View>
+        </KeyboardAvoidingView>
+      </View>
     </Modal>
   );
 }
@@ -1637,7 +1656,7 @@ function makeStyles(c: ThemeColors) {
     fontWeight: '700',
   },
   recruitingBadge: {
-    backgroundColor: '#f87171',
+    backgroundColor: c.status.danger,
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 8,
@@ -1658,10 +1677,15 @@ function makeStyles(c: ThemeColors) {
     lineHeight: 20,
     fontWeight: '600',
   },
+  profileMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 6,
+  },
   profileGymText: {
     color: c.text.tertiary,
     fontSize: 12,
-    marginTop: 6,
     fontWeight: '700',
   },
 
@@ -1670,7 +1694,7 @@ function makeStyles(c: ThemeColors) {
     flexDirection: 'row',
     backgroundColor: c.bg.card,
     borderBottomWidth: 1,
-    borderBottomColor: '#f1f5f9',
+    borderBottomColor: c.border.subtle,
     paddingHorizontal: 8,
   },
   tabItem: {
@@ -2527,28 +2551,51 @@ function makeStyles(c: ThemeColors) {
     justifyContent: 'center',
     backgroundColor: c.bg.subtle,
   },
+  composerInputWrap: {
+    marginBottom: 20,
+  },
   composerLabel: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: c.text.secondary,
+    fontSize: 13,
+    fontWeight: '800',
+    color: c.text.primary,
     marginBottom: 8,
+    marginLeft: 4,
   },
   composerInput: {
     backgroundColor: c.bg.card,
-    borderRadius: 12,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: c.border.subtle,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    fontSize: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    fontSize: 15,
     color: c.text.primary,
+    shadowColor: c.shadow.color,
+    shadowOpacity: 0.02,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 1,
   },
   composerTextArea: {
-    minHeight: 160,
-    paddingTop: 12,
+    minHeight: 200,
+    paddingTop: 16,
+  },
+  pinToggleBtn: {
+    marginTop: 8,
+    backgroundColor: c.bg.card,
+    borderRadius: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderWidth: 1,
+    borderColor: c.border.subtle,
+    shadowColor: c.shadow.color,
+    shadowOpacity: 0.02,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 1,
   },
   confirmBtnTextDisabled: {
-    color: c.text.muted,
+    color: '#94a3b8',
   },
   });
 }
