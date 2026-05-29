@@ -585,7 +585,7 @@ function makeStyles(c: ThemeColors) {
     },
     fabAnchor: {
       position: 'absolute',
-      bottom: 16,
+      bottom: 100,
       right: 16,
       zIndex: 10,
       elevation: 10,

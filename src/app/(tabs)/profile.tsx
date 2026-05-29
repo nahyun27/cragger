@@ -105,7 +105,18 @@ export default function ProfileScreen() {
     <SafeAreaView style={s.container} edges={['top']}>
       {/* Header bar */}
       <View style={s.header}>
-        <Text style={s.headerTitle}>마이페이지</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          {router.canGoBack() && (
+            <Pressable
+              onPress={() => router.back()}
+              style={({ pressed }) => [s.headerBtn, pressed && { opacity: 0.6 }, { marginLeft: -8 }]}
+              hitSlop={6}
+            >
+              <Feather name="arrow-left" size={22} color={c.text.primary} />
+            </Pressable>
+          )}
+          <Text style={s.headerTitle}>마이페이지</Text>
+        </View>
         <View style={s.headerActions}>
           <NotificationBell />
           <Pressable
