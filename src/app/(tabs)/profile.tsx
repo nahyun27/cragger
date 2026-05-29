@@ -248,7 +248,7 @@ export default function ProfileScreen() {
 
         <MembershipsSection />
 
-        <BadgesSection onSelectBadge={setSelectedBadge} />
+        <BadgesSection selectedBadge={selectedBadge} onSelectBadge={setSelectedBadge} />
 
         <ShoesSection />
       </ScrollView>
@@ -525,7 +525,13 @@ function BodyMetricPill({
   );
 }
 
-function BadgesSection({ onSelectBadge }: { onSelectBadge: (badge: BadgeDef) => void }) {
+function BadgesSection({
+  selectedBadge,
+  onSelectBadge,
+}: {
+  selectedBadge: BadgeDef | null;
+  onSelectBadge: (badge: BadgeDef) => void;
+}) {
   const c = useThemeColors();
   const s = React.useMemo(() => makeStyles(c), [c]);
   const { session: authSession } = useAuth();
@@ -566,55 +572,98 @@ function BadgesSection({ onSelectBadge }: { onSelectBadge: (badge: BadgeDef) => 
     }
   }
 
-  // 획득 먼저, 미획득 뒤 — 같은 카테고리 내 순서 유지.
-  const sortedBadges = React.useMemo(() => {
+  // 획득 / 잠금 분리
+  const { earnedList, lockedList } = React.useMemo(() => {
     const earned: BadgeDef[] = [];
     const locked: BadgeDef[] = [];
     for (const b of BADGES) {
       if (earnedMap.has(b.key)) earned.push(b);
       else locked.push(b);
     }
-    return [...earned, ...locked];
+    return { earnedList: earned, lockedList: locked };
   }, [earnedMap]);
+
+  const progress = totalCount > 0 ? unlockedCount / totalCount : 0;
+
+  const renderBadge = (badge: BadgeDef) => {
+    const isLocked = !earnedMap.has(badge.key);
+    const isSelected = selectedBadge?.key === badge.key;
+    const iconColor = isLocked ? c.text.muted : badge.color;
+
+    return (
+      <Pressable key={badge.key} style={s.badgeItem} onPress={() => handleBadgePress(badge)}>
+        {({ pressed }) => (
+          <View style={[s.badgeItemInner, pressed && { opacity: 0.6 }]}>
+            <View style={s.badgeIconWrap}>
+              <View style={isLocked ? { opacity: 0.4 } : undefined}>
+                <BadgeIcon icon={badge.icon} color={iconColor} size={22} />
+              </View>
+              {isLocked && (
+                <View style={s.badgeLockBadge}>
+                  <Feather name="lock" size={8} color={c.bg.card} />
+                </View>
+              )}
+              {isSelected && (
+                <View style={s.badgeSelectedPin}>
+                  <Text style={s.badgeSelectedPinText}>★</Text>
+                </View>
+              )}
+            </View>
+            <Text style={[s.badgeTitle, isLocked && { color: c.text.muted }]} numberOfLines={2}>
+              {badge.name}
+            </Text>
+          </View>
+        )}
+      </Pressable>
+    );
+  };
 
   return (
     <View style={s.sectionContainer}>
       <View style={s.sectionHeaderRow}>
-        <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 6 }}>
-          <Text style={s.sectionTitle}>배지 진열장</Text>
-          <Text style={s.sectionTitleCount}>
-            {unlockedCount} / {totalCount}
-          </Text>
-        </View>
+        <Text style={s.sectionTitle}>배지 진열장</Text>
       </View>
-      <View style={s.badgesContainer}>
-        {sortedBadges.map((badge) => {
-          const isLocked = !earnedMap.has(badge.key);
-          const iconColor = isLocked ? c.text.muted : badge.color;
 
-          return (
-            <Pressable key={badge.key} style={s.badgeItem} onPress={() => handleBadgePress(badge)}>
-              {({ pressed }) => (
-                <View style={[s.badgeItemInner, pressed && { opacity: 0.6 }]}>
-                  <View style={[
-                    s.badgeIconWrap,
-                    isLocked && { opacity: 0.45 },
-                  ]}>
-                    <BadgeIcon icon={badge.icon} color={iconColor} size={22} />
-                    {isLocked && (
-                      <View style={s.badgeLockBadge}>
-                        <Feather name="lock" size={8} color={c.bg.card} />
-                      </View>
-                    )}
-                  </View>
-                  <Text style={[s.badgeTitle, isLocked && { color: c.text.muted }]} numberOfLines={2}>
-                    {badge.name}
-                  </Text>
-                </View>
-              )}
-            </Pressable>
-          );
-        })}
+      <View style={s.collectionCard}>
+        {/* 헤더: 진행도 + 카운트 */}
+        <View style={s.collectionHeader}>
+          <View style={s.collectionHeaderTop}>
+            <Text style={s.collectionLabel}>컬렉션 진행도</Text>
+            <Text style={s.collectionCount}>
+              <Text style={s.collectionCountStrong}>{unlockedCount}</Text>
+              <Text style={s.collectionCountMuted}> / {totalCount}</Text>
+            </Text>
+          </View>
+          <View style={s.progressTrack}>
+            <View style={[s.progressFill, { width: `${progress * 100}%` }]} />
+          </View>
+        </View>
+
+        {/* 획득 그룹 */}
+        {earnedList.length > 0 && (
+          <View style={s.groupSection}>
+            <View style={s.groupHeader}>
+              <View style={s.groupDot} />
+              <Text style={s.groupTitle}>획득 {earnedList.length}</Text>
+            </View>
+            <View style={s.badgesGrid}>
+              {earnedList.map(renderBadge)}
+            </View>
+          </View>
+        )}
+
+        {/* 잠금 그룹 */}
+        {lockedList.length > 0 && (
+          <View style={s.groupSection}>
+            <View style={s.groupHeader}>
+              <View style={[s.groupDot, { backgroundColor: c.border.strong }]} />
+              <Text style={[s.groupTitle, { color: c.text.muted }]}>잠금 {lockedList.length}</Text>
+            </View>
+            <View style={s.badgesGrid}>
+              {lockedList.map(renderBadge)}
+            </View>
+          </View>
+        )}
       </View>
     </View>
   );
@@ -1836,26 +1885,88 @@ function makeStyles(c: ThemeColors) {
   },
 
   // Badges Section
-  badgesContainer: {
+  collectionCard: {
     backgroundColor: c.bg.card,
-    borderWidth: 1,
+    borderWidth: StyleSheet.hairlineWidth,
     borderColor: c.border.subtle,
-    borderRadius: 16,
-    padding: 16,
+    borderRadius: 20,
+    padding: 18,
+    shadowColor: c.shadow.color,
+    shadowOpacity: 0.04,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 2,
+    gap: 18,
+  },
+  collectionHeader: {
+    gap: 10,
+  },
+  collectionHeaderTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  collectionLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: c.text.tertiary,
+    letterSpacing: 0.2,
+    textTransform: 'uppercase',
+  },
+  collectionCount: {
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  collectionCountStrong: {
+    color: c.brand.primary,
+    fontSize: 16,
+    fontWeight: '900',
+  },
+  collectionCountMuted: {
+    color: c.text.muted,
+    fontWeight: '600',
+  },
+  progressTrack: {
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: c.bg.subtle,
+    overflow: 'hidden',
+  },
+  progressFill: {
+    height: '100%',
+    backgroundColor: c.brand.primary,
+    borderRadius: 3,
+  },
+  groupSection: {
+    gap: 12,
+  },
+  groupHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
+  },
+  groupDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: c.brand.primary,
+  },
+  groupTitle: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: c.text.secondary,
+    letterSpacing: -0.1,
+  },
+  badgesGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 14,
-    shadowColor: c.shadow.color,
-    shadowOpacity: 0.02,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 1,
+    rowGap: 16,
   },
   badgeItem: {
     width: '21%',
     alignItems: 'center',
     gap: 6,
-    marginBottom: 6,
   },
   badgeItemInner: {
     alignItems: 'center',
@@ -1877,6 +1988,29 @@ function makeStyles(c: ThemeColors) {
     justifyContent: 'center',
     borderWidth: 1.5,
     borderColor: c.bg.card,
+  },
+  badgeSelectedPin: {
+    position: 'absolute',
+    top: -3,
+    right: -3,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: c.brand.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1.5,
+    borderColor: c.bg.card,
+    shadowColor: c.brand.primary,
+    shadowOpacity: 0.4,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 1 },
+  },
+  badgeSelectedPinText: {
+    color: c.bg.card,
+    fontSize: 9,
+    fontWeight: '900',
+    lineHeight: 10,
   },
   badgeIconWrap: {
     alignItems: 'center',
