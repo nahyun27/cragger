@@ -1,4 +1,4 @@
-import { Feather } from '@expo/vector-icons';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
 import React from 'react';
 
@@ -31,35 +31,45 @@ export default function TabLayout() {
         name="index"
         options={{
           title: '홈',
-          tabBarIcon: ({ color, size }) => <Feather name="home" size={size} color={color} />,
+          tabBarIcon: ({ color, size, focused }) => (
+            <MaterialCommunityIcons name={focused ? 'home' : 'home-outline'} size={size * 1.1} color={color} />
+          ),
         }}
       />
       <Tabs.Screen
         name="log"
         options={{
           title: '기록',
-          tabBarIcon: ({ color, size }) => <Feather name="edit-3" size={size} color={color} />,
+          tabBarIcon: ({ color, size, focused }) => (
+            <MaterialCommunityIcons name={focused ? 'pencil-circle' : 'pencil-circle-outline'} size={size * 1.1} color={color} />
+          ),
         }}
       />
       <Tabs.Screen
         name="gyms"
         options={{
           title: '암장',
-          tabBarIcon: ({ color, size }) => <Feather name="map-pin" size={size} color={color} />,
+          tabBarIcon: ({ color, size, focused }) => (
+            <MaterialCommunityIcons name={focused ? 'map' : 'map-outline'} size={size * 1.1} color={color} />
+          ),
         }}
       />
       <Tabs.Screen
         name="community"
         options={{
           title: '커뮤니티',
-          tabBarIcon: ({ color, size }) => <Feather name="users" size={size} color={color} />,
+          tabBarIcon: ({ color, size, focused }) => (
+            <MaterialCommunityIcons name={focused ? 'account-group' : 'account-group-outline'} size={size * 1.1} color={color} />
+          ),
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
           title: '프로필',
-          tabBarIcon: ({ color, size }) => <Feather name="user" size={size} color={color} />,
+          tabBarIcon: ({ color, size, focused }) => (
+            <MaterialCommunityIcons name={focused ? 'account-circle' : 'account-circle-outline'} size={size * 1.1} color={color} />
+          ),
         }}
       />
     </Tabs>

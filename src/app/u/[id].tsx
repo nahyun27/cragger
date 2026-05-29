@@ -18,7 +18,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 
 import { useAuth } from '@/lib/auth-context';
-import { ShoeSizeGuide } from '@/components/shoes/shoe-size-guide';
 import { useUserCrews, type CrewSummary } from '@/hooks/use-crews';
 import {
   usePublicProfile,
@@ -35,7 +34,15 @@ import {
   type ShoeStatus,
 } from '@/hooks/use-shoes';
 import { useUnreadCount } from '@/hooks/use-notifications';
+import { useUserBadges } from '@/hooks/use-badges';
 import { useUserStats } from '@/hooks/use-user-stats';
+import {
+  BADGES,
+  BADGES_BY_KEY,
+  BADGE_CATEGORY_LABEL,
+  type BadgeCategory,
+  type BadgeDef,
+} from '@/constants/badges';
 import {
   daysFromTodayTo,
   isExpiringSoon,
@@ -47,36 +54,6 @@ import {
 import { currentMonth, monthRange } from '@/lib/date-ranges';
 import { supabase } from '@/lib/supabase';
 import { useThemeColors, useThemePref, useEffectiveScheme, type ThemeColors, type ThemePref } from '@/lib/theme';
-
-export type Badge = {
-  id: string;
-  title: string;
-  type: 'icon' | 'text';
-  iconName?: string;
-  text?: string;
-  color: string;
-  bg: string;
-  unlocked: boolean;
-  hint: string;
-  unlockedDate?: string;
-};
-
-export const MOCK_BADGES: Badge[] = [
-  { id: '1', title: '완등 1000문제', type: 'icon', iconName: 'award', color: '#3b82f6', bg: '#eff6ff', unlocked: true, hint: '1000문제 완등 시 획득', unlockedDate: '2026.05.20' },
-  { id: '2', title: '원정 50회', type: 'icon', iconName: 'map-pin', color: '#10b981', bg: '#ecfdf5', unlocked: true, hint: '다른 암장 50회 방문 시 획득', unlockedDate: '2026.05.15' },
-  { id: '3', title: '게시판 첫 글', type: 'icon', iconName: 'edit-2', color: '#f59e0b', bg: '#fffbeb', unlocked: true, hint: '게시판에 첫 글 작성 시 획득', unlockedDate: '2026.05.01' },
-  { id: '4', title: 'V6 클라이머', type: 'text', text: 'V6', color: '#a855f7', bg: '#faf5ff', unlocked: true, hint: 'V6 난이도 완등 시 획득', unlockedDate: '2026.05.18' },
-  { id: '5', title: '완등 500문제', type: 'icon', iconName: 'star', color: '#f59e0b', bg: '#fffbeb', unlocked: true, hint: '500문제 완등 시 획득', unlockedDate: '2026.03.10' },
-  { id: '6', title: 'V5 클라이머', type: 'text', text: 'V5', color: '#4f46e5', bg: '#e0e7ff', unlocked: true, hint: 'V5 난이도 완등 시 획득', unlockedDate: '2026.02.05' },
-  { id: '7', title: 'V4 클라이머', type: 'text', text: 'V4', color: '#3b82f6', bg: '#eff6ff', unlocked: true, hint: 'V4 난이도 완등 시 획득', unlockedDate: '2026.01.12' },
-  { id: '8', title: 'V3 클라이머', type: 'text', text: 'V3', color: '#22c55e', bg: '#f0fdf4', unlocked: true, hint: 'V3 난이도 완등 시 획득', unlockedDate: '2025.11.20' },
-  { id: '9', title: 'V2 클라이머', type: 'text', text: 'V2', color: '#eab308', bg: '#fefce8', unlocked: true, hint: 'V2 난이도 완등 시 획득', unlockedDate: '2025.10.10' },
-  { id: '10', title: 'V1 클라이머', type: 'text', text: 'V1', color: '#f97316', bg: '#fff7ed', unlocked: true, hint: 'V1 난이도 완등 시 획득', unlockedDate: '2025.09.05' },
-  { id: '11', title: 'V0 클라이머', type: 'text', text: 'V0', color: '#ef4444', bg: '#fef2f2', unlocked: true, hint: 'V0 난이도 완등 시 획득', unlockedDate: '2025.08.01' },
-  { id: '12', title: 'V7 클라이머', type: 'text', text: 'V7', color: '#92400e', bg: '#fef3c7', unlocked: false, hint: 'V7 난이도 완등 시 획득' },
-  { id: '13', title: 'V8 클라이머', type: 'text', text: 'V8', color: '#64748b', bg: '#f8fafc', unlocked: false, hint: 'V8 난이도 완등 시 획득' },
-  { id: '14', title: 'V9 클라이머', type: 'text', text: 'V9', color: '#0f172a', bg: '#f1f5f9', unlocked: false, hint: 'V9 난이도 완등 시 획득' },
-];
 
 export default function PublicProfileScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -97,7 +74,6 @@ export default function PublicProfileScreen() {
     [monthAnchor],
   );
   const { data: stats, isLoading, error } = useUserStats(thisMonthRange, id);
-  const [menuVisible, setMenuVisible] = useState(false);
 
   const username = profile?.username ?? '...';
   const firstChar = username && username.length > 0 ? username.charAt(0).toUpperCase() : '?';
@@ -173,16 +149,6 @@ export default function PublicProfileScreen() {
         <View style={s.sectionContainer}>
           <View style={s.sectionHeaderRow}>
             <Text style={s.sectionTitle}>{monthAnchor.month}월 운동 통계</Text>
-            <Pressable
-              onPress={() => router.push('/stats')}
-              hitSlop={6}
-              style={({ pressed }) => ({ opacity: pressed ? 0.5 : 1 })}
-            >
-              <View style={s.allStatsLink}>
-                <Text style={s.allStatsLinkText}>전체 통계</Text>
-                <Feather name="chevron-right" size={14} color={c.text.secondary} />
-              </View>
-            </Pressable>
           </View>
 
           {isLoading && (
@@ -227,8 +193,7 @@ export default function PublicProfileScreen() {
               {stats.gyms.length === 0 && (
                 <View style={s.emptyStatsCard}>
                   <Feather name="activity" size={24} color={c.text.muted} />
-                  <Text style={s.emptyStatsTitle}>아직 운동 기록이 없어요</Text>
-                  <Text style={s.emptyStatsSubtitle}>기록 탭에서 첫 세션을 추가해보세요</Text>
+                  <Text style={s.emptyStatsTitle}>이 달은 운동 기록이 없어요</Text>
                 </View>
               )}
             </>
@@ -299,7 +264,7 @@ function FootProfileCard({
             </View>
             {empty ? (
               <Text style={s.footEmptyText}>
-                발 정보를 등록하면 비슷한 발형 추천 사이즈를 볼 수 있어요
+                아직 등록한 발 정보가 없어요
               </Text>
             ) : (
               <View style={s.footChipsRow}>
@@ -467,66 +432,108 @@ function BodyMetricPill({
 function BadgesSection({ userId }: { userId: string }) {
   const c = useThemeColors();
   const s = React.useMemo(() => makeStyles(c), [c]);
-  const unlockedCount = MOCK_BADGES.filter(b => b.unlocked).length;
-  const totalCount = MOCK_BADGES.length;
+  const { data: rows = [], isLoading } = useUserBadges(userId);
 
-  const handleBadgePress = (badge: Badge) => {
-    if (badge.unlocked) {
-      customAlert(
-        badge.title, 
-        `달성일: ${badge.unlockedDate}\n\n${badge.hint}`,
-        [
-          { text: '닫기', style: 'cancel' }
-        ]
-      );
-    } else {
-      customAlert('미획득 배지', `${badge.hint}\n\n(아직 획득하지 못했습니다)`);
+  // earned_at 매핑
+  const earnedMap = React.useMemo(() => {
+    const m = new Map<string, string>();
+    for (const r of rows) m.set(r.badge_key, r.earned_at);
+    return m;
+  }, [rows]);
+
+  // 획득한 뱃지만 — 카테고리별 그룹
+  const groupedByCategory = React.useMemo(() => {
+    const order: BadgeCategory[] = ['record', 'grade', 'streak', 'social'];
+    const groups = new Map<BadgeCategory, BadgeDef[]>();
+    for (const cat of order) groups.set(cat, []);
+    for (const b of BADGES) {
+      if (earnedMap.has(b.key)) {
+        groups.get(b.category)!.push(b);
+      }
     }
-  };
+    return order
+      .map((cat) => ({ cat, list: groups.get(cat)! }))
+      .filter((g) => g.list.length > 0);
+  }, [earnedMap]);
+
+  const earnedCount = rows.length;
+
+  function handleBadgePress(badge: BadgeDef) {
+    const earnedAt = earnedMap.get(badge.key);
+    if (!earnedAt) return;
+    const dateStr = new Date(earnedAt).toLocaleDateString('ko-KR');
+    customAlert(
+      badge.name,
+      `달성일: ${dateStr}\n\n${badge.hint}`,
+      [{ text: '닫기', style: 'cancel' }],
+      undefined,
+      <BadgeIcon icon={badge.icon} color={badge.color} size={36} />,
+    );
+  }
 
   return (
     <View style={s.sectionContainer}>
       <View style={s.sectionHeaderRow}>
-        <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 6 }}>
-          <Text style={s.sectionTitle}>배지 진열장</Text>
-          <Text style={s.sectionTitleCount}>
-            {unlockedCount} / {totalCount}
+        <Text style={s.sectionTitle}>배지 진열장</Text>
+      </View>
+
+      <View style={s.collectionCard}>
+        <View style={s.collectionHeaderRow}>
+          <Text style={s.collectionLabel}>획득한 배지</Text>
+          <Text style={s.collectionCount}>
+            <Text style={s.collectionCountStrong}>{earnedCount}</Text>
+            <Text style={s.collectionCountMuted}>개</Text>
           </Text>
         </View>
-      </View>
-      <View style={s.badgesContainer}>
-        {MOCK_BADGES.map((badge) => {
-          const isLocked = !badge.unlocked;
-          const iconColor = isLocked ? c.text.muted : badge.color;
 
-          return (
-            <Pressable key={badge.id} style={s.badgeItem} onPress={() => handleBadgePress(badge)}>
-              {({ pressed }) => (
-                <View style={[s.badgeItemInner, pressed && { opacity: 0.6 }]}>
-                  <View style={[
-                    s.badgeIconWrap,
-                    isLocked && { opacity: 0.45 }
-                  ]}>
-                    {badge.type === 'text' ? (
-                      <BadgeIcon icon={badge.text as string} color={iconColor} size={20} />
-                    ) : badge.type === 'icon' ? (
-                      <BadgeIcon icon={badge.iconName as string} color={iconColor} size={20} />
-                    ) : null}
-                    
-                    {isLocked && (
-                      <View style={s.badgeLockBadge}>
-                        <Feather name="lock" size={8} color={c.bg.card} />
+        {isLoading && (
+          <View style={s.loaderWrap}>
+            <ActivityIndicator color={c.brand.primary} />
+          </View>
+        )}
+
+        {!isLoading && earnedCount === 0 && (
+          <View style={s.badgesEmptyState}>
+            <Feather name="award" size={28} color={c.text.muted} />
+            <Text style={s.badgesEmptyText}>아직 획득한 배지가 없어요</Text>
+          </View>
+        )}
+
+        {groupedByCategory.map(({ cat, list }, idx) => (
+          <View key={cat} style={[s.groupSection, idx > 0 && s.groupSectionDivider]}>
+            <View style={s.groupHeader}>
+              <View style={[s.groupDot, { backgroundColor: list[0].color }]} />
+              <Text style={s.groupTitle}>{BADGE_CATEGORY_LABEL[cat]}</Text>
+              <Text style={s.groupCount}>{list.length}</Text>
+            </View>
+            <View style={s.badgesGrid}>
+              {list.map((badge) => (
+                <Pressable
+                  key={badge.key}
+                  style={s.badgeItem}
+                  onPress={() => handleBadgePress(badge)}
+                >
+                  {({ pressed }) => (
+                    <View style={[s.badgeItemInner, pressed && { opacity: 0.6 }]}>
+                      <View style={[s.badgeIconWrap, {
+                        shadowColor: badge.color,
+                        shadowOpacity: 0.45,
+                        shadowRadius: 10,
+                        shadowOffset: { width: 0, height: 5 },
+                        elevation: 6,
+                      }]}>
+                        <BadgeIcon icon={badge.icon} color={badge.color} size={22} />
                       </View>
-                    )}
-                  </View>
-                  <Text style={[s.badgeTitle, isLocked && { color: c.text.muted }]} numberOfLines={2}>
-                    {badge.title}
-                  </Text>
-                </View>
-              )}
-            </Pressable>
-          );
-        })}
+                      <Text style={s.badgeTitle} numberOfLines={2}>
+                        {badge.name}
+                      </Text>
+                    </View>
+                  )}
+                </Pressable>
+              ))}
+            </View>
+          </View>
+        ))}
       </View>
     </View>
   );
@@ -559,10 +566,7 @@ function CrewsSection({ userId }: { userId: string }) {
       {data && data.length === 0 && (
         <View style={s.emptyStatsCard}>
           <Feather name="users" size={24} color={c.text.muted} />
-          <Text style={s.emptyStatsTitle}>아직 크루가 없어요</Text>
-          <Text style={s.emptyStatsSubtitle}>
-            크루를 만들거나 친구의 초대코드로 가입해보세요
-          </Text>
+          <Text style={s.emptyStatsTitle}>참여 중인 크루가 없어요</Text>
         </View>
       )}
 
@@ -957,10 +961,8 @@ function formatMembershipRightStat(m: MembershipRow, expired?: boolean): string 
 function ShoesSection({ userId }: { userId: string }) {
   const c = useThemeColors();
   const s = React.useMemo(() => makeStyles(c), [c]);
-  const router = useRouter();
   const { data: profile } = usePublicProfile(userId);
   const { data, isLoading, error } = useShoes(userId);
-  const [guideOpen, setGuideOpen] = useState(false);
   const count = data?.length ?? 0;
 
   return (
@@ -968,21 +970,12 @@ function ShoesSection({ userId }: { userId: string }) {
       <View style={s.sectionHeaderRow}>
         <View style={s.shoesTitleRow}>
           <Text style={s.sectionTitle}>
-            내 신발장 {count > 0 && <Text style={s.sectionTitleCount}>{count}</Text>}
+            신발장 {count > 0 && <Text style={s.sectionTitleCount}>{count}</Text>}
           </Text>
-          <Pressable
-            onPress={() => setGuideOpen(true)}
-            hitSlop={8}
-            style={({ pressed }) => [{ opacity: pressed ? 0.5 : 1 }]}
-          >
-            <Feather name="info" size={14} color={c.text.muted} />
-          </Pressable>
         </View>
       </View>
 
       <FootProfileCard profile={profile} />
-
-      <ShoeSizeGuide visible={guideOpen} onClose={() => setGuideOpen(false)} />
 
       {isLoading && (
         <View style={s.loaderWrap}>
@@ -1000,16 +993,7 @@ function ShoesSection({ userId }: { userId: string }) {
         <View style={s.shoeRackContainer}>
           <View style={s.emptyShelfSlot}>
             <Feather name="package" size={28} color={c.border.strong} />
-            <Text style={s.emptyShelfText}>첫 암벽화 등록하기</Text>
-            <Text style={s.emptyShelfSub}>핏·평점을 남기면 비슷한 발형 사용자와 비교돼요</Text>
-            <Pressable onPress={() => router.push('/shoes/new')}>
-              {({ pressed }) => (
-                <View style={[s.addBtn, { marginTop: 12 }, pressed && { opacity: 0.8 }]}>
-                  <Feather name="plus" size={14} color={c.text.secondary} />
-                  <Text style={s.addBtnText}>추가</Text>
-                </View>
-              )}
-            </Pressable>
+            <Text style={s.emptyShelfText}>아직 등록한 암벽화가 없어요</Text>
           </View>
         </View>
       )}
@@ -1702,26 +1686,96 @@ function makeStyles(c: ThemeColors) {
   },
 
   // Badges Section
-  badgesContainer: {
+  collectionCard: {
     backgroundColor: c.bg.card,
-    borderWidth: 1,
+    borderWidth: StyleSheet.hairlineWidth,
     borderColor: c.border.subtle,
-    borderRadius: 16,
-    padding: 16,
+    borderRadius: 20,
+    padding: 18,
+    shadowColor: c.shadow.color,
+    shadowOpacity: 0.04,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 2,
+    gap: 18,
+  },
+  collectionHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  collectionLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: c.text.tertiary,
+    letterSpacing: 0.2,
+    textTransform: 'uppercase',
+  },
+  collectionCount: {
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  collectionCountStrong: {
+    color: c.brand.primary,
+    fontSize: 16,
+    fontWeight: '900',
+  },
+  collectionCountMuted: {
+    color: c.text.muted,
+    fontWeight: '600',
+  },
+  groupSection: {
+    gap: 14,
+  },
+  groupSectionDivider: {
+    paddingTop: 18,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: c.border.subtle,
+  },
+  groupHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
+  },
+  groupDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
+    backgroundColor: c.brand.primary,
+  },
+  groupTitle: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: c.text.primary,
+    letterSpacing: -0.2,
+    flex: 1,
+  },
+  groupCount: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: c.text.secondary,
+  },
+  badgesGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 14,
-    shadowColor: c.shadow.color,
-    shadowOpacity: 0.02,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 1,
+    rowGap: 16,
+  },
+  badgesEmptyState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 28,
+    gap: 8,
+  },
+  badgesEmptyText: {
+    fontSize: 13,
+    color: c.text.muted,
+    fontWeight: '600',
   },
   badgeItem: {
     width: '21%',
     alignItems: 'center',
     gap: 6,
-    marginBottom: 6,
   },
   badgeItemInner: {
     alignItems: 'center',
