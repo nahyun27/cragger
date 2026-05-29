@@ -69,9 +69,10 @@ export function BadgeIcon({ icon, color, size = 20 }: BadgeIconProps) {
     );
   }
 
-  // 세션 — 'session-N' (원형)
+  // 세션 — 'session-N' (달력 안 숫자)
   if (icon.startsWith('session-')) {
     const num = icon.split('-')[1];
+    const calSize = size * 1.15;
     return (
       <View style={[sessionStyles.outer, {
         width: size * 1.6,
@@ -80,11 +81,22 @@ export function BadgeIcon({ icon, color, size = 20 }: BadgeIconProps) {
         backgroundColor: color + '22',
         borderColor: color,
       }]}>
-        <Feather name="calendar" size={size * 0.5} color={color} style={{ marginBottom: -1 }} />
-        <Text style={[sessionStyles.text, {
-          fontSize: num.length >= 3 ? size * 0.42 : size * 0.5,
-          color,
-        }]}>{num}</Text>
+        <View style={{ width: calSize, height: calSize }}>
+          <Feather name="calendar" size={calSize} color={color} />
+          {/* Feather 캘린더 body 는 viewBox 기준 y=10~22 = 42%~92% — 그 중간에 숫자 */}
+          <Text style={{
+            position: 'absolute',
+            left: 0,
+            right: 0,
+            top: calSize * 0.5,
+            textAlign: 'center',
+            fontSize: num.length >= 3 ? calSize * 0.34 : calSize * 0.42,
+            fontWeight: '900',
+            color,
+            letterSpacing: -0.5,
+            lineHeight: calSize * 0.42,
+          }}>{num}</Text>
+        </View>
       </View>
     );
   }
