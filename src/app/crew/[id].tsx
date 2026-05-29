@@ -1553,6 +1553,8 @@ function makeStyles(c: ThemeColors) {
     paddingTop: 16,
     paddingBottom: 16,
     backgroundColor: c.bg.card,
+    marginHorizontal: -20,
+    paddingHorizontal: 0,
   },
   profileAvatarRing: {
     width: 64,
@@ -1649,6 +1651,8 @@ function makeStyles(c: ThemeColors) {
   profileDescriptionBox: {
     backgroundColor: c.bg.card,
     paddingBottom: 16,
+    marginHorizontal: -20,
+    paddingHorizontal: 0,
   },
   profileDescriptionText: {
     color: c.text.primary,
