@@ -185,9 +185,20 @@ export default function GymDetailScreen() {
 
         {/* Difficulty — official + crowd vote merged */}
         <View className="gap-3.5">
-          <View className="flex-row items-end justify-between">
-            <Text className="text-text-primary text-lg font-bold">난이도</Text>
-            <Text className="text-text-tertiary text-xs">공식 / 체감 평균</Text>
+          <View className="flex-row items-center justify-between">
+            <View className="flex-row items-end gap-2">
+              <Text className="text-text-primary text-lg font-bold">난이도</Text>
+              <Text className="text-text-tertiary text-xs mb-0.5">공식 / 체감 평균</Text>
+            </View>
+            <Pressable
+              onPress={() =>
+                router.push({ pathname: '/gym/[id]/vote', params: { id: data.id } })
+              }
+              className="bg-brand-primary/10 border border-brand-primary/30 rounded-full py-1.5 px-3 flex-row items-center gap-1 active:opacity-70"
+            >
+              <Feather name="thumbs-up" size={11} color={c.brand.primary} />
+              <Text className="text-brand-primary font-bold text-xs">투표하기</Text>
+            </Pressable>
           </View>
           {data.color_schemes.length === 0 && data.color_stats.length === 0 ? (
             <View className="p-8 items-center justify-center bg-background-secondary rounded-2xl border border-border-subtle">
@@ -204,17 +215,17 @@ export default function GymDetailScreen() {
         </View>
       </ScrollView>
 
-      {/* Sticky vote button */}
+      {/* Sticky record button */}
       <View className="px-5 pt-3 pb-3 border-t border-border-subtle bg-background-primary">
         <Pressable
           onPress={() =>
-            router.push({ pathname: '/gym/[id]/vote', params: { id: data.id } })
+            router.push({ pathname: '/session/new', params: { gymId: data.id } })
           }
           className="bg-brand-primary rounded-2xl py-4 px-6 items-center flex-row justify-center gap-2 active:opacity-90 shadow-sm"
         >
-          <Feather name="thumbs-up" size={16} color="white" />
+          <Feather name="edit-3" size={16} color="white" />
           <Text className="text-white font-bold text-base">
-            이 암장 난이도 투표하기
+            이 암장에서 기록하기
           </Text>
         </Pressable>
       </View>

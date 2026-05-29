@@ -1,5 +1,5 @@
 import { customAlert } from '@/components/ui/custom-alert';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
@@ -125,9 +125,10 @@ export default function NewSessionScreen() {
 
   const c = useThemeColors();  const router = useRouter();
   const recordSession = useRecordSession();
+  const params = useLocalSearchParams<{ gymId?: string }>();
 
   const [dateChoice, setDateChoice] = useState<DateChoice>('today');
-  const [gymId, setGymId] = useState<string | null>(null);
+  const [gymId, setGymId] = useState<string | null>(params.gymId ?? null);
   const [showGymModal, setShowGymModal] = useState(false);
   const [durationMin, setDurationMin] = useState<number | null>(null);
   const [condition, setCondition] = useState<number | null>(null);
