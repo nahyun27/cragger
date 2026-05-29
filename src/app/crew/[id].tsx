@@ -1811,7 +1811,6 @@ function makeStyles(c: ThemeColors) {
     alignItems: 'center',
     justifyContent: 'space-between',
     marginBottom: 16,
-    paddingHorizontal: 20,
   },
   sectionTitle: {
     fontSize: 18,
@@ -1863,7 +1862,6 @@ function makeStyles(c: ThemeColors) {
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 6 },
     elevation: 2,
-    marginHorizontal: 16,
   },
   memberRow: {
     flexDirection: 'row',
