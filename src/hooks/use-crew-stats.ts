@@ -9,6 +9,15 @@ export type CrewHomeStats = {
   meetupCountLastMonth: number;
 };
 
+export type CrewActiveMember = {
+  user_id: string;
+  username: string;
+  display_name: string | null;
+  avatar_url: string | null;
+  role: 'owner' | 'admin' | 'member';
+  sessionCount: number;  // 활동률 — 최근 30일 세션 수
+};
+
 export type GradeBucket = {
   vGrade: string;
   vNum: number;
@@ -188,6 +197,67 @@ export function useCrewGradeDistribution(crewId: string | undefined) {
       const myVNum = meId ? (memberMax.get(meId) ?? null) : null;
 
       return { buckets, myVNum: myVNum != null ? Math.round(myVNum) : null };
+    },
+  });
+}
+
+// ── 활동률 기반 멤버 순위 (홈 탭 멤버 가로 스크롤용) ─────────────
+// 크루장 맨 앞, 그 외 최근 30일 세션 수 내림차순.
+export function useCrewActiveMembers(crewId: string | undefined) {
+  return useQuery({
+    queryKey: ['crew-active-members', crewId] as const,
+    enabled: !!crewId,
+    staleTime: 5 * 60_000,
+    queryFn: async (): Promise<CrewActiveMember[]> => {
+      // 1) 멤버 + 프로필
+      const { data: members, error: mErr } = await supabase
+        .from('crew_members')
+        .select(
+          'user_id, role, user:profiles!crew_members_user_id_fkey(id, username, display_name, avatar_url)',
+        )
+        .eq('crew_id', crewId!);
+      if (mErr) throw new Error(mErr.message);
+      const rows = (members ?? []) as Array<{
+        user_id: string;
+        role: 'owner' | 'admin' | 'member';
+        user: { id: string; username: string; display_name: string | null; avatar_url: string | null } | null;
+      }>;
+      if (rows.length === 0) return [];
+
+      // 2) 최근 30일 세션 — 멤버별 카운트
+      const cutoff = thirtyDaysAgo();
+      const userIds = rows.map((r) => r.user_id);
+      const { data: sessions, error: sErr } = await supabase
+        .from('sessions')
+        .select('user_id')
+        .in('user_id', userIds)
+        .gte('session_date', cutoff);
+      if (sErr) throw new Error(sErr.message);
+      const sessionCounts = new Map<string, number>();
+      for (const s of (sessions ?? []) as Array<{ user_id: string }>) {
+        sessionCounts.set(s.user_id, (sessionCounts.get(s.user_id) ?? 0) + 1);
+      }
+
+      const list: CrewActiveMember[] = rows
+        .filter((r) => r.user != null)
+        .map((r) => ({
+          user_id: r.user_id,
+          username: r.user!.username,
+          display_name: r.user!.display_name,
+          avatar_url: r.user!.avatar_url,
+          role: r.role,
+          sessionCount: sessionCounts.get(r.user_id) ?? 0,
+        }));
+
+      // 크루장 맨 앞, 그 외 sessionCount 내림차순 → 동률은 username
+      list.sort((a, b) => {
+        if (a.role === 'owner' && b.role !== 'owner') return -1;
+        if (b.role === 'owner' && a.role !== 'owner') return 1;
+        if (b.sessionCount !== a.sessionCount) return b.sessionCount - a.sessionCount;
+        return a.username.localeCompare(b.username);
+      });
+
+      return list;
     },
   });
 }

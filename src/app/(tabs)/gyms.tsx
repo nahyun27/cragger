@@ -1,4 +1,4 @@
-import { Feather } from '@expo/vector-icons';
+import { Feather, Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useMemo, useState } from 'react';
 import {
@@ -257,8 +257,8 @@ export default function GymsScreen() {
                 favoritesOnly ? s.favOnlyChipActive : s.favOnlyChipInactive,
               ]}
             >
-              <Feather
-                name="star"
+              <Ionicons
+                name={favoritesOnly ? "star" : "star-outline"}
                 size={12}
                 color={favoritesOnly ? c.brand.primary : c.text.tertiary}
               />
@@ -527,11 +527,10 @@ function GymCard({ gym, isFavorite }: { gym: GymListItem; isFavorite: boolean })
           >
             {({ pressed }) => (
               <View style={[{ opacity: pressed ? 0.6 : 1 }, s.favoriteBtn]}>
-                <Feather
-                  name="star"
+                <Ionicons
+                  name={isFavorite ? "star" : "star-outline"}
                   size={20}
                   color={isFavorite ? c.status.warning : c.border.strong}
-                  fill={isFavorite ? c.status.warning : 'transparent'}
                 />
               </View>
             )}

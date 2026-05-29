@@ -41,7 +41,12 @@ import {
   useDeleteAnnouncement,
   type CrewAnnouncement,
 } from '@/hooks/use-crew-announcements';
-import { useCrewHomeStats, useCrewGradeDistribution } from '@/hooks/use-crew-stats';
+import {
+  useCrewActiveMembers,
+  useCrewGradeDistribution,
+  useCrewHomeStats,
+  type CrewActiveMember,
+} from '@/hooks/use-crew-stats';
 import { effectiveStatus, useBattles, type Battle } from '@/hooks/use-battles';
 import { Sheet } from '@/components/ui/sheet';
 import { useThemeColors, type ThemeColors } from '@/lib/theme';
@@ -230,29 +235,31 @@ export default function CrewDetailScreen() {
               <Text style={s.profileName} numberOfLines={1}>
                 {data.name}
               </Text>
-              {isMember && (
-                <Pressable onPress={() => setShowInviteCode(true)} hitSlop={8}>
-                  {({ pressed }) => (
-                    <View style={[s.headerKeyBtn, pressed && { opacity: 0.6 }]}>
-                      <Feather name="key" size={16} color={c.brand.primary} />
-                    </View>
-                  )}
-                </Pressable>
-              )}
-              {isOwner && (
-                <Pressable
-                  onPress={() =>
-                    router.push({ pathname: '/crew/[id]/edit', params: { id: data.id } } as never)
-                  }
-                  hitSlop={8}
-                >
-                  {({ pressed }) => (
-                    <View style={[s.headerKeyBtn, pressed && { opacity: 0.6 }]}>
-                      <Feather name="edit-2" size={14} color={c.brand.primary} />
-                    </View>
-                  )}
-                </Pressable>
-              )}
+              <View style={s.profileTitleActions}>
+                {isMember && (
+                  <Pressable onPress={() => setShowInviteCode(true)} hitSlop={8}>
+                    {({ pressed }) => (
+                      <View style={[s.headerKeyBtn, pressed && { opacity: 0.6 }]}>
+                        <Feather name="key" size={16} color={c.brand.primary} />
+                      </View>
+                    )}
+                  </Pressable>
+                )}
+                {isOwner && (
+                  <Pressable
+                    onPress={() =>
+                      router.push({ pathname: '/crew/[id]/edit', params: { id: data.id } } as never)
+                    }
+                    hitSlop={8}
+                  >
+                    {({ pressed }) => (
+                      <View style={[s.headerKeyBtn, pressed && { opacity: 0.6 }]}>
+                        <Feather name="edit-2" size={14} color={c.brand.primary} />
+                      </View>
+                    )}
+                  </Pressable>
+                )}
+              </View>
             </View>
             <View style={s.profileSubRow}>
               <Text style={s.profileMemberCount}>회원 {data.member_count}명</Text>
@@ -304,6 +311,20 @@ export default function CrewDetailScreen() {
           {/* ---- HOME TAB ---- */}
           {activeTab === 'home' && (
             <View style={s.tabPane}>
+              {/* 최근 공지 한 줄 */}
+              {isMember && (
+                <LatestNoticeStrip crewId={data.id} onPress={() => setActiveTab('news')} />
+              )}
+
+              {/* 활동 멤버 가로 스크롤 */}
+              {isMember && (
+                <ActiveMembersStrip
+                  crewId={data.id}
+                  ownerId={data.owner_id}
+                  onMore={() => setActiveTab('members')}
+                />
+              )}
+
               {/* Crew stats strip */}
               {isMember && <CrewStatsStrip crewId={data.id} />}
 
@@ -1131,6 +1152,108 @@ function MemberRow({
   );
 }
 
+// ── 최근 공지 한 줄 ────────────────────────────────────────
+function LatestNoticeStrip({ crewId, onPress }: { crewId: string; onPress: () => void }) {
+  const c = useThemeColors();
+  const s = useMemo(() => makeStyles(c), [c]);
+  const { data } = useCrewAnnouncements(crewId);
+  const latest = data?.[0]; // 핀 + 최신순 정렬돼있음 — 첫 항목
+  if (!latest) return null;
+  return (
+    <Pressable onPress={onPress} style={({ pressed }) => [pressed && { opacity: 0.7 }]}>
+      <View style={s.latestNoticeStrip}>
+        <View style={s.latestNoticeIcon}>
+          <Feather name="bookmark" size={12} color={c.brand.primary} />
+        </View>
+        <Text style={s.latestNoticeText} numberOfLines={1}>
+          {latest.title}
+        </Text>
+        <Feather name="chevron-right" size={16} color={c.text.tertiary} />
+      </View>
+    </Pressable>
+  );
+}
+
+// ── 활동 멤버 가로 스크롤 ──────────────────────────────────────
+function ActiveMembersStrip({
+  crewId,
+  onMore,
+}: {
+  crewId: string;
+  ownerId: string;
+  onMore: () => void;
+}) {
+  const c = useThemeColors();
+  const s = useMemo(() => makeStyles(c), [c]);
+  const { data } = useCrewActiveMembers(crewId);
+
+  const top = (data ?? []).slice(0, 10);
+  const total = (data ?? []).length;
+  if (top.length === 0) return null;
+
+  return (
+    <View style={s.sectionGap}>
+      <View style={s.sectionHeaderRow}>
+        <Text style={s.sectionTitle}>활동 멤버</Text>
+      </View>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={s.activeMembersScroll}
+      >
+        {top.map((m) => (
+          <ActiveMemberChip key={m.user_id} member={m} />
+        ))}
+        {total > top.length && (
+          <Pressable
+            onPress={onMore}
+            style={({ pressed }) => [pressed && { opacity: 0.65 }]}
+          >
+            <View style={s.activeMembersMore}>
+              <View style={s.activeMembersMoreCircle}>
+                <Feather name="chevron-right" size={18} color={c.text.secondary} />
+              </View>
+              <Text style={s.activeMemberName} numberOfLines={1}>더보기</Text>
+            </View>
+          </Pressable>
+        )}
+      </ScrollView>
+    </View>
+  );
+}
+
+function ActiveMemberChip({ member }: { member: CrewActiveMember }) {
+  const c = useThemeColors();
+  const s = useMemo(() => makeStyles(c), [c]);
+  const router = useRouter();
+  const name = member.display_name || member.username;
+  const firstChar = name.length > 0 ? name.charAt(0).toUpperCase() : '?';
+  const isOwner = member.role === 'owner';
+
+  return (
+    <Pressable
+      onPress={() => router.push({ pathname: '/u/[id]', params: { id: member.user_id } } as never)}
+      style={({ pressed }) => [pressed && { opacity: 0.7 }]}
+    >
+      <View style={s.activeMembersMore}>
+        <View style={[s.activeMemberAvatar, isOwner && s.activeMemberAvatarOwner]}>
+          {member.avatar_url ? (
+            <Image source={{ uri: member.avatar_url }} style={s.activeMemberAvatarImg} resizeMode="cover" />
+          ) : (
+            <Text style={s.activeMemberAvatarText}>{firstChar}</Text>
+          )}
+          {isOwner && (
+            <View style={s.activeMemberOwnerBadge}>
+              <Text style={s.activeMemberOwnerBadgeText}>장</Text>
+            </View>
+          )}
+        </View>
+        <Text style={s.activeMemberName} numberOfLines={1}>{name}</Text>
+      </View>
+    </Pressable>
+  );
+}
+
 function CrewStatsStrip({ crewId }: { crewId: string }) {
   const c = useThemeColors();
   const s = useMemo(() => makeStyles(c), [c]);
@@ -1502,7 +1625,7 @@ function makeStyles(c: ThemeColors) {
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#f1f5f9',
+    borderBottomColor: c.border.subtle,
     backgroundColor: c.bg.card,
   },
   headerTitle: {
@@ -1595,6 +1718,11 @@ function makeStyles(c: ThemeColors) {
     alignItems: 'center',
     justifyContent: 'space-between',
   },
+  profileTitleActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
   profileName: {
     color: c.text.primary,
     fontSize: 20,
@@ -1610,7 +1738,7 @@ function makeStyles(c: ThemeColors) {
     justifyContent: 'center',
     backgroundColor: c.bg.accent,
     borderWidth: 1,
-    borderColor: '#a5f3fc',
+    borderColor: c.brand.primary + '33',
   },
   profileSubRow: {
     flexDirection: 'row',
@@ -1626,7 +1754,7 @@ function makeStyles(c: ThemeColors) {
   regionChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#e0f2fe', // light blue
+    backgroundColor: c.bg.accent,
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 8,
@@ -1678,7 +1806,7 @@ function makeStyles(c: ThemeColors) {
     backgroundColor: c.bg.card,
     borderBottomWidth: 1,
     borderBottomColor: c.border.subtle,
-    paddingHorizontal: 8,
+    marginHorizontal: -20,
   },
   tabItem: {
     flex: 1,
@@ -1721,7 +1849,7 @@ function makeStyles(c: ThemeColors) {
     gap: 6,
     backgroundColor: c.bg.accent,
     borderWidth: 1,
-    borderColor: '#cffafe',
+    borderColor: c.brand.primary + '33',
     borderRadius: 16,
     paddingVertical: 14,
     marginBottom: 10,
@@ -1729,7 +1857,7 @@ function makeStyles(c: ThemeColors) {
   inviteToggleBtnText: {
     fontSize: 14,
     fontWeight: '800',
-    color: '#0891b2',
+    color: c.brand.primaryDeep,
   },
   inviteCard: {
     backgroundColor: c.bg.card,
@@ -1838,20 +1966,20 @@ function makeStyles(c: ThemeColors) {
   actionBtnCyan: {
     backgroundColor: c.bg.accent,
     borderWidth: 1,
-    borderColor: '#cffafe',
+    borderColor: c.brand.primary + '33',
   },
   actionBtnAmber: {
-    backgroundColor: '#fffbeb',
+    backgroundColor: c.status.warningBg,
     borderWidth: 1,
-    borderColor: '#fde68a',
+    borderColor: c.status.warning + '33',
   },
   actionBtnTextCyan: {
-    color: '#0891b2',
+    color: c.brand.primary,
     fontSize: 11,
     fontWeight: '900',
   },
   actionBtnTextAmber: {
-    color: '#b45309',
+    color: c.status.warning,
     fontSize: 11,
     fontWeight: '900',
   },
@@ -1877,7 +2005,7 @@ function makeStyles(c: ThemeColors) {
   },
   memberRowBorder: {
     borderBottomWidth: 1,
-    borderBottomColor: '#f1f5f9',
+    borderBottomColor: c.border.subtle,
   },
   memberAvatar: {
     width: 40,
@@ -1911,14 +2039,14 @@ function makeStyles(c: ThemeColors) {
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 8,
-    backgroundColor: '#fffbeb',
+    backgroundColor: c.status.warningBg,
     borderWidth: 1,
-    borderColor: '#fde68a',
+    borderColor: c.status.warning + '33',
   },
   memberOwnerText: {
     fontSize: 10,
     fontWeight: '800',
-    color: '#d97706',
+    color: c.status.warning,
   },
   kickBtn: {
     width: 28,
@@ -1926,9 +2054,9 @@ function makeStyles(c: ThemeColors) {
     borderRadius: 6,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#fef2f2',
+    backgroundColor: c.status.dangerBg,
     borderWidth: 1,
-    borderColor: '#fee2e2',
+    borderColor: c.status.danger + '33',
   },
   loaderBox: {
     paddingVertical: 20,
@@ -1937,9 +2065,9 @@ function makeStyles(c: ThemeColors) {
   errorBox: {
     padding: 14,
     borderRadius: 16,
-    backgroundColor: '#fef2f2',
+    backgroundColor: c.status.dangerBg,
     borderWidth: 1,
-    borderColor: '#fee2e2',
+    borderColor: c.status.danger + '33',
   },
   errorBoxText: {
     color: c.status.danger,
@@ -2070,10 +2198,10 @@ function makeStyles(c: ThemeColors) {
     elevation: 1,
   },
   meetupCardActive: {
-    borderLeftColor: '#f59e0b',
+    borderLeftColor: c.status.warning,
   },
   meetupCardPast: {
-    borderLeftColor: '#cbd5e1',
+    borderLeftColor: c.border.strong,
     opacity: 0.65,
   },
   meetupCardHeader: {
@@ -2101,9 +2229,9 @@ function makeStyles(c: ThemeColors) {
     paddingHorizontal: 6,
     paddingVertical: 2.5,
     borderRadius: 4,
-    backgroundColor: '#fef2f2',
+    backgroundColor: c.status.dangerBg,
     borderWidth: 1,
-    borderColor: '#fee2e2',
+    borderColor: c.status.danger + '33',
   },
   meetupFullText: {
     fontSize: 9,
@@ -2181,8 +2309,8 @@ function makeStyles(c: ThemeColors) {
     paddingVertical: 4,
   },
   feedActionLiked: {
-    backgroundColor: '#fef2f2',
-    borderColor: '#fee2e2',
+    backgroundColor: c.status.dangerBg,
+    borderColor: c.status.danger + '22',
   },
   feedActionText: {
     fontSize: 10,
@@ -2193,9 +2321,9 @@ function makeStyles(c: ThemeColors) {
     color: c.status.danger,
   },
   leaveBtn: {
-    backgroundColor: '#fef2f2',
+    backgroundColor: c.status.dangerBg,
     borderWidth: 1,
-    borderColor: '#fee2e2',
+    borderColor: c.status.danger + '33',
     borderRadius: 20,
     paddingVertical: 16,
     alignItems: 'center',
@@ -2209,9 +2337,9 @@ function makeStyles(c: ThemeColors) {
     fontWeight: '800',
   },
   transferBtn: {
-    backgroundColor: '#faf5ff',
+    backgroundColor: c.bg.accent,
     borderWidth: 1,
-    borderColor: '#e9d5ff',
+    borderColor: c.brand.primary + '33',
     borderRadius: 20,
     paddingVertical: 16,
     alignItems: 'center',
@@ -2220,7 +2348,7 @@ function makeStyles(c: ThemeColors) {
     marginHorizontal: 16,
   },
   transferBtnText: {
-    color: '#7c3aed',
+    color: c.brand.primary,
     fontSize: 15,
     fontWeight: '800',
   },
@@ -2231,7 +2359,7 @@ function makeStyles(c: ThemeColors) {
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#e2e8f0',
+    borderBottomColor: c.border.subtle,
     backgroundColor: c.bg.card,
   },
   modalHeaderTitle: {
@@ -2274,7 +2402,7 @@ function makeStyles(c: ThemeColors) {
   },
   candidateRowDivider: {
     borderBottomWidth: 1,
-    borderBottomColor: '#f1f5f9',
+    borderBottomColor: c.border.subtle,
   },
   candidateAvatar: {
     width: 32,
@@ -2340,24 +2468,119 @@ function makeStyles(c: ThemeColors) {
     paddingTop: 12,
     paddingBottom: 24,
     borderTopWidth: 1,
-    borderTopColor: '#e2e8f0',
+    borderTopColor: c.border.subtle,
     backgroundColor: c.bg.card,
   },
   confirmBtn: {
-    backgroundColor: '#06b6d4',
+    backgroundColor: c.brand.primary,
     borderRadius: 16,
     paddingVertical: 14,
     alignItems: 'center',
     justifyContent: 'center',
   },
   confirmBtnDisabled: {
-    backgroundColor: '#cbd5e1',
+    backgroundColor: c.border.strong,
   },
   confirmBtnText: {
-    color: '#ffffff',
+    color: c.text.inverse,
     fontSize: 14,
     fontWeight: '800',
   },
+  // 최근 공지 한 줄
+  latestNoticeStrip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: c.bg.card,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: c.border.subtle,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginBottom: 18,
+  },
+  latestNoticeIcon: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: c.brand.primaryLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  latestNoticeText: {
+    flex: 1,
+    color: c.text.primary,
+    fontSize: 13,
+    fontWeight: '700',
+  },
+
+  // 활동 멤버 스트립
+  activeMembersScroll: {
+    paddingRight: 4,
+    gap: 14,
+  },
+  activeMembersMore: {
+    alignItems: 'center',
+    gap: 6,
+    width: 56,
+  },
+  activeMembersMoreCircle: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: c.bg.subtle,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  activeMemberAvatar: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: c.bg.subtle,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  activeMemberAvatarOwner: {
+    borderWidth: 2,
+    borderColor: c.brand.primary,
+  },
+  activeMemberAvatarImg: {
+    width: '100%',
+    height: '100%',
+  },
+  activeMemberAvatarText: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: c.text.secondary,
+  },
+  activeMemberOwnerBadge: {
+    position: 'absolute',
+    top: -2,
+    right: -2,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: c.brand.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1.5,
+    borderColor: c.bg.card,
+  },
+  activeMemberOwnerBadgeText: {
+    color: c.brand.onPrimary,
+    fontSize: 9,
+    fontWeight: '900',
+  },
+  activeMemberName: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: c.text.secondary,
+    textAlign: 'center',
+    maxWidth: 60,
+  },
+
   // Crew stats strip
   statsStripCard: {
     flexDirection: 'row',
@@ -2381,7 +2604,7 @@ function makeStyles(c: ThemeColors) {
   statsStripDivider: {
     width: 1,
     height: 36,
-    backgroundColor: '#e2e8f0',
+    backgroundColor: c.border.subtle,
   },
 
   // Grade distribution chart

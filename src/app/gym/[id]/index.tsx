@@ -8,7 +8,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Feather } from '@expo/vector-icons';
+import { Feather, Ionicons } from '@expo/vector-icons';
 
 import {
   COLOR_VOTE_THRESHOLD,
@@ -99,11 +99,10 @@ export default function GymDetailScreen() {
           className="p-2 -mr-2 active:opacity-60"
           hitSlop={8}
         >
-          <Feather
-            name="star"
+          <Ionicons
+            name={favorited ? "star" : "star-outline"}
             size={24}
             color={favorited ? '#f59e0b' : '#94a3b8'}
-            fill={favorited ? '#f59e0b' : 'transparent'}
           />
         </Pressable>
       </View>

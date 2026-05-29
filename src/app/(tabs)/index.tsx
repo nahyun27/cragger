@@ -11,7 +11,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Feather } from '@expo/vector-icons';
+import { Feather, Ionicons } from '@expo/vector-icons';
 
 import { useCommunityFeed, type PostRow, POST_TYPE_LABEL, type PostType } from '@/hooks/use-community';
 import { useFavoriteGyms } from '@/hooks/use-favorites';
@@ -427,7 +427,7 @@ function FavoriteGymsSection() {
                     <Text style={s.favGymLocation} numberOfLines={1}>
                       {gym.city} {gym.district ?? ''}
                     </Text>
-                    <Feather name="star" size={14} color={c.status.warning} fill={c.status.warning} />
+                    <Ionicons name="star" size={14} color={c.status.warning} />
                   </View>
 
                   <Text style={s.favGymName} numberOfLines={1}>

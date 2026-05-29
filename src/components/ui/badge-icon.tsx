@@ -288,17 +288,16 @@ export function BadgeIcon({ icon, color, size = 20 }: BadgeIconProps) {
   if (icon === 'battle-shield') {
     const w = size * 1.6;
     const h = size * 1.9;
-    const r = size * 0.2; // Top border radius
+    const cut = h * 0.12; // 양쪽 모서리 아주 조금 깎음
     
-    // Classic crest/shield shape: flat top, rounded bottom converging to point
+    // Classic crest/shield shape: peaked top, slightly concave top edges, straight sides, curved bottom
     const shieldPath = `
-      M 0 ${r}
-      A ${r} ${r} 0 0 1 ${r} 0
-      L ${w - r} 0
-      A ${r} ${r} 0 0 1 ${w} ${r}
+      M 0 ${cut}
+      Q ${w * 0.25} ${cut * 0.6} ${w / 2} 0
+      Q ${w * 0.75} ${cut * 0.6} ${w} ${cut}
       L ${w} ${h * 0.5}
-      C ${w} ${h * 0.8} ${w * 0.7} ${h} ${w / 2} ${h}
-      C ${w * 0.3} ${h} 0 ${h * 0.8} 0 ${h * 0.5}
+      C ${w} ${h * 0.85} ${w * 0.7} ${h} ${w / 2} ${h}
+      C ${w * 0.3} ${h} 0 ${h * 0.85} 0 ${h * 0.5}
       Z
     `;
 

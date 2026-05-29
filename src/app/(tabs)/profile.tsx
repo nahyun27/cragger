@@ -1,4 +1,5 @@
 import { BadgeIcon } from '@/components/ui/badge-icon';
+import { InstagramIcon } from '@/components/ui/instagram-icon';
 import { customAlert } from '@/components/ui/custom-alert';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
@@ -150,7 +151,7 @@ export default function ProfileScreen() {
                 hitSlop={6}
               >
                 <View style={s.instaTag}>
-                  <Feather name="instagram" size={12} color={c.brand.primary} />
+                  <InstagramIcon size={13} />
                   <Text style={s.instaTagText}>
                     @{profile.instagram_handle}
                   </Text>
@@ -515,7 +516,7 @@ function BodyMetricPill({
   const c = useThemeColors();
   const s = React.useMemo(() => makeStyles(c), [c]);
   return (
-    <View style={s.bodyPill}>
+    <View style={[s.bodyPill, sub && { flexDirection: 'row', justifyContent: 'space-between', width: '100%' }]}>
       <View style={s.bodyPillRow}>
         {icon}
         <Text style={s.bodyPillVal}>{value}</Text>
