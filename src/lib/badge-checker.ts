@@ -228,6 +228,8 @@ function checkBadge(key: string, d: UserBadgeData): boolean {
     case 'first_lead_510':return d.maxLead >= 10;
     case 'first_lead_511':return d.maxLead >= 11;
     case 'first_lead_512':return d.maxLead >= 12;
+    case 'first_lead_513':return d.maxLead >= 13;
+    case 'first_lead_514':return d.maxLead >= 14;
     // 색깔
     case 'rainbow':       return d.maxColorsInOneSession >= 5;
     case 'color_master':  return Array.from(d.colorSendCounts.values()).some((n) => n >= 20);

@@ -50,7 +50,7 @@ export default function TabLayout() {
         options={{
           title: '암장',
           tabBarIcon: ({ color, size, focused }) => (
-            <Ionicons name={focused ? 'business' : 'business-outline'} size={size} color={color} />
+            <Ionicons name={focused ? 'map' : 'map-outline'} size={size} color={color} />
           ),
         }}
       />
