@@ -580,7 +580,7 @@ function BadgesSection({
 
   // 카테고리별 그룹 (획득 → 잠금 순서로 정렬)
   const groupedByCategory = React.useMemo(() => {
-    const order: BadgeCategory[] = ['record', 'grade', 'color', 'streak', 'social'];
+    const order: BadgeCategory[] = ['record', 'grade', 'streak', 'social'];
     const groups = new Map<BadgeCategory, { earned: BadgeDef[]; locked: BadgeDef[] }>();
     for (const cat of order) groups.set(cat, { earned: [], locked: [] });
     for (const b of BADGES) {

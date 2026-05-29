@@ -1,8 +1,8 @@
 // 뱃지 정의 (코드 상수, DB 마스터 없음).
-// 카테고리: 기록(record) / 그레이드(grade) / 색깔(color) / 소셜(social) / 꾸준함(streak)
+// 카테고리: 기록(record) / 그레이드(grade) / 소셜(social) / 꾸준함(streak)
 // 정의 변경 시 기존 user_badges 행은 그대로 — badge_key 만 일치하면 카드에 보임.
 
-export type BadgeCategory = 'record' | 'grade' | 'color' | 'social' | 'streak';
+export type BadgeCategory = 'record' | 'grade' | 'social' | 'streak';
 
 export type BadgeDef = {
   key: string;
@@ -23,6 +23,8 @@ export const BADGES: BadgeDef[] = [
   { key: 'session_10',    category: 'record', name: '세션 10',     hint: '세션 10회', icon: 'session-10', color: '#2563eb', bg: '#dbeafe' },
   { key: 'session_50',    category: 'record', name: '세션 50',     hint: '세션 50회', icon: 'session-50', color: '#1d4ed8', bg: '#bfdbfe' },
   { key: 'session_100',   category: 'record', name: '세션 100',    hint: '세션 100회', icon: 'session-100', color: '#1e40af', bg: '#93c5fd' },
+  { key: 'rainbow',       category: 'record', name: '레인보우',    hint: '한 세션에 5색 이상 완등', icon: 'rainbow', color: '#0891b2', bg: '#cffafe' },
+  { key: 'color_master',  category: 'record', name: '컬러 마스터', hint: '한 색깔 20 완등', icon: 'palette', color: '#7c3aed', bg: '#ede9fe' },
 
   // ── 그레이드 (grade) ───────────────────────────────────────
   { key: 'first_v3',      category: 'grade',  name: 'V3 돌파',     hint: 'V3 첫 완등', icon: 'V3', color: '#7c3aed', bg: '#ede9fe' },
@@ -33,10 +35,6 @@ export const BADGES: BadgeDef[] = [
   { key: 'first_lead_511',category: 'grade',  name: '5.11 돌파',   hint: '5.11 첫 완등', icon: '5.11', color: '#7c3aed', bg: '#ede9fe' },
   { key: 'first_lead_512',category: 'grade',  name: '5.12 돌파',   hint: '5.12 첫 완등', icon: '5.12', color: '#7c3aed', bg: '#ede9fe' },
 
-  // ── 색깔 (color) ──────────────────────────────────────────
-  { key: 'rainbow',       category: 'color',  name: '레인보우',    hint: '한 세션에 5색 이상 완등', icon: 'rainbow', color: '#0891b2', bg: '#cffafe' },
-  { key: 'color_master',  category: 'color',  name: '컬러 마스터', hint: '한 색깔 20 완등', icon: 'palette', color: '#7c3aed', bg: '#ede9fe' },
-
   // ── 소셜 (social) ─────────────────────────────────────────
   { key: 'first_post',    category: 'social', name: '첫 글',       hint: '첫 게시글 작성', icon: 'edit-2', color: '#16a34a', bg: '#dcfce7' },
   { key: 'first_comment', category: 'social', name: '첫 댓글',     hint: '첫 댓글 작성', icon: 'message-circle', color: '#0891b2', bg: '#cffafe' },
@@ -44,7 +42,7 @@ export const BADGES: BadgeDef[] = [
   { key: 'crew_join',     category: 'social', name: '크루 가입',   hint: '크루 가입', icon: 'users', color: '#06b6d4', bg: '#cffafe' },
   { key: 'crew_create',   category: 'social', name: '크루장',      hint: '크루 만들기', icon: 'flag', color: '#d97706', bg: '#fef3c7' },
   { key: 'first_meetup',  category: 'social', name: '첫 모임',     hint: '첫 모임 참여', icon: 'coffee', color: '#dc2626', bg: '#fee2e2' },
-  { key: 'first_battle',  category: 'social', name: '첫 대결',     hint: '첫 대결 참여', icon: 'shield', color: '#7c3aed', bg: '#ede9fe' },
+  { key: 'first_battle',  category: 'social', name: '첫 대결',     hint: '첫 대결 참여', icon: 'battle-shield', color: '#7c3aed', bg: '#ede9fe' },
 
   // ── 꾸준함 (streak) ───────────────────────────────────────
   { key: 'streak_3',      category: 'streak', name: '3주 연속',    hint: '3주 연속 등반', icon: 'streak-3', color: '#16a34a', bg: '#dcfce7' },
@@ -59,7 +57,6 @@ export const BADGES_BY_KEY: Record<string, BadgeDef> = Object.fromEntries(
 export const BADGE_CATEGORY_LABEL: Record<BadgeCategory, string> = {
   record: '기록',
   grade:  '그레이드',
-  color:  '색깔',
   social: '소셜',
   streak: '꾸준함',
 };
