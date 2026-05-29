@@ -49,7 +49,13 @@ import { useAuth } from '@/lib/auth-context';
 import { currentMonth, monthRange } from '@/lib/date-ranges';
 import { supabase } from '@/lib/supabase';
 import { useThemeColors, useThemePref, useEffectiveScheme, type ThemeColors, type ThemePref } from '@/lib/theme';
-import { BADGES, BADGES_BY_KEY, type BadgeDef } from '@/constants/badges';
+import {
+  BADGES,
+  BADGES_BY_KEY,
+  BADGE_CATEGORY_LABEL,
+  type BadgeCategory,
+  type BadgeDef,
+} from '@/constants/badges';
 import { useBadgeCheck, useUserBadges } from '@/hooks/use-badges';
 
 export default function ProfileScreen() {
@@ -572,15 +578,19 @@ function BadgesSection({
     }
   }
 
-  // 획득 / 잠금 분리
-  const { earnedList, lockedList } = React.useMemo(() => {
-    const earned: BadgeDef[] = [];
-    const locked: BadgeDef[] = [];
+  // 카테고리별 그룹 (획득 → 잠금 순서로 정렬)
+  const groupedByCategory = React.useMemo(() => {
+    const order: BadgeCategory[] = ['record', 'grade', 'color', 'streak', 'social'];
+    const groups = new Map<BadgeCategory, { earned: BadgeDef[]; locked: BadgeDef[] }>();
+    for (const cat of order) groups.set(cat, { earned: [], locked: [] });
     for (const b of BADGES) {
-      if (earnedMap.has(b.key)) earned.push(b);
-      else locked.push(b);
+      const bucket = groups.get(b.category)!;
+      if (earnedMap.has(b.key)) bucket.earned.push(b);
+      else bucket.locked.push(b);
     }
-    return { earnedList: earned, lockedList: locked };
+    return order
+      .map((cat) => ({ cat, ...groups.get(cat)! }))
+      .filter((g) => g.earned.length + g.locked.length > 0);
   }, [earnedMap]);
 
   const progress = totalCount > 0 ? unlockedCount / totalCount : 0;
@@ -594,7 +604,16 @@ function BadgesSection({
       <Pressable key={badge.key} style={s.badgeItem} onPress={() => handleBadgePress(badge)}>
         {({ pressed }) => (
           <View style={[s.badgeItemInner, pressed && { opacity: 0.6 }]}>
-            <View style={s.badgeIconWrap}>
+            <View style={[
+              s.badgeIconWrap,
+              !isLocked && {
+                shadowColor: badge.color,
+                shadowOpacity: 0.45,
+                shadowRadius: 10,
+                shadowOffset: { width: 0, height: 5 },
+                elevation: 6,
+              },
+            ]}>
               <View style={isLocked ? { opacity: 0.4 } : undefined}>
                 <BadgeIcon icon={badge.icon} color={iconColor} size={22} />
               </View>
@@ -639,31 +658,25 @@ function BadgesSection({
           </View>
         </View>
 
-        {/* 획득 그룹 */}
-        {earnedList.length > 0 && (
-          <View style={s.groupSection}>
-            <View style={s.groupHeader}>
-              <View style={s.groupDot} />
-              <Text style={s.groupTitle}>획득 {earnedList.length}</Text>
+        {/* 카테고리별 섹션 */}
+        {groupedByCategory.map(({ cat, earned, locked }, idx) => {
+          const all = [...earned, ...locked];
+          const accent = earned[0]?.color ?? c.brand.primary;
+          return (
+            <View key={cat} style={[s.groupSection, idx > 0 && s.groupSectionDivider]}>
+              <View style={s.groupHeader}>
+                <View style={[s.groupDot, { backgroundColor: accent }]} />
+                <Text style={s.groupTitle}>{BADGE_CATEGORY_LABEL[cat]}</Text>
+                <Text style={s.groupCount}>
+                  {earned.length} <Text style={s.groupCountMuted}>/ {earned.length + locked.length}</Text>
+                </Text>
+              </View>
+              <View style={s.badgesGrid}>
+                {all.map(renderBadge)}
+              </View>
             </View>
-            <View style={s.badgesGrid}>
-              {earnedList.map(renderBadge)}
-            </View>
-          </View>
-        )}
-
-        {/* 잠금 그룹 */}
-        {lockedList.length > 0 && (
-          <View style={s.groupSection}>
-            <View style={s.groupHeader}>
-              <View style={[s.groupDot, { backgroundColor: c.border.strong }]} />
-              <Text style={[s.groupTitle, { color: c.text.muted }]}>잠금 {lockedList.length}</Text>
-            </View>
-            <View style={s.badgesGrid}>
-              {lockedList.map(renderBadge)}
-            </View>
-          </View>
-        )}
+          );
+        })}
       </View>
     </View>
   );
@@ -1938,7 +1951,12 @@ function makeStyles(c: ThemeColors) {
     borderRadius: 3,
   },
   groupSection: {
-    gap: 12,
+    gap: 14,
+  },
+  groupSectionDivider: {
+    paddingTop: 18,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: c.border.subtle,
   },
   groupHeader: {
     flexDirection: 'row',
@@ -1946,16 +1964,26 @@ function makeStyles(c: ThemeColors) {
     gap: 7,
   },
   groupDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
     backgroundColor: c.brand.primary,
   },
   groupTitle: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '800',
+    color: c.text.primary,
+    letterSpacing: -0.2,
+    flex: 1,
+  },
+  groupCount: {
+    fontSize: 12,
+    fontWeight: '700',
     color: c.text.secondary,
-    letterSpacing: -0.1,
+  },
+  groupCountMuted: {
+    color: c.text.muted,
+    fontWeight: '600',
   },
   badgesGrid: {
     flexDirection: 'row',
