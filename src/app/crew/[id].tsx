@@ -49,6 +49,12 @@ import {
   type CrewActiveMember,
 } from '@/hooks/use-crew-stats';
 import { effectiveStatus, useBattles, type Battle } from '@/hooks/use-battles';
+import {
+  useAcceptJoinRequest,
+  useCrewJoinRequests,
+  useRejectJoinRequest,
+  type CrewJoinRequest,
+} from '@/hooks/use-crew-requests';
 import { Sheet } from '@/components/ui/sheet';
 import { useThemeColors, type ThemeColors } from '@/lib/theme';
 
@@ -397,6 +403,9 @@ export default function CrewDetailScreen() {
           {/* ---- MEMBERS TAB ---- */}
           {activeTab === 'members' && (
             <View style={s.tabPane}>
+              {/* 가입 요청 (owner only) */}
+              {isOwner && <JoinRequestsSection crewId={data.id} />}
+
               {/* Members List */}
               <View style={s.sectionGap}>
                 <View style={s.sectionHeaderRow}>
@@ -1155,6 +1164,120 @@ function MemberRow({
         </View>
       )}
     </Pressable>
+  );
+}
+
+// ── 가입 요청 섹션 (크루장 전용) ────────────────────────────
+function JoinRequestsSection({ crewId }: { crewId: string }) {
+  const c = useThemeColors();
+  const s = useMemo(() => makeStyles(c), [c]);
+  const { data: requests = [] } = useCrewJoinRequests(crewId);
+  if (requests.length === 0) return null;
+  return (
+    <View style={s.sectionGap}>
+      <View style={s.sectionHeaderRow}>
+        <Text style={s.sectionTitle}>
+          가입 요청 <Text style={s.sectionTitleCount}>{requests.length}</Text>
+        </Text>
+      </View>
+      <View style={s.memberListCard}>
+        {requests.map((r, i) => (
+          <JoinRequestRow
+            key={r.id}
+            request={r}
+            isLast={i === requests.length - 1}
+          />
+        ))}
+      </View>
+    </View>
+  );
+}
+
+function JoinRequestRow({ request, isLast }: { request: CrewJoinRequest; isLast: boolean }) {
+  const c = useThemeColors();
+  const s = useMemo(() => makeStyles(c), [c]);
+  const router = useRouter();
+  const accept = useAcceptJoinRequest();
+  const reject = useRejectJoinRequest();
+  const name = request.user?.display_name || request.user?.username || '알 수 없음';
+  const firstChar = name.length > 0 ? name.charAt(0).toUpperCase() : '?';
+
+  function handleAccept() {
+    customAlert(`${name} 가입을 수락할까요?`, undefined, [
+      { text: '취소', style: 'cancel' },
+      {
+        text: '수락',
+        onPress: () =>
+          accept
+            .mutateAsync(request.id)
+            .catch((e) =>
+              customAlert('실패', e instanceof Error ? e.message : '오류'),
+            ),
+      },
+    ]);
+  }
+  function handleReject() {
+    customAlert(`${name} 가입을 거절할까요?`, '거절은 즉시 적용돼요.', [
+      { text: '취소', style: 'cancel' },
+      {
+        text: '거절',
+        style: 'destructive',
+        onPress: () =>
+          reject
+            .mutateAsync(request.id)
+            .catch((e) =>
+              customAlert('실패', e instanceof Error ? e.message : '오류'),
+            ),
+      },
+    ]);
+  }
+
+  return (
+    <View
+      style={[
+        s.memberRow,
+        !isLast && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: c.border.subtle },
+      ]}
+    >
+      <Pressable
+        onPress={() =>
+          router.push({ pathname: '/u/[id]', params: { id: request.user_id } } as never)
+        }
+        style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}
+      >
+        <View style={s.memberAvatar}>
+          {request.user?.avatar_url ? (
+            <Image source={{ uri: request.user.avatar_url }} style={s.memberAvatarImg} />
+          ) : (
+            <Text style={s.memberAvatarText}>{firstChar}</Text>
+          )}
+        </View>
+        <View style={{ flex: 1, gap: 2 }}>
+          <Text style={s.memberName} numberOfLines={1}>{name}</Text>
+          {request.message ? (
+            <Text style={s.memberSubtext} numberOfLines={2}>{request.message}</Text>
+          ) : (
+            <Text style={s.memberSubtext}>가입 인사 없음</Text>
+          )}
+        </View>
+      </Pressable>
+      <View style={{ flexDirection: 'row', gap: 6 }}>
+        <Pressable onPress={handleReject} hitSlop={4}>
+          {({ pressed }) => (
+            <View style={[s.reqRejectBtn, pressed && s.btnPressed]}>
+              <Feather name="x" size={16} color={c.status.danger} />
+            </View>
+          )}
+        </Pressable>
+        <Pressable onPress={handleAccept} hitSlop={4}>
+          {({ pressed }) => (
+            <View style={[s.reqAcceptBtn, pressed && s.btnPressed]}>
+              <Feather name="check" size={16} color={c.brand.onPrimary} />
+            </View>
+          )}
+        </Pressable>
+      </View>
+    </View>
   );
 }
 
@@ -2024,6 +2147,39 @@ function makeStyles(c: ThemeColors) {
   memberAvatarText: {
     fontSize: 14,
     fontWeight: '900',
+    color: c.text.secondary,
+  },
+  memberAvatarImg: {
+    width: '100%',
+    height: '100%',
+  },
+  memberName: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: c.text.primary,
+  },
+  memberSubtext: {
+    fontSize: 12,
+    color: c.text.tertiary,
+    fontWeight: '600',
+  },
+  reqAcceptBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: c.brand.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  reqRejectBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: c.status.dangerBg,
+    borderWidth: 1,
+    borderColor: c.status.danger + '55',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   memberNameText: {
     flex: 1,

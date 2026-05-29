@@ -16,29 +16,35 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 
 import { Section } from '@/components/ui/section';
-import { useJoinCrewByCode, useLookupCrewByCode } from '@/hooks/use-crews';
+import { useLookupCrewByCode } from '@/hooks/use-crews';
+import { useRequestJoinCrew } from '@/hooks/use-crew-requests';
 import { useThemeColors } from '@/lib/theme';
 
 export default function JoinCrewScreen() {
 
   const c = useThemeColors();  const router = useRouter();
   const [code, setCode] = useState('');
-  const joinCrew = useJoinCrewByCode();
+  const [message, setMessage] = useState('');
+  const requestJoin = useRequestJoinCrew();
   const codeUpper = code.trim().toUpperCase();
   const codeReady = codeUpper.length === 6;
   const { data: preview, isLoading: previewLoading, error: previewError } = useLookupCrewByCode(
     codeUpper,
   );
 
-  const canSubmit = codeReady && !!preview && !joinCrew.isPending;
+  const canSubmit = codeReady && !!preview && !requestJoin.isPending;
 
   async function handleJoin() {
     if (!canSubmit) return;
     try {
-      const { crewId } = await joinCrew.mutateAsync(codeUpper);
-      router.replace({ pathname: '/crew/[id]', params: { id: crewId } } as never);
+      await requestJoin.mutateAsync({ code: codeUpper, message });
+      customAlert(
+        '요청 보냈어요',
+        '크루장이 수락하면 알림이 도착해요.',
+        [{ text: '확인', onPress: () => router.back() }],
+      );
     } catch (e) {
-      customAlert('가입 실패', e instanceof Error ? e.message : '알 수 없는 오류');
+      customAlert('요청 실패', e instanceof Error ? e.message : '알 수 없는 오류');
     }
   }
 
@@ -120,6 +126,24 @@ export default function JoinCrewScreen() {
               )}
             </View>
           )}
+
+          {/* 한 줄 소개 (옵션) */}
+          {codeReady && !!preview && (
+            <Section title="가입 인사 (선택)">
+              <View className="bg-background-secondary border border-border-subtle rounded-xl px-3.5">
+                <TextInput
+                  placeholder="간단히 자기소개해보세요 (최대 100자)"
+                  placeholderTextColor="#9CA3AF"
+                  value={message}
+                  onChangeText={(t) => setMessage(t.slice(0, 100))}
+                  multiline
+                  maxLength={100}
+                  className="py-3 text-text-primary text-sm"
+                  style={{ minHeight: 60, textAlignVertical: 'top' }}
+                />
+              </View>
+            </Section>
+          )}
         </ScrollView>
 
         <View className="px-5 pt-3 pb-5 border-t border-border-subtle">
@@ -130,7 +154,7 @@ export default function JoinCrewScreen() {
               !canSubmit ? 'bg-background-tertiary' : 'bg-brand-primary'
             }`}
           >
-            {joinCrew.isPending ? (
+            {requestJoin.isPending ? (
               <ActivityIndicator color="white" />
             ) : (
               <Text
@@ -138,7 +162,7 @@ export default function JoinCrewScreen() {
                   !canSubmit ? 'text-text-muted' : 'text-background-primary'
                 }`}
               >
-                가입하기
+                가입 요청 보내기
               </Text>
             )}
           </Pressable>

@@ -199,40 +199,9 @@ export function useCreateCrew() {
   });
 }
 
-export function useJoinCrewByCode() {
-  const queryClient = useQueryClient();
-  const { session: authSession } = useAuth();
-  return useMutation({
-    mutationFn: async (code: string): Promise<{ crewId: string }> => {
-      const userId = authSession?.user.id;
-      if (!userId) throw new Error('Not authenticated');
-      const trimmed = code.trim().toUpperCase();
-      if (trimmed.length !== 6) throw new Error('초대코드는 6자리');
-
-      const { data: crew, error: lookupErr } = await supabase
-        .from('crews')
-        .select('id')
-        .eq('invite_code', trimmed)
-        .maybeSingle();
-      if (lookupErr) throw new Error(lookupErr.message);
-      if (!crew) throw new Error('코드를 확인해주세요');
-
-      const crewId = (crew as { id: string }).id;
-      const { error: insertErr } = await supabase
-        .from('crew_members')
-        .insert({ crew_id: crewId, user_id: userId, role: 'member' });
-      if (insertErr) {
-        if (insertErr.code === '23505') throw new Error('이미 가입한 크루입니다');
-        throw new Error(insertErr.message);
-      }
-      return { crewId };
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['crews'] });
-      checkBadgesAndNotify();
-    },
-  });
-}
+/**
+ * @deprecated 가입 요청 흐름으로 전환됨. useRequestJoinCrew() 사용.
+ */
 
 export function useLeaveCrew() {
   const queryClient = useQueryClient();
