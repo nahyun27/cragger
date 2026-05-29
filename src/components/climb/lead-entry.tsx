@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
+import { useEffectiveScheme, useThemeColors } from '@/lib/theme';
 
 export type LeadResult = 'onsight' | 'flash' | 'redpoint' | 'fall';
 
@@ -20,15 +21,31 @@ const SUB_GRADES = ['a', 'b', 'c', 'd'];
 const RESULT_OPTIONS: {
   value: LeadResult;
   label: string;
-  bg: string;
-  fg: string;
-  border: string;
 }[] = [
-  { value: 'onsight',  label: '온사이트',   bg: '#ecfeff', fg: '#0e7490', border: '#a5f3fc' },
-  { value: 'flash',    label: '플래시',     bg: '#f0fdf4', fg: '#15803d', border: '#bbf7d0' },
-  { value: 'redpoint', label: '레드포인트', bg: '#fff7ed', fg: '#c2410c', border: '#fed7aa' },
-  { value: 'fall',     label: '폴',         bg: '#fef2f2', fg: '#b91c1c', border: '#fecaca' },
+  { value: 'onsight',  label: '온사이트' },
+  { value: 'flash',    label: '플래시' },
+  { value: 'redpoint', label: '레드포인트' },
+  { value: 'fall',     label: '폴' },
 ];
+
+const RESULT_STYLES: Record<LeadResult, { light: any; dark: any }> = {
+  onsight: {
+    light: { bg: '#ecfeff', fg: '#0e7490', border: '#a5f3fc' },
+    dark: { bg: 'rgba(14,116,144,0.15)', fg: '#22d3ee', border: '#0891b2' },
+  },
+  flash: {
+    light: { bg: '#f0fdf4', fg: '#15803d', border: '#bbf7d0' },
+    dark: { bg: 'rgba(21,128,61,0.15)', fg: '#4ade80', border: '#16a34a' },
+  },
+  redpoint: {
+    light: { bg: '#fff7ed', fg: '#c2410c', border: '#fed7aa' },
+    dark: { bg: 'rgba(194,65,12,0.15)', fg: '#fb923c', border: '#ea580c' },
+  },
+  fall: {
+    light: { bg: '#fef2f2', fg: '#b91c1c', border: '#fecaca' },
+    dark: { bg: 'rgba(185,28,28,0.15)', fg: '#f87171', border: '#dc2626' },
+  },
+};
 
 const RESULT_LABEL: Record<LeadResult, string> = {
   onsight: '온사이트',
@@ -52,6 +69,9 @@ type Props = {
 };
 
 export function LeadEntry({ value, onChange }: Props) {
+  const c = useThemeColors();
+  const scheme = useEffectiveScheme();
+
   const [mainGrade, setMainGrade] = useState<string | null>(null);
   const [subGrade, setSubGrade] = useState<string | null>(null);
 
@@ -101,8 +121,8 @@ export function LeadEntry({ value, onChange }: Props) {
                     paddingVertical: 12,
                     borderRadius: 12,
                     borderWidth: 1.5,
-                    borderColor: active ? '#06b6d4' : '#e2e8f0',
-                    backgroundColor: active ? '#06b6d4' : '#ffffff',
+                    borderColor: active ? '#06b6d4' : c.border.subtle,
+                    backgroundColor: active ? '#06b6d4' : c.bg.primary,
                     alignItems: 'center',
                     opacity: pressed ? 0.8 : 1,
                     ...(active && {
@@ -118,7 +138,7 @@ export function LeadEntry({ value, onChange }: Props) {
                     style={{
                       fontSize: 13,
                       fontWeight: '800',
-                      color: active ? '#ffffff' : '#475569',
+                      color: active ? '#ffffff' : c.text.secondary,
                       letterSpacing: -0.3,
                     }}
                   >
@@ -148,8 +168,8 @@ export function LeadEntry({ value, onChange }: Props) {
                       paddingVertical: 14,
                       borderRadius: 12,
                       borderWidth: 1.5,
-                      borderColor: active ? '#06b6d4' : '#e2e8f0',
-                      backgroundColor: active ? '#06b6d4' : '#ffffff',
+                      borderColor: active ? '#06b6d4' : c.border.subtle,
+                      backgroundColor: active ? '#06b6d4' : c.bg.primary,
                       alignItems: 'center',
                       opacity: pressed ? 0.8 : 1,
                       ...(active && {
@@ -165,7 +185,7 @@ export function LeadEntry({ value, onChange }: Props) {
                       style={{
                         fontSize: 16,
                         fontWeight: '900',
-                        color: active ? '#ffffff' : '#475569',
+                        color: active ? '#ffffff' : c.text.secondary,
                       }}
                     >
                       {sub}
@@ -183,39 +203,42 @@ export function LeadEntry({ value, onChange }: Props) {
         완등 방식 (눌러서 추가)
       </Text>
       <View style={{ flexDirection: 'row', gap: 6 }}>
-        {RESULT_OPTIONS.map((opt) => (
-          <Pressable
-            key={opt.value}
-            onPress={() => handlePickResult(opt.value)}
-            disabled={!canAdd}
-            style={{ flex: 1 }}
-          >
-            {({ pressed }) => (
-              <View
-                style={{
-                  paddingVertical: 14,
-                  borderRadius: 12,
-                  borderWidth: 1.5,
-                  borderColor: opt.border,
-                  backgroundColor: opt.bg,
-                  alignItems: 'center',
-                  opacity: !canAdd ? 0.4 : pressed ? 0.8 : 1,
-                }}
-              >
-                <Text
+        {RESULT_OPTIONS.map((opt) => {
+          const s = RESULT_STYLES[opt.value][scheme];
+          return (
+            <Pressable
+              key={opt.value}
+              onPress={() => handlePickResult(opt.value)}
+              disabled={!canAdd}
+              style={{ flex: 1 }}
+            >
+              {({ pressed }) => (
+                <View
                   style={{
-                    fontSize: 11,
-                    fontWeight: '800',
-                    color: opt.fg,
-                    letterSpacing: -0.2,
+                    paddingVertical: 14,
+                    borderRadius: 12,
+                    borderWidth: 1.5,
+                    borderColor: s.border,
+                    backgroundColor: s.bg,
+                    alignItems: 'center',
+                    opacity: !canAdd ? 0.4 : pressed ? 0.8 : 1,
                   }}
                 >
-                  {opt.label}
-                </Text>
-              </View>
-            )}
-          </Pressable>
-        ))}
+                  <Text
+                    style={{
+                      fontSize: 11,
+                      fontWeight: '800',
+                      color: s.fg,
+                      letterSpacing: -0.2,
+                    }}
+                  >
+                    {opt.label}
+                  </Text>
+                </View>
+              )}
+            </Pressable>
+          );
+        })}
       </View>
       {!canAdd && (
         <Text style={{ fontSize: 11, color: '#94a3b8', textAlign: 'center' }}>
@@ -238,9 +261,9 @@ export function LeadEntry({ value, onChange }: Props) {
                   flexDirection: 'row',
                   alignItems: 'center',
                   gap: 10,
-                  backgroundColor: '#ffffff',
+                  backgroundColor: c.bg.primary,
                   borderWidth: 1,
-                  borderColor: '#e2e8f0',
+                  borderColor: c.border.subtle,
                   borderRadius: 12,
                   paddingHorizontal: 12,
                   paddingVertical: 10,
@@ -250,7 +273,7 @@ export function LeadEntry({ value, onChange }: Props) {
                   style={{
                     fontSize: 14,
                     fontWeight: '800',
-                    color: '#0f172a',
+                    color: c.text.primary,
                     minWidth: 56,
                   }}
                 >
@@ -259,9 +282,9 @@ export function LeadEntry({ value, onChange }: Props) {
                 {opt && (
                   <View
                     style={{
-                      backgroundColor: opt.bg,
+                      backgroundColor: RESULT_STYLES[r.result][scheme].bg,
                       borderWidth: 1,
-                      borderColor: opt.border,
+                      borderColor: RESULT_STYLES[r.result][scheme].border,
                       paddingHorizontal: 8,
                       paddingVertical: 3,
                       borderRadius: 8,
@@ -271,7 +294,7 @@ export function LeadEntry({ value, onChange }: Props) {
                       style={{
                         fontSize: 11,
                         fontWeight: '800',
-                        color: opt.fg,
+                        color: RESULT_STYLES[r.result][scheme].fg,
                       }}
                     >
                       {RESULT_LABEL[r.result]}

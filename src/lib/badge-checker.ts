@@ -128,20 +128,46 @@ async function fetchUserData(userId: string): Promise<UserBadgeData> {
   const sessions = (sessionsR.data ?? []) as Array<{ id: string; session_date: string }>;
   const sessionIds = sessions.map((s) => s.id);
 
-  // attempts (with problem.color via join) — 본인 세션의 시도만
+  // attempts (with problem.color/gym_id via join) — 본인 세션의 시도만
   let attempts: Array<{
     session_id: string;
     result: string;
     climbing_type: string;
     felt_grade: string | null;
-    problem: { color: string | null; route_grade: string | null } | null;
+    problem: { color: string | null; route_grade: string | null; gym_id: string | null } | null;
   }> = [];
   if (sessionIds.length > 0) {
     const { data: aData } = await supabase
       .from('attempts')
-      .select('session_id, result, climbing_type, felt_grade, problem:problems(color, route_grade)')
+      .select('session_id, result, climbing_type, felt_grade, problem:problems(color, route_grade, gym_id)')
       .in('session_id', sessionIds);
     attempts = (aData ?? []) as typeof attempts;
+  }
+
+  // crowd V그레이드 lookup — (gym_id, color) → avg_v_grade
+  // felt_grade 가 직접 입력 안 된 경우, 암장의 색깔 투표 평균을 V로 사용.
+  const gymColorPairs = new Set<string>();
+  for (const a of attempts) {
+    if (a.problem?.gym_id && a.problem.color) {
+      gymColorPairs.add(`${a.problem.gym_id}:${a.problem.color}`);
+    }
+  }
+  const crowdVMap = new Map<string, number>();
+  if (gymColorPairs.size > 0) {
+    const gymIds = Array.from(new Set(Array.from(gymColorPairs).map((p) => p.split(':')[0])));
+    const { data: statsRows } = await supabase
+      .from('gym_color_grade_stats')
+      .select('gym_id, color, avg_v_grade')
+      .in('gym_id', gymIds);
+    for (const r of (statsRows ?? []) as Array<{
+      gym_id: string;
+      color: string;
+      avg_v_grade: number | null;
+    }>) {
+      if (r.avg_v_grade != null) {
+        crowdVMap.set(`${r.gym_id}:${r.color}`, r.avg_v_grade);
+      }
+    }
   }
 
   // 집계
@@ -154,7 +180,11 @@ async function fetchUserData(userId: string): Promise<UserBadgeData> {
   for (const a of attempts) {
     if (!SEND_RESULTS.has(a.result)) continue;
     totalSends += 1;
-    const v = vGradeToNum(a.felt_grade);
+    // V 그레이드 — 1) 직접 입력한 felt_grade 우선 2) 없으면 crowd 평균
+    let v = vGradeToNum(a.felt_grade);
+    if (v == null && a.problem?.gym_id && a.problem.color) {
+      v = crowdVMap.get(`${a.problem.gym_id}:${a.problem.color}`) ?? null;
+    }
     if (v != null && v > maxV) maxV = v;
     if (a.climbing_type === 'lead') {
       const l = leadGradeToNum(a.problem?.route_grade ?? null);
