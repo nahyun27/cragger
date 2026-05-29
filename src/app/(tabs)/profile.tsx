@@ -134,12 +134,7 @@ export default function ProfileScreen() {
                 {username}
               </Text>
               {selectedBadge && (
-                <View style={[
-                  s.selectedBadgeIconWrap,
-                  { backgroundColor: selectedBadge.bg, borderColor: selectedBadge.color }
-                ]}>
-                  <BadgeIcon icon={selectedBadge.icon} color={selectedBadge.color} size={12} />
-                </View>
+                <BadgeIcon icon={selectedBadge.icon} color={selectedBadge.color} size={14} />
               )}
             </View>
             {profile?.instagram_handle ? (
@@ -1678,19 +1673,6 @@ function makeStyles(c: ThemeColors) {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-  },
-  selectedBadgeIconWrap: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    overflow: 'hidden',
-  },
-  selectedBadgeTextIcon: {
-    fontSize: 10,
-    fontWeight: '900',
   },
   profileName: {
     fontSize: 22,

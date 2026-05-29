@@ -1,4 +1,4 @@
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
 import React from 'react';
 
@@ -32,7 +32,7 @@ export default function TabLayout() {
         options={{
           title: '홈',
           tabBarIcon: ({ color, size, focused }) => (
-            <MaterialCommunityIcons name={focused ? 'home' : 'home-outline'} size={size * 1.1} color={color} />
+            <Ionicons name={focused ? 'home' : 'home-outline'} size={size} color={color} />
           ),
         }}
       />
@@ -41,7 +41,7 @@ export default function TabLayout() {
         options={{
           title: '기록',
           tabBarIcon: ({ color, size, focused }) => (
-            <MaterialCommunityIcons name={focused ? 'pencil-circle' : 'pencil-circle-outline'} size={size * 1.1} color={color} />
+            <Ionicons name={focused ? 'calendar-clear' : 'calendar-clear-outline'} size={size} color={color} />
           ),
         }}
       />
@@ -50,7 +50,7 @@ export default function TabLayout() {
         options={{
           title: '암장',
           tabBarIcon: ({ color, size, focused }) => (
-            <MaterialCommunityIcons name={focused ? 'map' : 'map-outline'} size={size * 1.1} color={color} />
+            <Ionicons name={focused ? 'map' : 'map-outline'} size={size} color={color} />
           ),
         }}
       />
@@ -59,7 +59,7 @@ export default function TabLayout() {
         options={{
           title: '커뮤니티',
           tabBarIcon: ({ color, size, focused }) => (
-            <MaterialCommunityIcons name={focused ? 'account-group' : 'account-group-outline'} size={size * 1.1} color={color} />
+            <Ionicons name={focused ? 'people' : 'people-outline'} size={size} color={color} />
           ),
         }}
       />
@@ -68,7 +68,7 @@ export default function TabLayout() {
         options={{
           title: '프로필',
           tabBarIcon: ({ color, size, focused }) => (
-            <MaterialCommunityIcons name={focused ? 'account-circle' : 'account-circle-outline'} size={size * 1.1} color={color} />
+            <Ionicons name={focused ? 'person' : 'person-outline'} size={size} color={color} />
           ),
         }}
       />
