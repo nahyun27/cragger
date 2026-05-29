@@ -43,8 +43,7 @@ export function CustomAlert() {
     title: '',
   });
 
-  // Animation
-  const scale = useRef(new Animated.Value(0.9)).current;
+  const scale = useRef(new Animated.Value(0.85)).current;
   const opacity = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -56,19 +55,19 @@ export function CustomAlert() {
 
   useEffect(() => {
     if (state.visible) {
-      scale.setValue(0.88);
+      scale.setValue(0.85);
       opacity.setValue(0);
       Animated.parallel([
         Animated.spring(scale, {
           toValue: 1,
           useNativeDriver: true,
-          tension: 180,
-          friction: 14,
+          tension: 160,
+          friction: 10,
         }),
         Animated.timing(opacity, {
           toValue: 1,
-          duration: 180,
-          easing: Easing.out(Easing.quad),
+          duration: 220,
+          easing: Easing.out(Easing.cubic),
           useNativeDriver: true,
         }),
       ]).start();
@@ -95,15 +94,14 @@ export function CustomAlert() {
     ? state.buttons
     : [{ text: '확인', style: 'default' as const }];
 
-  // 단일 / 듀얼은 가로, 3개 이상은 세로
   const stackButtons = buttons.length > 2;
 
-  // 제목 첫 글자가 이모지면 분리해서 큰 아이콘으로 표시
+  // 제목 앞 이모지 → 아이콘 자리로 추출
   const emojiMatch = state.title.match(
-    /^([\u{1F300}-\u{1F9FF}\u{1F600}-\u{1F64F}\u{2600}-\u{27BF}\u{1F000}-\u{1F02F}])\s*/u,
+    /^([\u{1F300}-\u{1F9FF}\u{1F600}-\u{1F64F}\u{2600}-\u{27BF}\u{1F000}-\u{1F02F}\u{1F100}-\u{1F1FF}])\s*/u,
   );
   const headerEmoji = emojiMatch?.[1];
-  const titleText = headerEmoji ? state.title.replace(emojiMatch![0], '') : state.title;
+  const titleText = headerEmoji ? state.title.replace(emojiMatch![0], '').trim() : state.title;
 
   return (
     <Modal
@@ -116,52 +114,50 @@ export function CustomAlert() {
       <Animated.View style={[s.overlay, { opacity }]}>
         <Pressable style={StyleSheet.absoluteFill} onPress={handleDismiss} />
         <Animated.View style={[s.alertBox, { transform: [{ scale }] }]}>
-          {headerEmoji && (
-            <View style={s.iconCircle}>
-              <Text style={s.iconText}>{headerEmoji}</Text>
+          {headerEmoji ? (
+            <View style={s.iconWrap}>
+              <View style={s.iconCircle}>
+                <Text style={s.iconText}>{headerEmoji}</Text>
+              </View>
             </View>
+          ) : (
+            <View style={s.accentBar} />
           )}
+
           <View style={s.content}>
             <Text style={s.title}>{titleText}</Text>
             {!!state.message && <Text style={s.message}>{state.message}</Text>}
           </View>
-          <View style={[s.buttonContainer, stackButtons && s.buttonContainerStacked]}>
+
+          <View style={[s.buttonRow, stackButtons && s.buttonRowStacked]}>
             {buttons.map((btn, idx) => {
               const isCancel = btn.style === 'cancel';
               const isDestructive = btn.style === 'destructive';
               const isPrimary = !isCancel && !isDestructive;
-              // 듀얼 버튼이면 마지막 버튼이 primary, 단일이면 그 자체가 primary
-              const isFilled =
-                !stackButtons &&
-                ((buttons.length === 1 && isPrimary) ||
-                  (buttons.length === 2 && idx === buttons.length - 1 && isPrimary) ||
-                  isDestructive);
+
+              // 마지막(또는 단일) primary/destructive 버튼 → filled
+              const isLast = idx === buttons.length - 1;
+              const isFilled = !stackButtons && isLast && (isPrimary || isDestructive);
 
               return (
-                <Pressable
+                <AlertButtonView
                   key={idx}
+                  styles={s}
+                  label={btn.text || 'OK'}
+                  variant={
+                    isFilled
+                      ? isDestructive
+                        ? 'filledDanger'
+                        : 'filled'
+                      : isDestructive
+                        ? 'ghostDanger'
+                        : isCancel
+                          ? 'ghostCancel'
+                          : 'ghost'
+                  }
+                  stacked={stackButtons}
                   onPress={() => handleButtonPress(btn)}
-                  style={({ pressed }) => [
-                    s.button,
-                    stackButtons && s.buttonStacked,
-                    isFilled && (isDestructive ? s.buttonFilledDanger : s.buttonFilled),
-                    !isFilled && s.buttonGhost,
-                    !stackButtons && idx > 0 && !isFilled && s.buttonGap,
-                    pressed && (isFilled ? s.buttonFilledPressed : s.buttonGhostPressed),
-                  ]}
-                >
-                  <Text
-                    style={[
-                      s.buttonText,
-                      isFilled && s.buttonTextFilled,
-                      !isFilled && isCancel && s.buttonTextCancel,
-                      !isFilled && isDestructive && s.buttonTextDestructive,
-                      !isFilled && isPrimary && s.buttonTextPrimary,
-                    ]}
-                  >
-                    {btn.text || 'OK'}
-                  </Text>
-                </Pressable>
+                />
               );
             })}
           </View>
@@ -171,114 +167,199 @@ export function CustomAlert() {
   );
 }
 
+type ButtonVariant = 'filled' | 'filledDanger' | 'ghost' | 'ghostCancel' | 'ghostDanger';
+
+function AlertButtonView({
+  styles: s,
+  label,
+  variant,
+  stacked,
+  onPress,
+}: {
+  styles: ReturnType<typeof makeStyles>;
+  label: string;
+  variant: ButtonVariant;
+  stacked: boolean;
+  onPress: () => void;
+}) {
+  const pressScale = useRef(new Animated.Value(1)).current;
+
+  const isFilled = variant === 'filled' || variant === 'filledDanger';
+
+  const onPressIn = () => {
+    Animated.spring(pressScale, {
+      toValue: 0.97,
+      useNativeDriver: true,
+      tension: 280,
+      friction: 18,
+    }).start();
+  };
+  const onPressOut = () => {
+    Animated.spring(pressScale, {
+      toValue: 1,
+      useNativeDriver: true,
+      tension: 280,
+      friction: 18,
+    }).start();
+  };
+
+  const bgStyle =
+    variant === 'filled'
+      ? s.btnFilled
+      : variant === 'filledDanger'
+        ? s.btnFilledDanger
+        : s.btnGhost;
+
+  const textStyle =
+    variant === 'filled' || variant === 'filledDanger'
+      ? s.btnTextFilled
+      : variant === 'ghostDanger'
+        ? s.btnTextDestructive
+        : variant === 'ghostCancel'
+          ? s.btnTextCancel
+          : s.btnTextPrimary;
+
+  return (
+    <Animated.View style={[s.btnWrap, stacked && s.btnWrapStacked, { transform: [{ scale: pressScale }] }]}>
+      <Pressable
+        onPress={onPress}
+        onPressIn={onPressIn}
+        onPressOut={onPressOut}
+        style={[s.btn, bgStyle, isFilled && s.btnFilledShadow]}
+      >
+        <Text style={[s.btnText, textStyle]}>{label}</Text>
+      </Pressable>
+    </Animated.View>
+  );
+}
+
 function makeStyles(c: ReturnType<typeof useThemeColors>) {
   return StyleSheet.create({
     overlay: {
       flex: 1,
-      backgroundColor: 'rgba(15, 23, 42, 0.55)',
+      backgroundColor: 'rgba(8, 15, 30, 0.6)',
       justifyContent: 'center',
       alignItems: 'center',
       padding: 28,
     },
     alertBox: {
       width: '100%',
-      maxWidth: 320,
+      maxWidth: 340,
       backgroundColor: c.bg.card,
-      borderRadius: 24,
-      paddingTop: 24,
-      paddingHorizontal: 20,
+      borderRadius: 28,
+      paddingTop: 0,
+      paddingHorizontal: 22,
       paddingBottom: 16,
       shadowColor: '#000',
-      shadowOpacity: 0.25,
-      shadowRadius: 24,
-      shadowOffset: { width: 0, height: 12 },
-      elevation: 12,
-      alignItems: 'stretch',
+      shadowOpacity: 0.32,
+      shadowRadius: 30,
+      shadowOffset: { width: 0, height: 16 },
+      elevation: 16,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: c.border.subtle,
+      overflow: 'hidden',
+    },
+    accentBar: {
+      height: 4,
+      backgroundColor: c.brand.primary,
+      marginHorizontal: -22,
+      marginBottom: 24,
+    },
+    iconWrap: {
+      alignItems: 'center',
+      paddingTop: 28,
+      paddingBottom: 4,
     },
     iconCircle: {
-      alignSelf: 'center',
-      width: 56,
-      height: 56,
-      borderRadius: 28,
-      backgroundColor: c.bg.subtle,
+      width: 64,
+      height: 64,
+      borderRadius: 32,
+      backgroundColor: c.brand.primaryLight,
       alignItems: 'center',
       justifyContent: 'center',
-      marginBottom: 12,
+      shadowColor: c.brand.primary,
+      shadowOpacity: 0.18,
+      shadowRadius: 14,
+      shadowOffset: { width: 0, height: 6 },
     },
     iconText: {
-      fontSize: 30,
+      fontSize: 34,
     },
     content: {
       alignItems: 'center',
-      gap: 8,
-      marginBottom: 20,
-      paddingHorizontal: 4,
+      gap: 10,
+      marginTop: 18,
+      marginBottom: 24,
+      paddingHorizontal: 8,
     },
     title: {
-      fontSize: 17,
+      fontSize: 18,
       fontWeight: '800',
       color: c.text.primary,
       textAlign: 'center',
       letterSpacing: -0.4,
+      lineHeight: 24,
     },
     message: {
-      fontSize: 14,
+      fontSize: 14.5,
       color: c.text.secondary,
       textAlign: 'center',
-      lineHeight: 21,
+      lineHeight: 22,
       fontWeight: '500',
     },
-    buttonContainer: {
+    buttonRow: {
       flexDirection: 'row',
-      gap: 8,
+      gap: 10,
     },
-    buttonContainerStacked: {
+    buttonRowStacked: {
       flexDirection: 'column',
       gap: 8,
     },
-    button: {
+    btnWrap: {
       flex: 1,
-      paddingVertical: 13,
-      paddingHorizontal: 16,
+    },
+    btnWrapStacked: {
+      width: '100%',
+    },
+    btn: {
+      paddingVertical: 14,
+      paddingHorizontal: 18,
       borderRadius: 14,
       alignItems: 'center',
       justifyContent: 'center',
+      minHeight: 50,
     },
-    buttonStacked: {
-      width: '100%',
-    },
-    buttonGap: {},
-    buttonFilled: {
+    btnFilled: {
       backgroundColor: c.brand.primary,
     },
-    buttonFilledDanger: {
+    btnFilledDanger: {
       backgroundColor: c.status.danger,
     },
-    buttonGhost: {
+    btnFilledShadow: {
+      shadowColor: c.brand.primary,
+      shadowOpacity: 0.25,
+      shadowRadius: 10,
+      shadowOffset: { width: 0, height: 4 },
+    },
+    btnGhost: {
       backgroundColor: c.bg.subtle,
     },
-    buttonFilledPressed: {
-      opacity: 0.85,
-    },
-    buttonGhostPressed: {
-      backgroundColor: c.border.subtle,
-    },
-    buttonText: {
-      fontSize: 15,
+    btnText: {
+      fontSize: 15.5,
       fontWeight: '700',
       letterSpacing: -0.2,
     },
-    buttonTextFilled: {
-      color: '#ffffff',
+    btnTextFilled: {
+      color: c.brand.onPrimary,
     },
-    buttonTextPrimary: {
+    btnTextPrimary: {
       color: c.brand.primary,
     },
-    buttonTextCancel: {
+    btnTextCancel: {
       color: c.text.secondary,
       fontWeight: '600',
     },
-    buttonTextDestructive: {
+    btnTextDestructive: {
       color: c.status.danger,
     },
   });
