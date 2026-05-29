@@ -3,6 +3,7 @@
 // 절대 hex 직접 쓰지 말 것 (Hold 색깔 = climb-colors.ts 만 예외).
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { colorScheme as nwColorScheme } from 'nativewind';
 import { useEffect } from 'react';
 import { useColorScheme } from 'react-native';
 import { create } from 'zustand';
@@ -136,11 +137,17 @@ type ThemePrefState = {
 
 const STORAGE_KEY = '@cragger/theme-pref';
 
+function applyToNativeWind(pref: ThemePref) {
+  // NativeWind 의 CSS 변수 .dark 토글. 'auto' 는 'system' 매핑.
+  nwColorScheme.set(pref === 'auto' ? 'system' : pref);
+}
+
 export const useThemePref = create<ThemePrefState>((set) => ({
   pref: 'auto',
   hydrated: false,
   setPref: (p) => {
     set({ pref: p });
+    applyToNativeWind(p);
     AsyncStorage.setItem(STORAGE_KEY, p).catch(() => {});
   },
   _setHydrated: () => set({ hydrated: true }),
@@ -154,9 +161,12 @@ export function useHydrateThemePref() {
         const v = await AsyncStorage.getItem(STORAGE_KEY);
         if (v === 'light' || v === 'dark' || v === 'auto') {
           useThemePref.setState({ pref: v });
+          applyToNativeWind(v);
+        } else {
+          applyToNativeWind('auto');
         }
       } catch {
-        // ignore — 기본값 auto 유지
+        applyToNativeWind('auto');
       } finally {
         useThemePref.setState({ hydrated: true });
       }
