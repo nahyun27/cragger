@@ -25,11 +25,14 @@ export default function RootLayout() {
 
 function ThemedRoot() {
   const scheme = useEffectiveScheme();
+  // NativeWind v4 — `dark` 클래스를 root 에 적용해서 자식의 .dark 변형 활성화.
   return (
-    <ThemeProvider value={scheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <AnimatedSplashOverlay />
-      <RootStack />
-    </ThemeProvider>
+    <View className={scheme === 'dark' ? 'dark flex-1' : 'flex-1'}>
+      <ThemeProvider value={scheme === 'dark' ? DarkTheme : DefaultTheme}>
+        <AnimatedSplashOverlay />
+        <RootStack />
+      </ThemeProvider>
+    </View>
   );
 }
 
