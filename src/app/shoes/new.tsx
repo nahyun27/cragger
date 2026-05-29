@@ -1,3 +1,4 @@
+import { customAlert } from '@/components/ui/custom-alert';
 import { useRouter } from 'expo-router';
 import React, { useState, useMemo} from 'react';
 import {
@@ -60,7 +61,7 @@ export default function NewShoeScreen() {
       });
       router.back();
     } catch (e) {
-      Alert.alert('저장 실패', e instanceof Error ? e.message : '알 수 없는 오류');
+      customAlert('저장 실패', e instanceof Error ? e.message : '알 수 없는 오류');
     }
   }
 

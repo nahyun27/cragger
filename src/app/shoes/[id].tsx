@@ -1,3 +1,4 @@
+import { customAlert } from '@/components/ui/custom-alert';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
@@ -100,13 +101,13 @@ export default function EditShoeScreen() {
       });
       router.back();
     } catch (e) {
-      Alert.alert('저장 실패', e instanceof Error ? e.message : '알 수 없는 오류');
+      customAlert('저장 실패', e instanceof Error ? e.message : '알 수 없는 오류');
     }
   }
 
   function handleDelete() {
     if (!id || deleteShoe.isPending) return;
-    Alert.alert('이 암벽화를 삭제할까요?', '되돌릴 수 없어요.', [
+    customAlert('이 암벽화를 삭제할까요?', '되돌릴 수 없어요.', [
       { text: '취소', style: 'cancel' },
       {
         text: '삭제',
@@ -116,7 +117,7 @@ export default function EditShoeScreen() {
             await deleteShoe.mutateAsync(id);
             router.back();
           } catch (e) {
-            Alert.alert('삭제 실패', e instanceof Error ? e.message : '알 수 없는 오류');
+            customAlert('삭제 실패', e instanceof Error ? e.message : '알 수 없는 오류');
           }
         },
       },

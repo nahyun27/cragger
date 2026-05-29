@@ -1,3 +1,4 @@
+import { customAlert } from '@/components/ui/custom-alert';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
@@ -143,7 +144,7 @@ export default function PublicProfileScreen() {
                   Linking.openURL(
                     `https://instagram.com/${profile.instagram_handle}`,
                   ).catch(() =>
-                    Alert.alert('열기 실패', 'Instagram 앱/브라우저를 찾을 수 없어요'),
+                    customAlert('열기 실패', 'Instagram 앱/브라우저를 찾을 수 없어요'),
                   )
                 }
                 style={({ pressed }) => [{ opacity: pressed ? 0.6 : 1 }]}
@@ -470,7 +471,7 @@ function BadgesSection({ userId }: { userId: string }) {
 
   const handleBadgePress = (badge: Badge) => {
     if (badge.unlocked) {
-      Alert.alert(
+      customAlert(
         badge.title, 
         `달성일: ${badge.unlockedDate}\n\n${badge.hint}`,
         [
@@ -478,7 +479,7 @@ function BadgesSection({ userId }: { userId: string }) {
         ]
       );
     } else {
-      Alert.alert('미획득 배지', `${badge.hint}\n\n(아직 획득하지 못했습니다)`);
+      customAlert('미획득 배지', `${badge.hint}\n\n(아직 획득하지 못했습니다)`);
     }
   };
 
@@ -764,7 +765,7 @@ function MembershipCard({
   const expSoon = !expired && isExpiringSoon(membership);
 
   function handleUsePass() {
-    Alert.alert(
+    customAlert(
       '1회 사용',
       `1회 차감할까요? ${membership.used_passes} → ${membership.used_passes + 1}회`,
       [
@@ -775,7 +776,7 @@ function MembershipCard({
             usePass
               .mutateAsync({ id: membership.id, current: membership.used_passes })
               .catch((e) =>
-                Alert.alert('차감 실패', e instanceof Error ? e.message : '오류'),
+                customAlert('차감 실패', e instanceof Error ? e.message : '오류'),
               );
           },
         },
@@ -1222,7 +1223,7 @@ function ProfileMenuModal({
   const setThemePref = useThemePref((s) => s.setPref);
 
   function handleTheme() {
-    Alert.alert('테마', '화면 색깔 모드를 선택하세요', [
+    customAlert('테마', '화면 색깔 모드를 선택하세요', [
       { text: '시스템 따라가기', onPress: () => setThemePref('auto') },
       { text: '라이트', onPress: () => setThemePref('light') },
       { text: '다크', onPress: () => setThemePref('dark') },
@@ -1257,17 +1258,17 @@ function ProfileMenuModal({
           <MenuButton
             icon="bell"
             label="알림 설정"
-            onPress={() => { onClose(); Alert.alert('알림 설정', '준비 중인 기능입니다.'); }}
+            onPress={() => { onClose(); customAlert('알림 설정', '준비 중인 기능입니다.'); }}
           />
           <MenuButton
             icon="lock"
             label="개인정보 처리방침"
-            onPress={() => { onClose(); Alert.alert('안내', '준비 중인 기능입니다.'); }}
+            onPress={() => { onClose(); customAlert('안내', '준비 중인 기능입니다.'); }}
           />
           <MenuButton
             icon="help-circle"
             label="고객센터 / 문의하기"
-            onPress={() => { onClose(); Alert.alert('고객센터', '준비 중인 기능입니다.'); }}
+            onPress={() => { onClose(); customAlert('고객센터', '준비 중인 기능입니다.'); }}
           />
 
           <View style={s.modalDivider} />

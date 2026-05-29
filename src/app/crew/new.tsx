@@ -1,3 +1,4 @@
+import { customAlert } from '@/components/ui/custom-alert';
 import { useRouter } from 'expo-router';
 import React, { useMemo, useState } from 'react';
 import {
@@ -53,7 +54,7 @@ export default function NewCrewScreen() {
       });
       router.replace({ pathname: '/crew/[id]', params: { id } } as never);
     } catch (e) {
-      Alert.alert('크루 생성 실패', e instanceof Error ? e.message : '알 수 없는 오류');
+      customAlert('크루 생성 실패', e instanceof Error ? e.message : '알 수 없는 오류');
     }
   }
 

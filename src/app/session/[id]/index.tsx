@@ -1,3 +1,4 @@
+import { customAlert } from '@/components/ui/custom-alert';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React from 'react';
 import {
@@ -54,7 +55,7 @@ export default function SessionDetailScreen() {
 
   function handleDelete() {
     if (!id || deleteSession.isPending) return;
-    Alert.alert(
+    customAlert(
       '이 세션을 삭제할까요?',
       '색깔별 기록과 시도도 함께 삭제됩니다. 되돌릴 수 없어요.',
       [
@@ -67,7 +68,7 @@ export default function SessionDetailScreen() {
               await deleteSession.mutateAsync(id);
               router.replace('/(tabs)/log');
             } catch (e) {
-              Alert.alert(
+              customAlert(
                 '삭제 실패',
                 e instanceof Error ? e.message : '알 수 없는 오류',
               );

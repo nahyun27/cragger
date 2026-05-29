@@ -1,3 +1,4 @@
+import { customAlert } from '@/components/ui/custom-alert';
 import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useMemo, useState } from 'react';
@@ -126,7 +127,7 @@ export default function NewMembershipScreen() {
       });
       router.replace('/(tabs)/profile');
     } catch (e) {
-      Alert.alert('회원권 추가 실패', e instanceof Error ? e.message : '알 수 없는 오류');
+      customAlert('회원권 추가 실패', e instanceof Error ? e.message : '알 수 없는 오류');
     }
   }
 
@@ -311,7 +312,7 @@ export default function NewMembershipScreen() {
                 );
               })}
               <Pressable
-                onPress={() => Alert.alert('준비 중', '그저께 이전 시작일은 v1.1에서 추가됩니다.')}
+                onPress={() => customAlert('준비 중', '그저께 이전 시작일은 v1.1에서 추가됩니다.')}
                 className="px-4 py-2.5 rounded-xl border border-border-subtle bg-background-primary items-center justify-center"
               >
                 <Text className="text-text-muted text-sm font-semibold">더 이전</Text>

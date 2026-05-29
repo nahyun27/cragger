@@ -1,16 +1,13 @@
 import { useMemo } from 'react';
 import React from 'react';
 import {
-  Modal,
-  Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 
+import { Sheet } from '@/components/ui/sheet';
 import { useThemeColors, type ThemeColors } from '@/lib/theme';
 
 type Props = {
@@ -24,25 +21,7 @@ export function ShoeSizeGuide({ visible, onClose }: Props) {
   const s = useMemo(() => makeStyles(c), [c]);
 
   return (
-    <Modal
-      visible={visible}
-      animationType="slide"
-      presentationStyle="pageSheet"
-      onRequestClose={onClose}
-    >
-      <SafeAreaView style={s.container} edges={['top', 'bottom']}>
-        <View style={s.header}>
-          <Text style={s.headerTitle}>암벽화 사이즈 가이드</Text>
-          <Pressable
-            onPress={onClose}
-            hitSlop={8}
-            style={({ pressed }) => [s.closeBtn, pressed && { opacity: 0.6 }]}
-          >
-            <Feather name="x" size={20} color={c.text.primary} />
-          </Pressable>
-        </View>
-
-        <ScrollView contentContainerStyle={s.scroll}>
+    <Sheet visible={visible} onClose={onClose} variant="full" title="암벽화 사이즈 가이드">
           {/* Intro */}
           <Text style={s.intro}>
             암벽화는 발에 밀착되게 신는 특수화. 실측 발 길이 기준으로 선택해요.
@@ -104,9 +83,7 @@ export function ShoeSizeGuide({ visible, onClose }: Props) {
           <Text style={s.disclaimer}>
             위는 일반적인 경향이며 모델별 편차가 큽니다. 직접 신어보고 결정하세요.
           </Text>
-        </ScrollView>
-      </SafeAreaView>
-    </Modal>
+    </Sheet>
   );
 }
 

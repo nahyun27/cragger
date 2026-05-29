@@ -1,3 +1,4 @@
+import { customAlert } from '@/components/ui/custom-alert';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useMemo, useState } from 'react';
 import {
@@ -64,7 +65,7 @@ export default function GymVoteScreen() {
       await submitVote.mutateAsync({ gymId: id, color: pickerColor, grade });
       setPickerColor(null);
     } catch (e) {
-      Alert.alert('투표 실패', e instanceof Error ? e.message : '알 수 없는 오류');
+      customAlert('투표 실패', e instanceof Error ? e.message : '알 수 없는 오류');
     }
   }
 

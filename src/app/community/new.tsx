@@ -1,3 +1,4 @@
+import { customAlert } from '@/components/ui/custom-alert';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import * as ImagePicker from 'expo-image-picker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -113,7 +114,7 @@ export default function NewPostScreen() {
     if (remaining <= 0) return;
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!perm.granted) {
-      Alert.alert('권한 필요', '갤러리 접근을 허용해주세요');
+      customAlert('권한 필요', '갤러리 접근을 허용해주세요');
       return;
     }
     const res = await ImagePicker.launchImageLibraryAsync({
@@ -135,7 +136,7 @@ export default function NewPostScreen() {
     if (!canSubmit) return;
     const userId = authSession?.user.id;
     if (!userId) {
-      Alert.alert('로그인 필요');
+      customAlert('로그인 필요');
       return;
     }
     let uploadedUrls: string[] = [];
@@ -147,7 +148,7 @@ export default function NewPostScreen() {
         );
       } catch (e) {
         setUploading(false);
-        Alert.alert('업로드 실패', e instanceof Error ? e.message : '알 수 없는 오류');
+        customAlert('업로드 실패', e instanceof Error ? e.message : '알 수 없는 오류');
         return;
       }
       setUploading(false);
@@ -176,7 +177,7 @@ export default function NewPostScreen() {
             options: poll.options,
           });
         } catch (pe) {
-          Alert.alert(
+          customAlert(
             '투표 생성 실패',
             pe instanceof Error ? pe.message : '글은 등록됐지만 투표는 실패했어요',
           );
@@ -184,7 +185,7 @@ export default function NewPostScreen() {
       }
       router.replace({ pathname: '/community/[id]', params: { id } });
     } catch (e) {
-      Alert.alert('등록 실패', e instanceof Error ? e.message : '알 수 없는 오류');
+      customAlert('등록 실패', e instanceof Error ? e.message : '알 수 없는 오류');
     }
   }
 

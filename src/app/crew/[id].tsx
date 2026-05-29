@@ -1,3 +1,4 @@
+import { customAlert } from '@/components/ui/custom-alert';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useState, useMemo} from 'react';
 import {
@@ -119,12 +120,12 @@ export default function CrewDetailScreen() {
 
   function handleCopyCode() {
     if (!data) return;
-    Alert.alert('초대코드', data.invite_code, [{ text: '확인' }]);
+    customAlert('초대코드', data.invite_code, [{ text: '확인' }]);
   }
 
   function handleLeave() {
     if (!data) return;
-    Alert.alert('크루를 나갈까요?', '다시 들어오려면 초대코드가 필요해요.', [
+    customAlert('크루를 나갈까요?', '다시 들어오려면 초대코드가 필요해요.', [
       { text: '취소', style: 'cancel' },
       {
         text: '나가기',
@@ -134,7 +135,7 @@ export default function CrewDetailScreen() {
             await leaveCrew.mutateAsync(data.id);
             router.replace('/(tabs)/profile');
           } catch (e) {
-            Alert.alert('실패', e instanceof Error ? e.message : '알 수 없는 오류');
+            customAlert('실패', e instanceof Error ? e.message : '알 수 없는 오류');
           }
         },
       },
@@ -143,7 +144,7 @@ export default function CrewDetailScreen() {
 
   function handleDelete() {
     if (!data) return;
-    Alert.alert('크루를 삭제할까요?', '모든 멤버가 빠지고 되돌릴 수 없어요.', [
+    customAlert('크루를 삭제할까요?', '모든 멤버가 빠지고 되돌릴 수 없어요.', [
       { text: '취소', style: 'cancel' },
       {
         text: '삭제',
@@ -153,7 +154,7 @@ export default function CrewDetailScreen() {
             await deleteCrew.mutateAsync(data.id);
             router.replace('/(tabs)/profile');
           } catch (e) {
-            Alert.alert('실패', e instanceof Error ? e.message : '알 수 없는 오류');
+            customAlert('실패', e instanceof Error ? e.message : '알 수 없는 오류');
           }
         },
       },
@@ -175,7 +176,7 @@ export default function CrewDetailScreen() {
       options.push({ text: '크루 삭제', style: 'destructive', onPress: handleDelete });
     }
     options.push({ text: '취소', style: 'cancel' });
-    Alert.alert('크루 관리', undefined, options);
+    customAlert('크루 관리', undefined, options);
   }
 
   const colors = getCrewAvatarColors(data.name);
@@ -403,7 +404,7 @@ export default function CrewDetailScreen() {
                 <Pressable
                   onPress={() => {
                     if (data.members.length <= 1) {
-                      Alert.alert(
+                      customAlert(
                         '혼자 있는 크루',
                         '본인뿐이라 위임할 멤버가 없어요. 크루를 삭제해주세요.',
                       );
@@ -478,7 +479,7 @@ function TransferOwnerModal({
 
   function handleConfirm() {
     if (!selected) return;
-    Alert.alert(
+    customAlert(
       alsoLeave ? '위임 + 탈퇴할까요?' : '크루장 위임할까요?',
       alsoLeave
         ? '선택한 멤버가 크루장이 되고, 본인은 크루를 나가요.'
@@ -497,7 +498,7 @@ function TransferOwnerModal({
               if (alsoLeave) onDone();
               else onClose();
             } catch (e) {
-              Alert.alert('실패', e instanceof Error ? e.message : '오류');
+              customAlert('실패', e instanceof Error ? e.message : '오류');
             }
           },
         },
@@ -1082,7 +1083,7 @@ function MemberRow({
   const showKick = isOwnerView && !isMe && member.role !== 'owner';
 
   function handleKick() {
-    Alert.alert(
+    customAlert(
       `${name} 님을 추방할까요?`,
       '다시 가입하려면 초대코드가 필요해요.',
       [
@@ -1093,7 +1094,7 @@ function MemberRow({
           onPress: () =>
             kick.mutate(
               { crewId, userId: member.user_id },
-              { onError: (e) => Alert.alert('실패', e instanceof Error ? e.message : '오류') },
+              { onError: (e) => customAlert('실패', e instanceof Error ? e.message : '오류') },
             ),
         },
       ],
@@ -1316,7 +1317,7 @@ function AnnouncementCard({
   const dateStr = `${date.getMonth() + 1}/${date.getDate()}`;
 
   function handleDelete() {
-    Alert.alert('공지를 삭제할까요?', '되돌릴 수 없어요.', [
+    customAlert('공지를 삭제할까요?', '되돌릴 수 없어요.', [
       { text: '취소', style: 'cancel' },
       {
         text: '삭제',
@@ -1416,7 +1417,7 @@ function AnnouncementComposer({
       await create.mutateAsync({ crewId, title, body, pinned: canPin ? pinned : false });
       onClose();
     } catch (e) {
-      Alert.alert('실패', e instanceof Error ? e.message : '오류');
+      customAlert('실패', e instanceof Error ? e.message : '오류');
     }
   }
 

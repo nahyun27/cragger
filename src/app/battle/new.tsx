@@ -1,3 +1,4 @@
+import { customAlert } from '@/components/ui/custom-alert';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useMemo, useState } from 'react';
@@ -79,7 +80,7 @@ export default function NewBattleScreen() {
       });
       router.replace({ pathname: '/battle/[id]', params: { id } } as never);
     } catch (e) {
-      Alert.alert('대결 만들기 실패', e instanceof Error ? e.message : '오류');
+      customAlert('대결 만들기 실패', e instanceof Error ? e.message : '오류');
     }
   }
 

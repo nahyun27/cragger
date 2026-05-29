@@ -1,3 +1,4 @@
+import { customAlert } from '@/components/ui/custom-alert';
 import * as ImagePicker from 'expo-image-picker';
 import * as MediaLibrary from 'expo-media-library';
 import * as Sharing from 'expo-sharing';
@@ -65,7 +66,7 @@ export default function SessionShareScreen() {
     try {
       const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (!perm.granted) {
-        Alert.alert('권한 필요', '사진을 선택하려면 갤러리 접근 권한이 필요해요.');
+        customAlert('권한 필요', '사진을 선택하려면 갤러리 접근 권한이 필요해요.');
         return;
       }
       const result = await ImagePicker.launchImageLibraryAsync({
@@ -77,7 +78,7 @@ export default function SessionShareScreen() {
         setBgImageUri(result.assets[0].uri);
       }
     } catch (e) {
-      Alert.alert('사진 선택 실패', e instanceof Error ? e.message : '오류');
+      customAlert('사진 선택 실패', e instanceof Error ? e.message : '오류');
     }
   }
 
@@ -103,14 +104,14 @@ export default function SessionShareScreen() {
     try {
       const perm = await MediaLibrary.requestPermissionsAsync();
       if (!perm.granted) {
-        Alert.alert('권한 필요', '갤러리에 저장하려면 권한이 필요해요.');
+        customAlert('권한 필요', '갤러리에 저장하려면 권한이 필요해요.');
         return;
       }
       const uri = await capture();
       await MediaLibrary.saveToLibraryAsync(uri);
-      Alert.alert('저장 완료', '갤러리에 이미지 카드가 저장되었습니다.');
+      customAlert('저장 완료', '갤러리에 이미지 카드가 저장되었습니다.');
     } catch (e) {
-      Alert.alert('저장 실패', e instanceof Error ? e.message : '알 수 없는 오류');
+      customAlert('저장 실패', e instanceof Error ? e.message : '알 수 없는 오류');
     } finally {
       setBusy(null);
     }
@@ -122,7 +123,7 @@ export default function SessionShareScreen() {
     try {
       const available = await Sharing.isAvailableAsync();
       if (!available) {
-        Alert.alert('공유 불가', '이 기기에서 시스템 공유가 지원되지 않아요.');
+        customAlert('공유 불가', '이 기기에서 시스템 공유가 지원되지 않아요.');
         return;
       }
       const uri = await capture();
@@ -131,7 +132,7 @@ export default function SessionShareScreen() {
         dialogTitle: '세션 공유',
       });
     } catch (e) {
-      Alert.alert('공유 실패', e instanceof Error ? e.message : '알 수 없는 오류');
+      customAlert('공유 실패', e instanceof Error ? e.message : '알 수 없는 오류');
     } finally {
       setBusy(null);
     }

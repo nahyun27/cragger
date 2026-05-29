@@ -1,3 +1,4 @@
+import { customAlert } from '@/components/ui/custom-alert';
 import { useRouter } from 'expo-router';
 import React, { useMemo, useState } from 'react';
 import {
@@ -202,7 +203,7 @@ export default function NewSessionScreen() {
       });
       router.replace('/(tabs)/log');
     } catch (e) {
-      Alert.alert('기록 실패', e instanceof Error ? e.message : '알 수 없는 오류');
+      customAlert('기록 실패', e instanceof Error ? e.message : '알 수 없는 오류');
     }
   }
 
@@ -237,14 +238,14 @@ export default function NewSessionScreen() {
               icon="grid"
               active={false}
               disabled
-              onPress={() => Alert.alert('준비 중', '보드 기록은 v1.1에서 추가됩니다.')}
+              onPress={() => customAlert('준비 중', '보드 기록은 v1.1에서 추가됩니다.')}
             />
             <DisciplineBtn
               label="지구력"
               icon="activity"
               active={false}
               disabled
-              onPress={() => Alert.alert('준비 중', '지구력 기록은 v1.1에서 추가됩니다.')}
+              onPress={() => customAlert('준비 중', '지구력 기록은 v1.1에서 추가됩니다.')}
             />
           </View>
         </Section>
@@ -263,7 +264,7 @@ export default function NewSessionScreen() {
               label="더 이전"
               selected={false}
               onPress={() =>
-                Alert.alert('준비 중', '그저께 이전 날짜 선택은 v1.1에서 추가됩니다.')
+                customAlert('준비 중', '그저께 이전 날짜 선택은 v1.1에서 추가됩니다.')
               }
             />
           </View>

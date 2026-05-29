@@ -1,3 +1,4 @@
+import { customAlert } from '@/components/ui/custom-alert';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import React, { useEffect, useMemo, useState } from 'react';
@@ -74,12 +75,12 @@ export default function EditCrewScreen() {
     if (uploading) return;
     const userId = authSession?.user.id;
     if (!userId) {
-      Alert.alert('오류', '로그인이 필요해요');
+      customAlert('오류', '로그인이 필요해요');
       return;
     }
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!perm.granted) {
-      Alert.alert('권한 필요', '사진 라이브러리 접근 권한이 필요해요');
+      customAlert('권한 필요', '사진 라이브러리 접근 권한이 필요해요');
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -95,7 +96,7 @@ export default function EditCrewScreen() {
       const url = await uploadCrewLogo(result.assets[0], userId);
       setImageUrl(url);
     } catch (e) {
-      Alert.alert('업로드 실패', e instanceof Error ? e.message : '오류');
+      customAlert('업로드 실패', e instanceof Error ? e.message : '오류');
     } finally {
       setUploading(false);
     }
@@ -114,7 +115,7 @@ export default function EditCrewScreen() {
       });
       router.back();
     } catch (e) {
-      Alert.alert('저장 실패', e instanceof Error ? e.message : '오류');
+      customAlert('저장 실패', e instanceof Error ? e.message : '오류');
     }
   }
 

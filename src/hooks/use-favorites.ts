@@ -1,3 +1,4 @@
+import { customAlert } from '@/components/ui/custom-alert';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Alert } from 'react-native';
 
@@ -65,7 +66,7 @@ export function useToggleFavorite() {
       if (userId && ctx?.prev) {
         queryClient.setQueryData(['gym-favorites', userId], ctx.prev);
       }
-      Alert.alert(
+      customAlert(
         '즐겨찾기 실패',
         err instanceof Error ? err.message : '알 수 없는 오류',
       );

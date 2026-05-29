@@ -1,3 +1,4 @@
+import { customAlert } from '@/components/ui/custom-alert';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React from 'react';
 import {
@@ -85,7 +86,7 @@ export default function BattleDetailScreen() {
   );
 
   function handleDelete() {
-    Alert.alert('대결을 삭제할까요?', '되돌릴 수 없어요.', [
+    customAlert('대결을 삭제할까요?', '되돌릴 수 없어요.', [
       { text: '취소', style: 'cancel' },
       {
         text: '삭제',
@@ -95,7 +96,7 @@ export default function BattleDetailScreen() {
             await deleteBattle.mutateAsync(battle.id);
             router.back();
           } catch (e) {
-            Alert.alert('실패', e instanceof Error ? e.message : '오류');
+            customAlert('실패', e instanceof Error ? e.message : '오류');
           }
         },
       },
@@ -104,18 +105,18 @@ export default function BattleDetailScreen() {
 
   function handleAccept() {
     accept.mutate(battle.id, {
-      onError: (e) => Alert.alert('실패', e instanceof Error ? e.message : '오류'),
+      onError: (e) => customAlert('실패', e instanceof Error ? e.message : '오류'),
     });
   }
   function handleDecline() {
-    Alert.alert('대결을 거절할까요?', '거절하면 다시 수락할 수 없어요.', [
+    customAlert('대결을 거절할까요?', '거절하면 다시 수락할 수 없어요.', [
       { text: '취소', style: 'cancel' },
       {
         text: '거절',
         style: 'destructive',
         onPress: () =>
           decline.mutate(battle.id, {
-            onError: (e) => Alert.alert('실패', e instanceof Error ? e.message : '오류'),
+            onError: (e) => customAlert('실패', e instanceof Error ? e.message : '오류'),
           }),
       },
     ]);

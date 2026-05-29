@@ -1,3 +1,4 @@
+import { customAlert } from '@/components/ui/custom-alert';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as ImagePicker from 'expo-image-picker';
@@ -151,7 +152,7 @@ export default function ProfileEditScreen() {
   async function handlePickAvatar() {
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!perm.granted) {
-      Alert.alert('권한 필요', '갤러리 접근을 허용해주세요');
+      customAlert('권한 필요', '갤러리 접근을 허용해주세요');
       return;
     }
     const res = await ImagePicker.launchImageLibraryAsync({
@@ -206,7 +207,7 @@ export default function ProfileEditScreen() {
     if (pendingAvatar) {
       const userId = authSession?.user.id;
       if (!userId) {
-        Alert.alert('로그인 필요');
+        customAlert('로그인 필요');
         return;
       }
       setUploadingAvatar(true);
@@ -214,7 +215,7 @@ export default function ProfileEditScreen() {
         avatarUrlArg = await uploadAvatarImage(pendingAvatar, userId);
       } catch (e) {
         setUploadingAvatar(false);
-        Alert.alert('업로드 실패', e instanceof Error ? e.message : '알 수 없는 오류');
+        customAlert('업로드 실패', e instanceof Error ? e.message : '알 수 없는 오류');
         return;
       }
       setUploadingAvatar(false);
@@ -239,7 +240,7 @@ export default function ProfileEditScreen() {
       }
       router.back();
     } catch (e) {
-      Alert.alert('저장 실패', e instanceof Error ? e.message : '알 수 없는 오류');
+      customAlert('저장 실패', e instanceof Error ? e.message : '알 수 없는 오류');
     }
   }
 

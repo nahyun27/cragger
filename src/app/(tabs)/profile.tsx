@@ -1,3 +1,4 @@
+import { customAlert } from '@/components/ui/custom-alert';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
@@ -74,7 +75,7 @@ export default function ProfileScreen() {
         const msg = newlyEarned
           .map((b) => `${b.icon}  ${b.name}`)
           .join('\n');
-        Alert.alert(
+        customAlert(
           newlyEarned.length === 1 ? '🏅 새 뱃지 획득!' : `🏅 새 뱃지 ${newlyEarned.length}개!`,
           msg,
         );
@@ -142,7 +143,7 @@ export default function ProfileScreen() {
                   Linking.openURL(
                     `https://instagram.com/${profile.instagram_handle}`,
                   ).catch(() =>
-                    Alert.alert('열기 실패', 'Instagram 앱/브라우저를 찾을 수 없어요'),
+                    customAlert('열기 실패', 'Instagram 앱/브라우저를 찾을 수 없어요'),
                   )
                 }
                 style={({ pressed }) => [{ opacity: pressed ? 0.6 : 1 }]}
@@ -257,7 +258,7 @@ export default function ProfileScreen() {
         visible={menuVisible}
         onClose={() => setMenuVisible(false)}
         onLogout={() => {
-          Alert.alert(
+          customAlert(
             '로그아웃',
             '정말 로그아웃 하시겠습니까?',
             [
@@ -545,12 +546,12 @@ function BadgesSection({ onSelectBadge }: { onSelectBadge: (badge: BadgeDef) => 
     const earnedAt = earnedMap.get(badge.key);
     if (earnedAt) {
       const dateStr = new Date(earnedAt).toLocaleDateString('ko-KR');
-      Alert.alert(badge.name, `달성일: ${dateStr}\n\n${badge.hint}`, [
+      customAlert(badge.name, `달성일: ${dateStr}\n\n${badge.hint}`, [
         { text: '닫기', style: 'cancel' },
         { text: '대표 배지로 설정', onPress: () => onSelectBadge(badge) },
       ]);
     } else {
-      Alert.alert('미획득 배지', `${badge.hint}\n\n(아직 획득하지 못했어요)`);
+      customAlert('미획득 배지', `${badge.hint}\n\n(아직 획득하지 못했어요)`);
     }
   }
 
@@ -864,7 +865,7 @@ function MembershipCard({
   const expSoon = !expired && isExpiringSoon(membership);
 
   function handleUsePass() {
-    Alert.alert(
+    customAlert(
       '1회 사용',
       `1회 차감할까요? ${membership.used_passes} → ${membership.used_passes + 1}회`,
       [
@@ -875,7 +876,7 @@ function MembershipCard({
             usePass
               .mutateAsync({ id: membership.id, current: membership.used_passes })
               .catch((e) =>
-                Alert.alert('차감 실패', e instanceof Error ? e.message : '오류'),
+                customAlert('차감 실패', e instanceof Error ? e.message : '오류'),
               );
           },
         },
@@ -1351,17 +1352,17 @@ function ProfileMenuModal({
       <MenuButton
         icon="bell"
         label="알림 설정"
-        onPress={() => { onClose(); Alert.alert('알림 설정', '준비 중인 기능입니다.'); }}
+        onPress={() => { onClose(); customAlert('알림 설정', '준비 중인 기능입니다.'); }}
       />
       <MenuButton
         icon="lock"
         label="개인정보 처리방침"
-        onPress={() => { onClose(); Alert.alert('안내', '준비 중인 기능입니다.'); }}
+        onPress={() => { onClose(); customAlert('안내', '준비 중인 기능입니다.'); }}
       />
       <MenuButton
         icon="help-circle"
         label="고객센터 / 문의하기"
-        onPress={() => { onClose(); Alert.alert('고객센터', '준비 중인 기능입니다.'); }}
+        onPress={() => { onClose(); customAlert('고객센터', '준비 중인 기능입니다.'); }}
       />
 
       <View style={s.modalDivider} />

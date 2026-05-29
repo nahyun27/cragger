@@ -1,3 +1,4 @@
+import { customAlert } from '@/components/ui/custom-alert';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import * as ImagePicker from 'expo-image-picker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -108,7 +109,7 @@ export default function EditPostScreen() {
     if (remaining <= 0) return;
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!perm.granted) {
-      Alert.alert('권한 필요', '갤러리 접근을 허용해주세요');
+      customAlert('권한 필요', '갤러리 접근을 허용해주세요');
       return;
     }
     const res = await ImagePicker.launchImageLibraryAsync({
@@ -133,7 +134,7 @@ export default function EditPostScreen() {
     if (!id || !canSubmit) return;
     const userId = authSession?.user.id;
     if (!userId) {
-      Alert.alert('로그인 필요');
+      customAlert('로그인 필요');
       return;
     }
     let uploadedUrls: string[] = [];
@@ -145,7 +146,7 @@ export default function EditPostScreen() {
         );
       } catch (e) {
         setUploading(false);
-        Alert.alert('업로드 실패', e instanceof Error ? e.message : '알 수 없는 오류');
+        customAlert('업로드 실패', e instanceof Error ? e.message : '알 수 없는 오류');
         return;
       }
       setUploading(false);
@@ -166,7 +167,7 @@ export default function EditPostScreen() {
       });
       router.back();
     } catch (e) {
-      Alert.alert('저장 실패', e instanceof Error ? e.message : '알 수 없는 오류');
+      customAlert('저장 실패', e instanceof Error ? e.message : '알 수 없는 오류');
     }
   }
 

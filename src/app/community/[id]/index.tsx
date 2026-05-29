@@ -1,3 +1,4 @@
+import { customAlert } from '@/components/ui/custom-alert';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useState, useMemo} from 'react';
 import {
@@ -156,7 +157,7 @@ export default function PostDetailScreen() {
 
   async function handleDeletePost() {
     if (!id) return;
-    Alert.alert('이 글을 삭제할까요?', '댓글과 좋아요도 함께 사라져요.', [
+    customAlert('이 글을 삭제할까요?', '댓글과 좋아요도 함께 사라져요.', [
       { text: '취소', style: 'cancel' },
       {
         text: '삭제',
@@ -166,7 +167,7 @@ export default function PostDetailScreen() {
             await deletePost.mutateAsync(id);
             router.replace('/(tabs)/community');
           } catch (e) {
-            Alert.alert('삭제 실패', e instanceof Error ? e.message : '알 수 없는 오류');
+            customAlert('삭제 실패', e instanceof Error ? e.message : '알 수 없는 오류');
           }
         },
       },
@@ -185,7 +186,7 @@ export default function PostDetailScreen() {
       setReplyToId(null);
       setReplyToName(null);
     } catch (e) {
-      Alert.alert('댓글 실패', e instanceof Error ? e.message : '알 수 없는 오류');
+      customAlert('댓글 실패', e instanceof Error ? e.message : '알 수 없는 오류');
     }
   }
 
@@ -220,7 +221,7 @@ export default function PostDetailScreen() {
       });
       cancelEdit();
     } catch (e) {
-      Alert.alert('수정 실패', e instanceof Error ? e.message : '알 수 없는 오류');
+      customAlert('수정 실패', e instanceof Error ? e.message : '알 수 없는 오류');
     }
   }
 
@@ -379,7 +380,7 @@ export default function PostDetailScreen() {
                 }
               }
               const confirmDelete = (c: CommentRow) =>
-                Alert.alert('댓글을 삭제할까요?', '되돌릴 수 없어요.', [
+                customAlert('댓글을 삭제할까요?', '되돌릴 수 없어요.', [
                   { text: '취소', style: 'cancel' },
                   {
                     text: '삭제',
@@ -389,7 +390,7 @@ export default function PostDetailScreen() {
                         { commentId: c.id, postId: post.id },
                         {
                           onError: (e) =>
-                            Alert.alert(
+                            customAlert(
                               '삭제 실패',
                               e instanceof Error ? e.message : '알 수 없는 오류',
                             ),
@@ -558,13 +559,13 @@ function MeetupInfoCard({ post, isMine }: { post: PostRow; isMine: boolean }) {
     if (full || isPast) return;
     joinMeetup.mutate(post.id, {
       onError: (e) =>
-        Alert.alert('참가 신청 실패', e instanceof Error ? e.message : '알 수 없는 오류'),
+        customAlert('참가 신청 실패', e instanceof Error ? e.message : '알 수 없는 오류'),
     });
   }
 
   function handleCancelJoin() {
     if (busy) return;
-    Alert.alert('참가를 취소할까요?', '취소 후에는 다시 신청해야 해요.', [
+    customAlert('참가를 취소할까요?', '취소 후에는 다시 신청해야 해요.', [
       { text: '되돌아가기', style: 'cancel' },
       {
         text: '취소',
@@ -572,7 +573,7 @@ function MeetupInfoCard({ post, isMine }: { post: PostRow; isMine: boolean }) {
         onPress: () =>
           cancelMeetupJoin.mutate(post.id, {
             onError: (e) =>
-              Alert.alert('취소 실패', e instanceof Error ? e.message : '알 수 없는 오류'),
+              customAlert('취소 실패', e instanceof Error ? e.message : '알 수 없는 오류'),
           }),
       },
     ]);

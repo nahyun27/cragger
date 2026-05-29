@@ -1,3 +1,4 @@
+import { customAlert } from '@/components/ui/custom-alert';
 import {
   useInfiniteQuery,
   useMutation,
@@ -250,7 +251,7 @@ export function useToggleLike() {
           ctx.prevLikes,
         );
       }
-      Alert.alert('좋아요 실패', err instanceof Error ? err.message : '알 수 없는 오류');
+      customAlert('좋아요 실패', err instanceof Error ? err.message : '알 수 없는 오류');
     },
     onSettled: (_data, _err, vars) => {
       queryClient.invalidateQueries({ queryKey: ['community', 'my-likes'] });

@@ -1,3 +1,4 @@
+import { customAlert } from '@/components/ui/custom-alert';
 import { Feather } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useMemo, useState } from 'react';
@@ -122,13 +123,13 @@ export default function EditMembershipScreen() {
       });
       router.back();
     } catch (e) {
-      Alert.alert('저장 실패', e instanceof Error ? e.message : '알 수 없는 오류');
+      customAlert('저장 실패', e instanceof Error ? e.message : '알 수 없는 오류');
     }
   }
 
   function handleDelete() {
     if (!id || deleteMembership.isPending) return;
-    Alert.alert('회원권을 삭제할까요?', '되돌릴 수 없어요.', [
+    customAlert('회원권을 삭제할까요?', '되돌릴 수 없어요.', [
       { text: '취소', style: 'cancel' },
       {
         text: '삭제',
@@ -138,7 +139,7 @@ export default function EditMembershipScreen() {
             await deleteMembership.mutateAsync(id);
             router.replace('/(tabs)/profile');
           } catch (e) {
-            Alert.alert('삭제 실패', e instanceof Error ? e.message : '알 수 없는 오류');
+            customAlert('삭제 실패', e instanceof Error ? e.message : '알 수 없는 오류');
           }
         },
       },

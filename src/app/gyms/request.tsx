@@ -1,3 +1,4 @@
+import { customAlert } from '@/components/ui/custom-alert';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useRouter } from 'expo-router';
 import React from 'react';
@@ -56,11 +57,11 @@ export default function GymRequestScreen() {
         locationHint: values.locationHint?.trim() || null,
         note: values.note?.trim() || null,
       });
-      Alert.alert('요청 보냈어요', '검토 후 암장 목록에 추가됩니다.', [
+      customAlert('요청 보냈어요', '검토 후 암장 목록에 추가됩니다.', [
         { text: '확인', onPress: () => router.back() },
       ]);
     } catch (e) {
-      Alert.alert('요청 실패', e instanceof Error ? e.message : '알 수 없는 오류');
+      customAlert('요청 실패', e instanceof Error ? e.message : '알 수 없는 오류');
     }
   }
 
