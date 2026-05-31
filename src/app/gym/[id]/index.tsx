@@ -58,21 +58,7 @@ export default function GymDetailScreen() {
     );
   }
 
-  const sports = [
-    data.has_boulder && '볼더링',
-    data.has_lead && '리드',
-    data.has_top_rope && '탑로프',
-    data.has_speed && '스피드',
-    data.has_auto_belay && '오토빌레이',
-  ].filter(Boolean) as string[];
 
-  const boards = [
-    data.has_moonboard && '문보드',
-    data.has_kilter && '킬터',
-    data.has_tension && '텐션',
-  ].filter(Boolean) as string[];
-
-  const allTags = [...sports, ...boards];
 
   const location = [data.city, data.district].filter(Boolean).join(' ');
   const sizeLine = [
@@ -84,27 +70,38 @@ export default function GymDetailScreen() {
     .join(' · ');
 
   return (
-    <SafeAreaView className="flex-1 bg-background-card" edges={['top', 'bottom']}>
+    <SafeAreaView className="flex-1 bg-background-primary" edges={['top', 'bottom']}>
       {/* Header */}
-      <View className="flex-row items-center justify-between px-4 py-[14px] bg-background-card border-b border-border-subtle">
+      <View className="flex-row items-center justify-between px-4 py-[14px] bg-background-primary border-b border-border-subtle">
         <Pressable onPress={() => router.back()} className="w-10 h-10 rounded-xl items-center justify-center -ml-2 active:opacity-60" hitSlop={8}>
           <Feather name="arrow-left" size={24} color={c.text.primary} />
         </Pressable>
         <Text className="text-text-primary text-[18px] font-extrabold tracking-[-0.4px]">암장 정보</Text>
-        <Pressable
-          onPress={() => {
-            if (!id) return;
-            toggleFavorite.mutate({ gymId: id, currentlyFavorite: favorited });
-          }}
-          className="w-10 h-10 rounded-xl items-center justify-center -mr-2 active:opacity-60"
-          hitSlop={8}
-        >
-          <Ionicons
-            name={favorited ? "star" : "star-outline"}
-            size={24}
-            color={favorited ? '#f59e0b' : '#94a3b8'}
-          />
-        </Pressable>
+        <View className="flex-row gap-1">
+          <Pressable
+            onPress={() =>
+              router.push({ pathname: '/gym/[id]/suggest', params: { id: id! } } as never)
+            }
+            className="w-10 h-10 rounded-xl items-center justify-center active:opacity-60"
+            hitSlop={8}
+          >
+            <Feather name="edit-3" size={20} color={c.text.tertiary} />
+          </Pressable>
+          <Pressable
+            onPress={() => {
+              if (!id) return;
+              toggleFavorite.mutate({ gymId: id, currentlyFavorite: favorited });
+            }}
+            className="w-10 h-10 rounded-xl items-center justify-center -mr-2 active:opacity-60"
+            hitSlop={8}
+          >
+            <Ionicons
+              name={favorited ? "star" : "star-outline"}
+              size={24}
+              color={favorited ? '#f59e0b' : '#94a3b8'}
+            />
+          </Pressable>
+        </View>
       </View>
 
       <ScrollView className="flex-1 bg-background-primary" contentContainerClassName="p-5 gap-6">
@@ -134,24 +131,33 @@ export default function GymDetailScreen() {
         {(data.size_pyeong || data.floors_count || data.opened_at) && (
           <View className="flex-row gap-3">
             {data.size_pyeong && (
-              <View className="flex-1 bg-background-secondary p-3.5 rounded-2xl border border-border-subtle items-center">
-                <Feather name="maximize-2" size={16} color={c.brand.primary} className="mb-1" />
-                <Text className="text-text-tertiary text-[10px] mb-0.5">규모</Text>
-                <Text className="text-text-primary text-sm font-bold">{data.size_pyeong}평</Text>
+              <View 
+                className="flex-1 bg-background-primary p-3.5 rounded-2xl border border-border-subtle items-center"
+                style={{ shadowColor: c.shadow.color, shadowOpacity: 0.04, shadowRadius: 8, shadowOffset: { width: 0, height: 2 }, elevation: 2 }}
+              >
+                <Feather name="maximize-2" size={16} color={c.brand.primary} className="mb-1.5" />
+                <Text className="text-text-tertiary text-[11px] mb-1 font-semibold">규모</Text>
+                <Text className="text-text-primary text-sm font-extrabold">{data.size_pyeong}평</Text>
               </View>
             )}
             {data.floors_count && (
-              <View className="flex-1 bg-background-secondary p-3.5 rounded-2xl border border-border-subtle items-center">
-                <Feather name="layers" size={16} color={c.brand.primary} className="mb-1" />
-                <Text className="text-text-tertiary text-[10px] mb-0.5">층수</Text>
-                <Text className="text-text-primary text-sm font-bold">{data.floors_count}층</Text>
+              <View 
+                className="flex-1 bg-background-primary p-3.5 rounded-2xl border border-border-subtle items-center"
+                style={{ shadowColor: c.shadow.color, shadowOpacity: 0.04, shadowRadius: 8, shadowOffset: { width: 0, height: 2 }, elevation: 2 }}
+              >
+                <Feather name="layers" size={16} color={c.brand.primary} className="mb-1.5" />
+                <Text className="text-text-tertiary text-[11px] mb-1 font-semibold">층수</Text>
+                <Text className="text-text-primary text-sm font-extrabold">{data.floors_count}층</Text>
               </View>
             )}
             {data.opened_at && (
-              <View className="flex-1 bg-background-secondary p-3.5 rounded-2xl border border-border-subtle items-center">
-                <Feather name="calendar" size={16} color={c.brand.primary} className="mb-1" />
-                <Text className="text-text-tertiary text-[10px] mb-0.5">오픈</Text>
-                <Text className="text-text-primary text-sm font-bold">
+              <View 
+                className="flex-1 bg-background-primary p-3.5 rounded-2xl border border-border-subtle items-center"
+                style={{ shadowColor: c.shadow.color, shadowOpacity: 0.04, shadowRadius: 8, shadowOffset: { width: 0, height: 2 }, elevation: 2 }}
+              >
+                <Feather name="calendar" size={16} color={c.brand.primary} className="mb-1.5" />
+                <Text className="text-text-tertiary text-[11px] mb-1 font-semibold">오픈</Text>
+                <Text className="text-text-primary text-sm font-extrabold">
                   {new Date(data.opened_at).getFullYear()}년
                 </Text>
               </View>
@@ -159,18 +165,52 @@ export default function GymDetailScreen() {
           </View>
         )}
 
-        {/* Tags Section */}
-        {allTags.length > 0 && (
+        {/* Facilities Badges Section */}
+        {(data.has_boulder || data.has_lead || data.has_top_rope || data.has_speed || data.has_auto_belay || data.has_moonboard || data.has_kilter || data.has_tension) && (
           <View className="flex-row flex-wrap gap-1.5">
-            {allTags.map((tag) => (
-              <View
-                key={tag}
-                className="px-3 py-1.5 rounded-xl bg-background-secondary border border-border-subtle flex-row items-center gap-1.5"
-              >
-                <View className="w-1.5 h-1.5 rounded-full bg-brand-primary/60" />
-                <Text className="text-text-secondary text-xs font-semibold">{tag}</Text>
+            {data.has_boulder && (
+              <View className="bg-background-secondary border border-border-subtle px-2.5 py-1 rounded-md">
+                <Text className="text-text-secondary text-[11px] font-bold">볼더링</Text>
               </View>
-            ))}
+            )}
+            {data.has_lead && (
+              <View className="bg-background-secondary border border-border-subtle px-2.5 py-1 rounded-md">
+                <Text className="text-text-secondary text-[11px] font-bold">리드</Text>
+              </View>
+            )}
+            {data.has_top_rope && (
+              <View className="bg-background-secondary border border-border-subtle px-2.5 py-1 rounded-md">
+                <Text className="text-text-secondary text-[11px] font-bold">탑로프</Text>
+              </View>
+            )}
+            {data.has_speed && (
+              <View className="bg-background-secondary border border-border-subtle px-2.5 py-1 rounded-md">
+                <Text className="text-text-secondary text-[11px] font-bold">스피드</Text>
+              </View>
+            )}
+            {data.has_auto_belay && (
+              <View className="bg-background-secondary border border-border-subtle px-2.5 py-1 rounded-md">
+                <Text className="text-text-secondary text-[11px] font-bold">오토빌레이</Text>
+              </View>
+            )}
+            {data.has_moonboard && (
+              <View className="flex-row items-center gap-1 px-2.5 py-1 rounded-md border" style={{ backgroundColor: 'rgba(147, 51, 234, 0.15)', borderColor: 'rgba(147, 51, 234, 0.3)' }}>
+                <Feather name="zap" size={10} color="#a855f7" />
+                <Text className="text-[11px] font-extrabold" style={{ color: '#a855f7' }}>문보드</Text>
+              </View>
+            )}
+            {data.has_kilter && (
+              <View className="flex-row items-center gap-1 px-2.5 py-1 rounded-md border" style={{ backgroundColor: 'rgba(59, 130, 246, 0.15)', borderColor: 'rgba(59, 130, 246, 0.3)' }}>
+                <Feather name="zap" size={10} color="#3b82f6" />
+                <Text className="text-[11px] font-extrabold" style={{ color: '#3b82f6' }}>킬터보드</Text>
+              </View>
+            )}
+            {data.has_tension && (
+              <View className="flex-row items-center gap-1 px-2.5 py-1 rounded-md border" style={{ backgroundColor: 'rgba(249, 115, 22, 0.15)', borderColor: 'rgba(249, 115, 22, 0.3)' }}>
+                <Feather name="zap" size={10} color="#f97316" />
+                <Text className="text-[11px] font-extrabold" style={{ color: '#f97316' }}>텐션보드</Text>
+              </View>
+            )}
           </View>
         )}
 

@@ -37,6 +37,7 @@ import {
   type Profile,
 } from '@/hooks/use-profile';
 import { useFollowCounts } from '@/hooks/use-follows';
+import { useIsAdmin } from '@/hooks/use-gym-submissions';
 import {
   SHOE_STATUS_LABEL,
   useShoes,
@@ -1515,6 +1516,7 @@ function ProfileMenuModal({
         label="고객센터 / 문의하기"
         onPress={() => { onClose(); customAlert('고객센터', '준비 중인 기능입니다.'); }}
       />
+      <AdminSubmissionsMenuLink onClose={onClose} />
 
       <View style={s.modalDivider} />
 
@@ -1587,6 +1589,19 @@ function MyFollowStrip({ userId }: { userId: string | undefined }) {
         <Text style={s.followStripLabel}>팔로잉</Text>
       </Pressable>
     </View>
+  );
+}
+
+function AdminSubmissionsMenuLink({ onClose }: { onClose: () => void }) {
+  const router = useRouter();
+  const { data: isAdmin } = useIsAdmin();
+  if (!isAdmin) return null;
+  return (
+    <MenuButton
+      icon="shield"
+      label="제보 승인 관리 (관리자)"
+      onPress={() => { onClose(); router.push('/admin/submissions' as never); }}
+    />
   );
 }
 
@@ -2759,34 +2774,38 @@ function makeStyles(c: ThemeColors) {
   followStrip: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-around',
+    justifyContent: 'space-evenly',
     backgroundColor: c.bg.card,
-    borderWidth: StyleSheet.hairlineWidth,
+    borderWidth: 1,
     borderColor: c.border.subtle,
-    borderRadius: 14,
+    borderRadius: 18,
     marginHorizontal: 20,
-    paddingVertical: 12,
-    marginTop: 14,
+    marginTop: 20,
+    paddingVertical: 14,
+    shadowColor: c.shadow.color,
+    shadowOpacity: 0.03,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 1,
   },
   followStripBox: {
     flex: 1,
     alignItems: 'center',
-    gap: 2,
+    gap: 4,
   },
   followStripNum: {
     fontSize: 18,
-    fontWeight: '900',
+    fontWeight: '800',
     color: c.text.primary,
-    letterSpacing: -0.3,
   },
   followStripLabel: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '700',
     color: c.text.tertiary,
   },
   followStripDivider: {
-    width: StyleSheet.hairlineWidth,
-    height: 26,
+    width: 1,
+    height: 32,
     backgroundColor: c.border.subtle,
   },
   menuBtnLabel: {

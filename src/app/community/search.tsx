@@ -26,10 +26,10 @@ import { useSearchUsers, type SearchUser } from '@/hooks/use-follows';
 import { useThemeColors, type ThemeColors } from '@/lib/theme';
 
 const BADGE_COLORS: Record<string, { bg: string; text: string }> = {
-  general: { bg: '#eff6ff', text: '#2563eb' },
-  question: { bg: '#faf5ff', text: '#7c3aed' },
-  review: { bg: '#ecfdf5', text: '#059669' },
-  meetup: { bg: '#fffbeb', text: '#d97706' },
+  general: { bg: 'rgba(59, 130, 246, 0.15)', text: '#3b82f6' },
+  question: { bg: 'rgba(147, 51, 234, 0.15)', text: '#a855f7' },
+  review: { bg: 'rgba(16, 185, 129, 0.15)', text: '#10b981' },
+  meetup: { bg: 'rgba(245, 158, 11, 0.15)', text: '#f59e0b' },
 };
 
 function formatRelativeTime(iso: string): string {
@@ -248,7 +248,7 @@ function ResultCard({
   return (
     <Pressable
       onPress={onPress}
-      style={({ pressed }) => [s.card, { backgroundColor: pressed ? '#f8fafc' : '#fff' }]}
+      style={({ pressed }) => [s.card, { backgroundColor: pressed ? c.bg.subtle : c.bg.card }]}
     >
       <View style={s.cardHead}>
         <View style={[s.avatar, { backgroundColor: getAvatarBg(authorName) }]}>
@@ -448,9 +448,9 @@ function makeStyles(c: ThemeColors) {
     gap: 10,
     paddingHorizontal: 12,
     paddingVertical: 10,
-    backgroundColor: '#fff',
+    backgroundColor: c.bg.card,
     borderBottomWidth: 1,
-    borderBottomColor: '#e2e8f0',
+    borderBottomColor: c.border.subtle,
   },
   backBtn: {
     width: 40,
@@ -488,7 +488,7 @@ function makeStyles(c: ThemeColors) {
     width: 72,
     height: 72,
     borderRadius: 36,
-    backgroundColor: '#fff',
+    backgroundColor: c.bg.card,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
@@ -505,9 +505,9 @@ function makeStyles(c: ThemeColors) {
     margin: 20,
     padding: 16,
     borderRadius: 16,
-    backgroundColor: '#fef2f2',
+    backgroundColor: c.status.dangerBg,
     borderWidth: 1,
-    borderColor: '#fecaca',
+    borderColor: c.status.danger,
   },
   errorText: { color: c.status.danger, fontSize: 13, fontWeight: '600' },
 
@@ -551,7 +551,7 @@ function makeStyles(c: ThemeColors) {
 
   title: { fontSize: 14, fontWeight: '800', color: c.text.primary, lineHeight: 20, marginBottom: 4 },
   body: { fontSize: 13, color: c.text.secondary, lineHeight: 19, marginBottom: 10 },
-  highlight: { backgroundColor: '#fef3c7', color: '#92400e', fontWeight: '700' },
+  highlight: { backgroundColor: c.brand.primary + '30', color: c.brand.primary, fontWeight: '700' },
 
   thumbWrap: {
     borderRadius: 12,

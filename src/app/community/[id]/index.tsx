@@ -81,10 +81,10 @@ function formatRelativeTime(iso: string): string {
 }
 
 const BADGE_COLORS: Record<string, { bg: string; text: string; border: string }> = {
-  general: { bg: '#eff6ff', text: '#2563eb', border: '#bfdbfe' },
-  question: { bg: '#faf5ff', text: '#7c3aed', border: '#e9d5ff' },
-  review: { bg: '#ecfdf5', text: '#059669', border: '#a7f3d0' },
-  meetup: { bg: '#fffbeb', text: '#d97706', border: '#fde68a' },
+  general: { bg: 'rgba(59, 130, 246, 0.15)', text: '#3b82f6', border: 'rgba(59, 130, 246, 0.3)' },
+  question: { bg: 'rgba(147, 51, 234, 0.15)', text: '#a855f7', border: 'rgba(147, 51, 234, 0.3)' },
+  review: { bg: 'rgba(16, 185, 129, 0.15)', text: '#10b981', border: 'rgba(16, 185, 129, 0.3)' },
+  meetup: { bg: 'rgba(245, 158, 11, 0.15)', text: '#f59e0b', border: 'rgba(245, 158, 11, 0.3)' },
 };
 
 function getAvatarBgColor(name: string) {

@@ -11,7 +11,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Feather } from '@expo/vector-icons';
+import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 
 import { GRID_COLORS, type GridColor } from '@/components/climb/color-grid';
 import { LeadEntry, type LeadRoute } from '@/components/climb/lead-entry';
@@ -50,12 +50,12 @@ const DURATION_CHIPS: { value: number; label: string }[] = [
   { value: 180, label: '3시간+' },
 ];
 
-const CONDITION_OPTIONS: { value: number; icon: 'frown' | 'meh' | 'smile'; color: string; label: string }[] = [
-  { value: 1, icon: 'frown', color: '#ef4444', label: '최악' },
-  { value: 2, icon: 'frown', color: '#f97316', label: '안좋음' },
-  { value: 3, icon: 'meh', color: '#64748b', label: '보통' },
-  { value: 4, icon: 'smile', color: '#84cc16', label: '좋음' },
-  { value: 5, icon: 'smile', color: '#06b6d4', label: '최상' },
+const CONDITION_OPTIONS: { value: number; icon: any; color: string; label: string }[] = [
+  { value: 1, icon: 'emoticon-dead-outline', color: '#ef4444', label: '최악' },
+  { value: 2, icon: 'emoticon-sad-outline', color: '#f97316', label: '안좋음' },
+  { value: 3, icon: 'emoticon-neutral-outline', color: '#eab308', label: '보통' },
+  { value: 4, icon: 'emoticon-happy-outline', color: '#84cc16', label: '좋음' },
+  { value: 5, icon: 'emoticon-excited-outline', color: '#06b6d4', label: '최상' },
 ];
 
 export default function EditSessionScreen() {
@@ -276,20 +276,24 @@ export default function EditSessionScreen() {
                   key={value}
                   onPress={() => setCondition(active ? null : value)}
                   className={`flex-1 items-center py-2.5 rounded-2xl border gap-1 ${
-                    active
-                      ? 'border-brand-primary bg-brand-primary/5'
-                      : 'border-border-subtle bg-background-primary'
+                    !active ? 'border-border-subtle bg-background-primary' : ''
                   }`}
+                  style={
+                    active
+                      ? { borderColor: color, backgroundColor: `${color}15` }
+                      : undefined
+                  }
                 >
-                  <Feather
+                  <MaterialCommunityIcons
                     name={icon}
-                    size={20}
+                    size={22}
                     color={active ? color : '#94a3b8'}
                   />
                   <Text
                     className={`text-[10px] ${
-                      active ? 'text-brand-primary font-bold' : 'text-text-tertiary'
+                      active ? 'font-bold' : 'text-text-tertiary'
                     }`}
+                    style={active ? { color } : undefined}
                   >
                     {label}
                   </Text>

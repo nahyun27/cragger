@@ -59,6 +59,14 @@ export async function uploadCrewLogo(
   return publicUrl;
 }
 
+export async function uploadGymLogoSuggestion(
+  asset: ImagePicker.ImagePickerAsset,
+  userId: string,
+): Promise<string> {
+  const { publicUrl } = await uploadImage(asset, 'gym-logos', userId);
+  return publicUrl;
+}
+
 // Best-effort delete of an avatar by its public URL.
 // Errors are swallowed — orphaned files are harmless and we never block the UX.
 export async function deleteAvatarByUrl(publicUrl: string | null): Promise<void> {

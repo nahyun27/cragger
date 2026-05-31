@@ -1472,15 +1472,17 @@ function ActiveMemberChip({ member }: { member: CrewActiveMember }) {
       style={({ pressed }) => [pressed && { opacity: 0.7 }]}
     >
       <View style={s.activeMembersMore}>
-        <View style={[s.activeMemberAvatar, isOwner && s.activeMemberAvatarOwner]}>
-          {member.avatar_url ? (
-            <Image source={{ uri: member.avatar_url }} style={s.activeMemberAvatarImg} resizeMode="cover" />
-          ) : (
-            <Text style={s.activeMemberAvatarText}>{firstChar}</Text>
-          )}
+        <View style={s.activeMemberAvatarContainer}>
+          <View style={[s.activeMemberAvatar, isOwner && s.activeMemberAvatarOwner]}>
+            {member.avatar_url ? (
+              <Image source={{ uri: member.avatar_url }} style={s.activeMemberAvatarImg} resizeMode="cover" />
+            ) : (
+              <Text style={s.activeMemberAvatarText}>{firstChar}</Text>
+            )}
+          </View>
           {isOwner && (
             <View style={s.activeMemberOwnerBadge}>
-              <Text style={s.activeMemberOwnerBadgeText}>장</Text>
+              <Feather name="star" size={11} color={c.brand.onPrimary} />
             </View>
           )}
         </View>
@@ -2883,15 +2885,19 @@ function makeStyles(c: ThemeColors) {
     alignItems: 'center',
     justifyContent: 'center',
   },
-  activeMemberAvatar: {
+  activeMemberAvatarContainer: {
+    position: 'relative',
     width: 50,
     height: 50,
+  },
+  activeMemberAvatar: {
+    width: '100%',
+    height: '100%',
     borderRadius: 25,
     backgroundColor: c.bg.subtle,
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
-    position: 'relative',
   },
   activeMemberAvatarOwner: {
     borderWidth: 2,
@@ -2908,15 +2914,15 @@ function makeStyles(c: ThemeColors) {
   },
   activeMemberOwnerBadge: {
     position: 'absolute',
-    top: -2,
+    bottom: -2,
     right: -2,
-    width: 18,
-    height: 18,
-    borderRadius: 9,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
     backgroundColor: c.brand.primary,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1.5,
+    borderWidth: 2,
     borderColor: c.bg.card,
   },
   activeMemberOwnerBadgeText: {
