@@ -1,7 +1,7 @@
 import { BadgeIcon } from '@/components/ui/badge-icon';
 import { InstagramIcon } from '@/components/ui/instagram-icon';
 import { customAlert } from '@/components/ui/custom-alert';
-import { useRouter } from 'expo-router';
+import { useNavigation, useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
   ActivityIndicator,
@@ -9,9 +9,11 @@ import {
   Image,
   Linking,
   Modal,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
+  Switch,
   Text,
   View,
 } from 'react-native';
@@ -69,6 +71,10 @@ import { useBadgeCheck, useUserBadges } from '@/hooks/use-badges';
 
 export default function ProfileScreen() {
   const router = useRouter();
+  const navigation = useNavigation();
+  // 탭 진입(직접)일 땐 부모 stack history 없음 → false
+  // 다른 화면에서 push 후 redirect 로 들어왔으면 부모 history 존재 → true
+  const canGoBack = navigation.getParent()?.canGoBack() ?? false;
   const c = useThemeColors();
   const s = React.useMemo(() => makeStyles(c), [c]);
   const { data: profile } = useProfile();
@@ -109,9 +115,9 @@ export default function ProfileScreen() {
       {/* Header bar */}
       <View style={s.header}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-          {router.canGoBack() && (
+          {canGoBack && (
             <Pressable
-              onPress={() => router.back()}
+              onPress={() => navigation.getParent()?.goBack()}
               style={({ pressed }) => [s.headerBtn, pressed && { opacity: 0.6 }, { marginLeft: -8 }]}
               hitSlop={6}
             >
@@ -1616,13 +1622,18 @@ function PrivacyMenuButton() {
       onPress={() => {
         updateProfile.mutate({ isPrivate: !isPrivate });
       }}
-      style={({ pressed }) => [s.menuBtn, pressed && { opacity: 0.6 }]}
+      style={({ pressed }) => [{ opacity: pressed ? 0.6 : 1 }]}
     >
-      <Feather name={isPrivate ? 'lock' : 'unlock'} size={18} color={c.text.primary} />
-      <Text style={s.menuBtnLabel}>{isPrivate ? '비공개 계정' : '공개 계정'}</Text>
-      <View style={{ flex: 1 }} />
-      <View style={[s.privacyToggleTrack, isPrivate && s.privacyToggleTrackOn]}>
-        <View style={[s.privacyToggleThumb, isPrivate && s.privacyToggleThumbOn]} />
+      <View style={s.menuBtn}>
+        <Feather name={isPrivate ? 'lock' : 'unlock'} size={18} color={c.text.primary} />
+        <Text style={s.menuBtnLabel}>{isPrivate ? '비공개 계정' : '공개 계정'}</Text>
+        <View style={{ flex: 1 }} />
+        <Switch 
+          value={isPrivate} 
+          onValueChange={(val) => updateProfile.mutate({ isPrivate: val })} 
+          trackColor={{ false: c.border.strong, true: c.brand.primary }}
+          thumbColor={Platform.OS === 'ios' ? undefined : c.bg.card}
+        />
       </View>
     </Pressable>
   );
