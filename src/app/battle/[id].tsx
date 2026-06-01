@@ -21,13 +21,18 @@ import {
   useBattle,
   useBattleParticipants,
   useBattleRanking,
+  useChangeBattleTeam,
   useDeclineBattle,
   useDeleteBattle,
+  useEndBattle,
   useJoinBattle,
   useLeaveBattle,
+  useStartBattle,
   type Battle,
   type BattleScoreEntry,
   type ScoringRules,
+  type TeamSide,
+  type TeamTotal,
 } from '@/hooks/use-battles';
 
 function formatDate(iso: string): string {
@@ -61,6 +66,9 @@ export default function BattleDetailScreen() {
   const participantsQ = useBattleParticipants(id);
   const join = useJoinBattle();
   const leave = useLeaveBattle();
+  const changeTeam = useChangeBattleTeam();
+  const startBattle = useStartBattle();
+  const endBattle = useEndBattle();
   const accept = useAcceptBattle();
   const decline = useDeclineBattle();
   const deleteBattle = useDeleteBattle();
@@ -86,10 +94,13 @@ export default function BattleDetailScreen() {
   }
   const isCreator = battle.created_by === meId;
   const isCrewVs = battle.battle_type === 'crew_vs_crew';
+  const isTeam = battle.battle_type === 'crew_internal_team';
   const isEnded = status === 'ended';
   const isScheduled = status === 'scheduled';
   const isDeclined = status === 'declined';
-  const isMeJoined = (participantsQ.data ?? []).some((p) => p.user_id === meId);
+  const myParticipant = (participantsQ.data ?? []).find((p) => p.user_id === meId);
+  const isMeJoined = !!myParticipant;
+  const myTeam = myParticipant?.team ?? null;
 
   function handleDelete() {
     customAlert('대결을 삭제할까요?', '되돌릴 수 없어요.', [
@@ -116,10 +127,45 @@ export default function BattleDetailScreen() {
         onError: (e) => customAlert('실패', e instanceof Error ? e.message : '오류'),
       });
     } else {
-      join.mutate(battle.id, {
+      // 팀전인데 팀 안 정해진 채로 참가하면 a로 기본
+      join.mutate(
+        { battleId: battle.id, team: isTeam ? 'a' : undefined },
+        { onError: (e) => customAlert('실패', e instanceof Error ? e.message : '오류') },
+      );
+    }
+  }
+
+  function handleSelectTeam(team: TeamSide) {
+    if (!battle) return;
+    if (!isMeJoined) {
+      join.mutate({ battleId: battle.id, team }, {
+        onError: (e) => customAlert('실패', e instanceof Error ? e.message : '오류'),
+      });
+    } else if (myTeam !== team) {
+      changeTeam.mutate({ battleId: battle.id, team }, {
         onError: (e) => customAlert('실패', e instanceof Error ? e.message : '오류'),
       });
     }
+  }
+
+  function handleStart() {
+    startBattle.mutate(battle!.id, {
+      onError: (e) => customAlert('실패', e instanceof Error ? e.message : '오류'),
+    });
+  }
+
+  function handleEnd() {
+    customAlert('대결을 종료할까요?', '종료 후엔 점수가 더 이상 갱신되지 않아요.', [
+      { text: '취소', style: 'cancel' },
+      {
+        text: '종료',
+        style: 'destructive',
+        onPress: () =>
+          endBattle.mutate(battle!.id, {
+            onError: (e) => customAlert('실패', e instanceof Error ? e.message : '오류'),
+          }),
+      },
+    ]);
   }
 
   function handleRecord() {
@@ -201,6 +247,37 @@ export default function BattleDetailScreen() {
           <CrewVsCrewCard battle={battle} totals={rankingQ.data.crewTotals} status={status} />
         )}
 
+        {/* 팀전 점수 비교 */}
+        {isTeam && rankingQ.data && (
+          <TeamVsTeamCard totals={rankingQ.data.teamTotals} status={status} />
+        )}
+
+        {/* 호스트 시작/종료 */}
+        {isCreator && !isDeclined && (
+          <View className="flex-row gap-2">
+            {isScheduled && (
+              <Pressable
+                onPress={handleStart}
+                disabled={startBattle.isPending}
+                className="flex-1 py-3 rounded-xl items-center justify-center flex-row gap-2 bg-status-success/10 border border-status-success/30"
+              >
+                <Feather name="play" size={14} color={c.status.success} />
+                <Text className="text-status-success text-sm font-extrabold">대결 시작</Text>
+              </Pressable>
+            )}
+            {status === 'active' && (
+              <Pressable
+                onPress={handleEnd}
+                disabled={endBattle.isPending}
+                className="flex-1 py-3 rounded-xl items-center justify-center flex-row gap-2 bg-status-warning/10 border border-status-warning/30"
+              >
+                <Feather name="flag" size={14} color={c.status.warning} />
+                <Text className="text-status-warning text-sm font-extrabold">대결 종료</Text>
+              </Pressable>
+            )}
+          </View>
+        )}
+
         {isDeclined && (
           <View className="bg-background-secondary border border-border-subtle rounded-2xl p-4">
             <Text className="text-text-tertiary text-sm font-semibold text-center">거절된 대결입니다</Text>
@@ -210,33 +287,59 @@ export default function BattleDetailScreen() {
         {/* 참가 토글 + 기록하기 CTA */}
         {!isEnded && !isDeclined && (
           <View className="gap-2">
-            <Pressable
-              onPress={handleJoinToggle}
-              disabled={join.isPending || leave.isPending}
-              className={`py-3 rounded-xl items-center justify-center flex-row gap-2 ${
-                isMeJoined ? 'bg-background-card border border-border-subtle' : 'bg-brand-primary'
-              }`}
-            >
-              {(join.isPending || leave.isPending) ? (
-                <ActivityIndicator size="small" color={isMeJoined ? c.text.primary : c.brand.onPrimary} />
-              ) : (
-                <>
-                  <Feather
-                    name={isMeJoined ? 'user-check' : 'user-plus'}
-                    size={15}
-                    color={isMeJoined ? c.text.primary : c.brand.onPrimary}
+            {isTeam ? (
+              <View className="gap-2">
+                <Text className="text-text-tertiary text-xs font-bold">참가하려면 팀 선택</Text>
+                <View className="flex-row gap-2">
+                  <TeamPickBtn
+                    label={battle.team_a_name ?? 'A팀'}
+                    active={myTeam === 'a'}
+                    onPress={() => handleSelectTeam('a')}
                   />
-                  <Text
-                    className={`text-sm font-extrabold ${
-                      isMeJoined ? 'text-text-primary' : 'text-background-primary'
-                    }`}
+                  <TeamPickBtn
+                    label={battle.team_b_name ?? 'B팀'}
+                    active={myTeam === 'b'}
+                    onPress={() => handleSelectTeam('b')}
+                  />
+                </View>
+                {isMeJoined && (
+                  <Pressable
+                    onPress={handleJoinToggle}
+                    className="py-2 items-center"
                   >
-                    {isMeJoined ? '참가 신청 됨 — 취소' : '참가 신청'}
-                  </Text>
-                </>
-              )}
-            </Pressable>
-            {isMeJoined && (
+                    <Text className="text-text-tertiary text-xs font-semibold">참가 취소</Text>
+                  </Pressable>
+                )}
+              </View>
+            ) : (
+              <Pressable
+                onPress={handleJoinToggle}
+                disabled={join.isPending || leave.isPending}
+                className={`py-3 rounded-xl items-center justify-center flex-row gap-2 ${
+                  isMeJoined ? 'bg-background-card border border-border-subtle' : 'bg-brand-primary'
+                }`}
+              >
+                {(join.isPending || leave.isPending) ? (
+                  <ActivityIndicator size="small" color={isMeJoined ? c.text.primary : c.brand.onPrimary} />
+                ) : (
+                  <>
+                    <Feather
+                      name={isMeJoined ? 'user-check' : 'user-plus'}
+                      size={15}
+                      color={isMeJoined ? c.text.primary : c.brand.onPrimary}
+                    />
+                    <Text
+                      className={`text-sm font-extrabold ${
+                        isMeJoined ? 'text-text-primary' : 'text-background-primary'
+                      }`}
+                    >
+                      {isMeJoined ? '참가 신청 됨 — 취소' : '참가 신청'}
+                    </Text>
+                  </>
+                )}
+              </Pressable>
+            )}
+            {isMeJoined && status === 'active' && (
               <Pressable
                 onPress={handleRecord}
                 className="py-3 rounded-xl items-center justify-center flex-row gap-2 bg-brand-primary/10 border border-brand-primary/30"
@@ -313,6 +416,44 @@ export default function BattleDetailScreen() {
         </View>
       </ScrollView>
     </SafeAreaView>
+  );
+}
+
+function TeamPickBtn({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) {
+  return (
+    <Pressable
+      onPress={onPress}
+      className={`flex-1 py-3 rounded-xl items-center justify-center ${
+        active ? 'bg-brand-primary' : 'bg-background-card border border-border-subtle'
+      }`}
+    >
+      <Text className={`text-sm font-extrabold ${active ? 'text-background-primary' : 'text-text-primary'}`}>
+        {label}{active && ' ✓'}
+      </Text>
+    </Pressable>
+  );
+}
+
+function TeamVsTeamCard({ totals, status }: { totals: TeamTotal[]; status: string }) {
+  const c = useThemeColors();
+  if (totals.length !== 2) return null;
+  const a = totals[0];
+  const b = totals[1];
+  const total = a.score + b.score;
+  const aPct = total > 0 ? Math.round((a.score / total) * 100) : 50;
+  const aWin = status === 'ended' && a.score > b.score;
+  const bWin = status === 'ended' && b.score > a.score;
+  return (
+    <View className="bg-background-card border border-border-subtle rounded-2xl p-4 gap-3">
+      <View className="flex-row items-center justify-between">
+        <CrewTotal name={a.name} score={a.score} isWinner={aWin} align="left" />
+        <Text className="text-text-muted text-[11px] font-extrabold">VS</Text>
+        <CrewTotal name={b.name} score={b.score} isWinner={bWin} align="right" />
+      </View>
+      <View className="h-2.5 rounded-full bg-background-subtle overflow-hidden flex-row">
+        <View style={{ width: `${aPct}%`, backgroundColor: c.brand.primary }} />
+      </View>
+    </View>
   );
 }
 

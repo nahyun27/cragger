@@ -17,7 +17,8 @@ import {
   Text,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { BlurView } from 'expo-blur';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 
 import { Sheet } from '@/components/ui/sheet';
@@ -117,10 +118,19 @@ export default function ProfileScreen() {
   const username = profile?.username ?? '...';
   const firstChar = username && username.length > 0 ? username.charAt(0).toUpperCase() : '?';
 
+  const insets = useSafeAreaInsets();
+  const scheme = useEffectiveScheme();
+
   return (
-    <SafeAreaView style={s.container} edges={['top']}>
+    <View style={s.container}>
       {/* Header bar */}
-      <View style={s.header}>
+      <View className="z-20 border-b border-border-subtle absolute top-0 left-0 right-0" style={{ paddingTop: Math.max(insets.top, 20) }}>
+        <BlurView
+          tint={scheme === 'dark' ? 'dark' : 'light'}
+          intensity={80}
+          style={StyleSheet.absoluteFill}
+        />
+        <View style={s.header}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
           {canGoBack && (
             <Pressable
@@ -144,8 +154,9 @@ export default function ProfileScreen() {
           </Pressable>
         </View>
       </View>
+      </View>
 
-      <ScrollView style={{ flex: 1, backgroundColor: c.bg.primary }} contentContainerStyle={s.scrollContent}>
+      <ScrollView style={{ flex: 1, backgroundColor: c.bg.primary }} contentContainerStyle={[s.scrollContent, { paddingTop: Math.max(insets.top, 20) + 70 }]}>
         {/* Profile card — 가로 레이아웃 (사진 좌 / 정보 우) */}
         <MyProfileCardH
           profile={profile}
@@ -256,7 +267,7 @@ export default function ProfileScreen() {
         }}
         onEditProfile={() => router.push('/profile/edit')}
       />
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -1726,9 +1737,6 @@ function makeStyles(c: ThemeColors) {
     paddingHorizontal: 24,
     paddingTop: 16,
     paddingBottom: 14,
-    backgroundColor: c.bg.card,
-    borderBottomWidth: 1,
-    borderColor: c.border.subtle,
   },
   headerTitle: {
     fontSize: 24,

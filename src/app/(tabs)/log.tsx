@@ -9,13 +9,14 @@ import {
   Text,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
+import { BlurView } from 'expo-blur';
 
 import { SessionCalendar } from '@/components/log/session-calendar';
 import { SessionRow } from '@/components/session/session-row';
 import { useRecentSessions } from '@/hooks/use-recent-sessions';
-import { useThemeColors, type ThemeColors } from '@/lib/theme';
+import { useThemeColors, useEffectiveScheme, type ThemeColors } from '@/lib/theme';
 
 type ViewMode = 'list' | 'calendar';
 
@@ -38,10 +39,19 @@ export default function LogScreen() {
     };
   }, [sessions]);
 
+  const insets = useSafeAreaInsets();
+  const scheme = useEffectiveScheme();
+
   return (
-    <SafeAreaView style={s.container} edges={['top']}>
+    <View style={s.container}>
       {/* Header */}
-      <View style={s.header}>
+      <View className="z-20 border-b border-border-subtle absolute top-0 left-0 right-0" style={{ paddingTop: Math.max(insets.top, 20) }}>
+        <BlurView
+          tint={scheme === 'dark' ? 'dark' : 'light'}
+          intensity={80}
+          style={StyleSheet.absoluteFill}
+        />
+        <View style={s.header}>
         <View>
           <Text style={s.headerTitle}>기록</Text>
           <Text style={s.headerSubtitle}>나의 등반 세션</Text>
@@ -57,9 +67,10 @@ export default function LogScreen() {
           </View>
         </Pressable>
       </View>
+      </View>
 
       {/* View toggle */}
-      <View style={s.toggleWrap}>
+      <View style={[s.toggleWrap, { paddingTop: Math.max(insets.top, 20) + 60 }]}>
         <View style={s.toggle}>
           <ToggleBtn
             label="리스트"
@@ -162,7 +173,7 @@ export default function LogScreen() {
           </>
         )}
       </View>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -208,9 +219,6 @@ function makeStyles(c: ThemeColors) {
       paddingHorizontal: 24,
       paddingTop: 16,
       paddingBottom: 14,
-      backgroundColor: c.bg.card,
-      borderBottomWidth: 1,
-      borderColor: c.border.subtle,
     },
     headerTitle: {
       fontSize: 24,
@@ -249,7 +257,6 @@ function makeStyles(c: ThemeColors) {
       paddingHorizontal: 16,
       paddingTop: 14,
       paddingBottom: 6,
-      backgroundColor: c.bg.primary,
     },
     toggle: {
       flexDirection: 'row',

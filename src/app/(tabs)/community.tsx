@@ -10,8 +10,9 @@ import {
   Text,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
+import { BlurView } from 'expo-blur';
 
 import {
   POST_TYPE_LABEL,
@@ -23,7 +24,7 @@ import {
 } from '@/hooks/use-community';
 import { useDiscoverCrews, type CrewSummary } from '@/hooks/use-crews';
 import { FeaturedBadgeChip } from '@/components/ui/featured-badge-chip';
-import { useThemeColors, type ThemeColors } from '@/lib/theme';
+import { useThemeColors, useEffectiveScheme, type ThemeColors } from '@/lib/theme';
 
 type FilterKey = 'all' | PostType;
 
@@ -212,25 +213,35 @@ export default function CommunityScreen() {
   const { data: likedSet } = useMyLikes();
   const posts = useMemo<PostRow[]>(() => feed.data?.pages.flat() ?? [], [feed.data]);
 
-  return (
-    <SafeAreaView style={s.container} edges={['top']}>
-      {/* Header */}
-      <View style={s.header}>
-        <View>
-          <Text style={s.headerTitle}>커뮤니티</Text>
-          <Text style={s.headerSubtitle}>클라이머들의 소통과 정보 공유</Text>
-        </View>
-        <Pressable
-          onPress={() => router.push('/community/search')}
-          style={({ pressed }) => [s.headerBtn, { opacity: pressed ? 0.6 : 1 }]}
-          hitSlop={6}
-        >
-          <Feather name="search" size={18} color={c.text.tertiary} />
-        </Pressable>
-      </View>
+  const insets = useSafeAreaInsets();
+  const scheme = useEffectiveScheme();
 
-      {/* Filter Pills */}
-      <View style={s.filterWrapper}>
+  return (
+    <View style={s.container}>
+      {/* Header with Glassmorphism */}
+      <View className="z-20 border-b border-border-subtle absolute top-0 left-0 right-0" style={{ paddingTop: Math.max(insets.top, 20) }}>
+        <BlurView
+          tint={scheme === 'dark' ? 'dark' : 'light'}
+          intensity={80}
+          style={StyleSheet.absoluteFill}
+        />
+        <View style={s.header}>
+          <View>
+            <Text style={s.headerTitle}>커뮤니티</Text>
+            <Text style={s.headerSubtitle}>클라이머들의 소통과 정보 공유</Text>
+          </View>
+          <Pressable
+            onPress={() => router.push('/community/search')}
+            style={({ pressed }) => [s.headerBtn, { opacity: pressed ? 0.6 : 1 }]}
+            hitSlop={6}
+          >
+            <Feather name="search" size={18} color={c.text.tertiary} />
+          </Pressable>
+          </Pressable>
+        </View>
+
+        {/* Filter Pills */}
+        <View style={s.filterWrapper}>
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -271,6 +282,7 @@ export default function CommunityScreen() {
           })}
         </ScrollView>
       </View>
+      </View>
 
       {/* List States */}
       {feed.isLoading && (
@@ -285,39 +297,40 @@ export default function CommunityScreen() {
         </View>
       )}
 
-      {!feed.isLoading && !feed.error && posts.length === 0 && (
-        <View style={s.emptyContainer}>
-          <View style={s.emptyIconWrapper}>
-            <Feather name="message-square" size={28} color={c.text.muted} />
-          </View>
-          <Text style={s.emptyTitle}>게시글이 비어있어요</Text>
-          <Text style={s.emptySubtitle}>
-            원하는 주제의 글을 남기고 다른 클라이머들과 대화를 시작해보세요!
-          </Text>
-          <Pressable
-            onPress={() => router.push('/community/new')}
-            style={({ pressed }) => [s.emptyBtn, { opacity: pressed ? 0.9 : 1 }]}
-          >
-            <Text style={s.emptyBtnText}>첫 글 등록하기</Text>
-          </Pressable>
-        </View>
-      )}
-
-      {/* Recruiting crews — 전체 필터일 때만 노출 */}
-      {filter === 'all' && <RecruitingCrewsStrip />}
-
       {/* Feed List */}
-      {posts.length > 0 && (
-        <FlatList
+      <FlatList
+        className="flex-1"
           data={posts}
           keyExtractor={(p) => p.id}
-          contentContainerStyle={s.listContent}
+          contentContainerStyle={[s.listContent, { paddingTop: Math.max(insets.top, 20) + 110, paddingBottom: 100 }]}
           onEndReached={() => {
             if (feed.hasNextPage && !feed.isFetchingNextPage) feed.fetchNextPage();
           }}
           onEndReachedThreshold={0.4}
           refreshing={feed.isRefetching}
           onRefresh={() => feed.refetch()}
+          ListHeaderComponent={
+            filter === 'all' ? <RecruitingCrewsStrip /> : null
+          }
+          ListEmptyComponent={
+            !feed.isLoading && !feed.error && posts.length === 0 ? (
+              <View style={[s.emptyContainer, filter !== 'all' && { paddingTop: Math.max(insets.top, 20) + 40 }]}>
+                <View style={s.emptyIconWrapper}>
+                  <Feather name="message-square" size={28} color={c.text.muted} />
+                </View>
+                <Text style={s.emptyTitle}>게시글이 비어있어요</Text>
+                <Text style={s.emptySubtitle}>
+                  원하는 주제의 글을 남기고 다른 클라이머들과 대화를 시작해보세요!
+                </Text>
+                <Pressable
+                  onPress={() => router.push('/community/new')}
+                  style={({ pressed }) => [s.emptyBtn, { opacity: pressed ? 0.9 : 1 }]}
+                >
+                  <Text style={s.emptyBtnText}>첫 글 등록하기</Text>
+                </Pressable>
+              </View>
+            ) : null
+          }
           ListFooterComponent={
             feed.isFetchingNextPage ? (
               <View style={s.footerLoader}>
@@ -336,12 +349,8 @@ export default function CommunityScreen() {
             />
           )}
         />
-      )}
 
-      {/* Floating write button — absolute anchor on a static View;
-          Pressable uses children-as-function so the fab visual styles
-          stay on a real View (Pressable's style-array form has been
-          eating width/bg/etc. elsewhere). */}
+      {/* Floating write button */}
       <View pointerEvents="box-none" style={s.fabAnchor}>
         <Pressable
           onPress={() => router.push('/community/new')}
@@ -354,7 +363,7 @@ export default function CommunityScreen() {
           )}
         </Pressable>
       </View>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -516,9 +525,7 @@ function makeStyles(c: ThemeColors) {
     recruitStrip: {
       paddingTop: 14,
       paddingBottom: 10,
-      borderBottomWidth: StyleSheet.hairlineWidth,
-      borderBottomColor: c.border.subtle,
-      backgroundColor: c.bg.card,
+      paddingBottom: 10,
     },
     recruitStripHeader: {
       flexDirection: 'row',
@@ -614,7 +621,6 @@ function makeStyles(c: ThemeColors) {
       paddingHorizontal: 24,
       paddingTop: 16,
       paddingBottom: 14,
-      backgroundColor: c.bg.card,
     },
     headerTitle: {
       fontSize: 26,
@@ -655,9 +661,6 @@ function makeStyles(c: ThemeColors) {
       elevation: 6,
     },
     filterWrapper: {
-      backgroundColor: c.bg.card,
-      borderBottomWidth: 1,
-      borderColor: c.border.subtle,
     },
     filterScroll: {
       paddingHorizontal: 16,

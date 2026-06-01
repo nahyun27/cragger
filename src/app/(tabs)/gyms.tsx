@@ -12,12 +12,13 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { BlurView } from 'expo-blur';
 
 import { GymThumbnail } from '@/components/gym/gym-thumbnail';
 import { useFavoriteGymIds, useToggleFavorite } from '@/hooks/use-favorites';
 import { useGyms, type GymListItem } from '@/hooks/use-gyms';
-import { useThemeColors, type ThemeColors } from '@/lib/theme';
+import { useThemeColors, useEffectiveScheme, type ThemeColors } from '@/lib/theme';
 
 // City → coarse region mapping for the filter chips.
 // The gyms.city column was populated inconsistently — sometimes "서울",
@@ -167,10 +168,19 @@ export default function GymsScreen() {
     );
   };
 
+  const insets = useSafeAreaInsets();
+  const scheme = useEffectiveScheme();
+
   return (
-    <SafeAreaView style={s.container} edges={['top']}>
-      {/* Header */}
-      <View style={s.header}>
+    <View style={s.container}>
+      {/* Header with Glassmorphism */}
+      <View className="z-20 border-b border-border-subtle absolute top-0 left-0 right-0" style={{ paddingTop: Math.max(insets.top, 20) }}>
+        <BlurView
+          tint={scheme === 'dark' ? 'dark' : 'light'}
+          intensity={80}
+          style={StyleSheet.absoluteFill}
+        />
+        <View style={s.header}>
         <View style={s.headerTitleRow}>
           <Text style={s.headerTitle}>암장</Text>
           <View style={s.countBadge}>
@@ -182,10 +192,11 @@ export default function GymsScreen() {
         <Text style={s.headerSubtitle}>
           원하는 시설과 지역의 암장을 편리하게 필터링해 보세요.
         </Text>
+        </View>
       </View>
 
       {/* Search Input */}
-      <View style={s.searchContainer}>
+      <View style={[s.searchContainer, { paddingTop: Math.max(insets.top, 20) + 70 }]}>
         <View 
           style={[
             s.searchBar,
@@ -426,7 +437,7 @@ export default function GymsScreen() {
           </Pressable>
         </Pressable>
       </Modal>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -549,7 +560,6 @@ function makeStyles(c: ThemeColors) {
       paddingHorizontal: 20,
       paddingTop: 4,
       paddingBottom: 8,
-      backgroundColor: c.bg.card,
     },
     headerTitleRow: { flexDirection: 'row', alignItems: 'center' },
     headerTitle: {
@@ -580,7 +590,6 @@ function makeStyles(c: ThemeColors) {
     searchContainer: {
       paddingHorizontal: 20,
       paddingBottom: 8,
-      backgroundColor: c.bg.card,
     },
     searchBar: {
       flexDirection: 'row',
@@ -605,7 +614,6 @@ function makeStyles(c: ThemeColors) {
     },
 
     filterBlock: {
-      backgroundColor: c.bg.card,
       borderBottomWidth: 1,
       borderColor: c.border.subtle,
       paddingBottom: 8,

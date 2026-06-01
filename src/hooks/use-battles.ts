@@ -4,8 +4,9 @@ import { useAuth } from '@/lib/auth-context';
 import { checkBadgesAndNotify } from '@/lib/check-badges-and-notify';
 import { supabase } from '@/lib/supabase';
 
-export type BattleType = 'crew_internal' | 'crew_vs_crew';
+export type BattleType = 'crew_internal' | 'crew_internal_team' | 'crew_vs_crew';
 export type BattleStatus = 'scheduled' | 'active' | 'ended' | 'declined';
+export type TeamSide = 'a' | 'b';
 
 export type ScoringRules =
   | { type: 'linear'; base: number }              // V × base
@@ -30,9 +31,11 @@ export type Battle = {
   crew_id: string;
   opponent_crew_id: string | null;
   gym_id: string;
-  battle_date: string;       // YYYY-MM-DD
+  battle_date: string;       // YYYY-MM-DD (기록용)
   status: BattleStatus;
   scoring_rules: ScoringRules;
+  team_a_name: string | null;
+  team_b_name: string | null;
   created_by: string;
   created_at: string;
   crew: BattleCrewMini | null;
@@ -41,17 +44,11 @@ export type Battle = {
 };
 
 const BATTLE_COLS =
-  'id, battle_type, title, crew_id, opponent_crew_id, gym_id, battle_date, status, scoring_rules, created_by, created_at, crew:crews!battles_crew_id_fkey(id, name), opponent_crew:crews!battles_opponent_crew_id_fkey(id, name), gym:gyms!battles_gym_id_fkey(id, name, branch)';
+  'id, battle_type, title, crew_id, opponent_crew_id, gym_id, battle_date, status, scoring_rules, team_a_name, team_b_name, created_by, created_at, crew:crews!battles_crew_id_fkey(id, name), opponent_crew:crews!battles_opponent_crew_id_fkey(id, name), gym:gyms!battles_gym_id_fkey(id, name, branch)';
 
-// 현재 날짜 기준 effective status.
-// DB status='active' 라도 battle_date 가 지났으면 ended.
-// status='scheduled' 인데 오늘이면 active 로 본다.
+// 호스트가 수동으로 status 를 바꿈. 날짜는 기록용이라 자동 전환 없음.
 export function effectiveStatus(b: Battle): BattleStatus {
-  if (b.status === 'declined' || b.status === 'ended') return b.status;
-  const today = new Date().toISOString().slice(0, 10);
-  if (b.battle_date < today) return 'ended';
-  if (b.battle_date > today) return 'scheduled';
-  return 'active';
+  return b.status;
 }
 
 // 점수 환산 — V숫자 → scoring_rules 기반 점수
@@ -103,6 +100,7 @@ export function useBattle(battleId: string | undefined) {
 export type BattleParticipantRow = {
   user_id: string;
   joined_at: string;
+  team: TeamSide | null;
   user: {
     id: string;
     username: string;
@@ -121,7 +119,7 @@ export function useBattleParticipants(battleId: string | undefined) {
       const { data, error } = await supabase
         .from('battle_participants')
         .select(
-          'user_id, joined_at, user:profiles!battle_participants_user_id_fkey(id, username, display_name, avatar_url, featured_badge_key)',
+          'user_id, joined_at, team, user:profiles!battle_participants_user_id_fkey(id, username, display_name, avatar_url, featured_badge_key)',
         )
         .eq('battle_id', battleId!)
         .order('joined_at', { ascending: true });
@@ -130,6 +128,7 @@ export function useBattleParticipants(battleId: string | undefined) {
       const rows = (data ?? []) as Array<{
         user_id: string;
         joined_at: string;
+        team: TeamSide | null;
         user: BattleParticipantRow['user'];
       }>;
       if (rows.length === 0) return [];
@@ -168,13 +167,17 @@ export type BattleScoreEntry = {
   avatar_url: string | null;
   featured_badge_key: string | null;
   crew_id: string | null;
+  team: TeamSide | null;
   score: number;
   send_count: number;
 };
 
+export type TeamTotal = { team: TeamSide; name: string; score: number; send_count: number };
+
 export type BattleRanking = {
-  individuals: BattleScoreEntry[];                                              // 점수 내림차순
+  individuals: BattleScoreEntry[];   // 점수 내림차순
   crewTotals: { crew_id: string; crew_name: string; score: number; send_count: number }[];
+  teamTotals: TeamTotal[];           // crew_internal_team 일 때 채워짐
 };
 
 function vGradeToNum(g: string | null): number | null {
@@ -206,18 +209,21 @@ export function useBattleRanking(battleId: string | undefined, opts?: { refetchI
       const { data: pRows, error: pErr } = await supabase
         .from('battle_participants')
         .select(
-          'user_id, user:profiles!battle_participants_user_id_fkey(id, username, display_name, avatar_url, featured_badge_key)',
+          'user_id, team, user:profiles!battle_participants_user_id_fkey(id, username, display_name, avatar_url, featured_badge_key)',
         )
         .eq('battle_id', battleId!);
       if (pErr) throw new Error(pErr.message);
       const participants = (pRows ?? []) as Array<{
         user_id: string;
+        team: TeamSide | null;
         user: BattleScoreEntry | null;
       }>;
       if (participants.length === 0) {
-        return { individuals: [], crewTotals: emptyCrewTotals(battle) };
+        return { individuals: [], crewTotals: emptyCrewTotals(battle), teamTotals: emptyTeamTotals(battle) };
       }
       const userIds = participants.map((p) => p.user_id);
+      const userToTeam = new Map<string, TeamSide | null>();
+      for (const p of participants) userToTeam.set(p.user_id, p.team);
 
       // 3) crew_id per participant
       const crewIds = [battle.crew_id, battle.opponent_crew_id].filter((x): x is string => !!x);
@@ -254,6 +260,7 @@ export function useBattleRanking(battleId: string | undefined, opts?: { refetchI
           avatar_url: p.user.avatar_url,
           featured_badge_key: p.user.featured_badge_key,
           crew_id: userToCrew.get(p.user_id) ?? null,
+          team: p.team,
           score: 0,
           send_count: 0,
         });
@@ -332,9 +339,32 @@ export function useBattleRanking(battleId: string | undefined, opts?: { refetchI
         send_count: v.send_count,
       }));
 
-      return { individuals, crewTotals };
+      // 팀별 합산 (crew_internal_team 일 때만 의미 있음)
+      const teamMap: Record<TeamSide, { score: number; send_count: number }> = {
+        a: { score: 0, send_count: 0 },
+        b: { score: 0, send_count: 0 },
+      };
+      for (const p of individuals) {
+        if (p.team === 'a' || p.team === 'b') {
+          teamMap[p.team].score += p.score;
+          teamMap[p.team].send_count += p.send_count;
+        }
+      }
+      const teamTotals: TeamTotal[] = [
+        { team: 'a', name: battle.team_a_name ?? 'A팀', ...teamMap.a },
+        { team: 'b', name: battle.team_b_name ?? 'B팀', ...teamMap.b },
+      ];
+
+      return { individuals, crewTotals, teamTotals };
     },
   });
+}
+
+function emptyTeamTotals(battle: Battle): TeamTotal[] {
+  return [
+    { team: 'a', name: battle.team_a_name ?? 'A팀', score: 0, send_count: 0 },
+    { team: 'b', name: battle.team_b_name ?? 'B팀', score: 0, send_count: 0 },
+  ];
 }
 
 function emptyCrewTotals(battle: Battle) {
@@ -364,6 +394,8 @@ export type CreateBattleArgs = {
   gymId: string;
   battleDate: string;             // YYYY-MM-DD
   scoringRules: ScoringRules;
+  teamAName?: string;              // crew_internal_team 일 때
+  teamBName?: string;
 };
 
 export function useCreateBattle() {
@@ -382,9 +414,10 @@ export function useCreateBattle() {
           opponent_crew_id: args.opponentCrewId,
           gym_id: args.gymId,
           battle_date: args.battleDate,
-          // crew_internal 은 바로 active(scheduled), crew_vs_crew 는 상대 수락 대기 의미로 scheduled
           status: 'scheduled',
           scoring_rules: args.scoringRules,
+          team_a_name: args.teamAName ?? null,
+          team_b_name: args.teamBName ?? null,
           created_by: userId,
         })
         .select('id')
@@ -406,6 +439,39 @@ export function useAcceptBattle() {
       const { error } = await supabase
         .from('battles')
         .update({ status: 'active' })
+        .eq('id', battleId);
+      if (error) throw new Error(error.message);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['battles'] });
+    },
+  });
+}
+
+// 호스트가 수동으로 시작/종료
+export function useStartBattle() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (battleId: string) => {
+      const { error } = await supabase
+        .from('battles')
+        .update({ status: 'active' })
+        .eq('id', battleId);
+      if (error) throw new Error(error.message);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['battles'] });
+    },
+  });
+}
+
+export function useEndBattle() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (battleId: string) => {
+      const { error } = await supabase
+        .from('battles')
+        .update({ status: 'ended' })
         .eq('id', battleId);
       if (error) throw new Error(error.message);
     },
@@ -449,20 +515,46 @@ export function useJoinBattle() {
   const queryClient = useQueryClient();
   const { session: authSession } = useAuth();
   return useMutation({
-    mutationFn: async (battleId: string) => {
+    mutationFn: async (args: { battleId: string; team?: TeamSide }) => {
       const userId = authSession?.user.id;
       if (!userId) throw new Error('Not authenticated');
       const { error } = await supabase
         .from('battle_participants')
-        .insert({ battle_id: battleId, user_id: userId });
+        .insert({
+          battle_id: args.battleId,
+          user_id: userId,
+          team: args.team ?? null,
+        });
       if (error) {
         if (error.code === '23505') return; // 이미 참가
         throw new Error(error.message);
       }
     },
-    onSuccess: (_d, battleId) => {
-      queryClient.invalidateQueries({ queryKey: ['battles', 'participants', battleId] });
-      queryClient.invalidateQueries({ queryKey: ['battles', 'ranking', battleId] });
+    onSuccess: (_d, args) => {
+      queryClient.invalidateQueries({ queryKey: ['battles', 'participants', args.battleId] });
+      queryClient.invalidateQueries({ queryKey: ['battles', 'ranking', args.battleId] });
+    },
+  });
+}
+
+// 팀 변경 (crew_internal_team)
+export function useChangeBattleTeam() {
+  const queryClient = useQueryClient();
+  const { session: authSession } = useAuth();
+  return useMutation({
+    mutationFn: async (args: { battleId: string; team: TeamSide }) => {
+      const userId = authSession?.user.id;
+      if (!userId) throw new Error('Not authenticated');
+      const { error } = await supabase
+        .from('battle_participants')
+        .update({ team: args.team })
+        .eq('battle_id', args.battleId)
+        .eq('user_id', userId);
+      if (error) throw new Error(error.message);
+    },
+    onSuccess: (_d, args) => {
+      queryClient.invalidateQueries({ queryKey: ['battles', 'participants', args.battleId] });
+      queryClient.invalidateQueries({ queryKey: ['battles', 'ranking', args.battleId] });
     },
   });
 }

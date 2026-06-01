@@ -9,6 +9,7 @@ import { useColorScheme } from 'react-native';
 import { create } from 'zustand';
 
 export type ThemeColors = {
+  isDark: boolean;
   bg: {
     primary: string;     // 메인 화면 배경
     card: string;        // 카드/sheet 배경
@@ -48,6 +49,7 @@ export type ThemeColors = {
 };
 
 export const lightColors: ThemeColors = {
+  isDark: false,
   bg: {
     primary:  '#f8fafc',
     card:     '#ffffff',
@@ -87,6 +89,7 @@ export const lightColors: ThemeColors = {
 };
 
 export const darkColors: ThemeColors = {
+  isDark: true,
   bg: {
     primary:  '#0f172a',
     card:     '#1e293b',

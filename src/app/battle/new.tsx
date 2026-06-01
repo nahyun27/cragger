@@ -45,6 +45,8 @@ export default function NewBattleScreen() {
   const { data: allGyms } = useGyms();
 
   const [battleType, setBattleType] = useState<BattleType>('crew_internal');
+  const [teamAName, setTeamAName] = useState('A팀');
+  const [teamBName, setTeamBName] = useState('B팀');
   const [title, setTitle] = useState('');
   const [battleDate, setBattleDate] = useState<Date>(() => {
     const d = new Date();
@@ -105,6 +107,8 @@ export default function NewBattleScreen() {
         gymId,
         battleDate: dateStr,
         scoringRules: buildScoringRules(),
+        teamAName: battleType === 'crew_internal_team' ? teamAName.trim() || 'A팀' : undefined,
+        teamBName: battleType === 'crew_internal_team' ? teamBName.trim() || 'B팀' : undefined,
       });
       router.replace({ pathname: '/battle/[id]', params: { id } } as never);
     } catch (e) {
@@ -129,7 +133,7 @@ export default function NewBattleScreen() {
       >
         <ScrollView contentContainerClassName="p-5 gap-6 pb-8" keyboardShouldPersistTaps="handled">
           <Section title="대결 종류" required>
-            <View className="flex-row gap-2">
+            <View className="gap-2">
               <TypeBtn
                 label="크루 내 개인전"
                 desc="참여 멤버끼리 점수 경쟁"
@@ -137,13 +141,46 @@ export default function NewBattleScreen() {
                 onPress={() => setBattleType('crew_internal')}
               />
               <TypeBtn
+                label="크루 내 팀전"
+                desc="멤버끼리 A팀 vs B팀 합산 대결"
+                active={battleType === 'crew_internal_team'}
+                onPress={() => setBattleType('crew_internal_team')}
+              />
+              <TypeBtn
                 label="크루 vs 크루"
-                desc="크루 합산 점수 대결"
+                desc="다른 크루와 합산 점수 대결"
                 active={battleType === 'crew_vs_crew'}
                 onPress={() => setBattleType('crew_vs_crew')}
               />
             </View>
           </Section>
+
+          {battleType === 'crew_internal_team' && (
+            <Section title="팀 이름" required>
+              <View className="flex-row gap-2">
+                <View className="flex-1 bg-background-secondary border border-border-subtle rounded-xl px-3.5">
+                  <TextInput
+                    placeholder="A팀"
+                    placeholderTextColor="#9CA3AF"
+                    value={teamAName}
+                    onChangeText={(t) => setTeamAName(t.slice(0, 12))}
+                    maxLength={12}
+                    className="py-3 text-text-primary text-sm font-bold"
+                  />
+                </View>
+                <View className="flex-1 bg-background-secondary border border-border-subtle rounded-xl px-3.5">
+                  <TextInput
+                    placeholder="B팀"
+                    placeholderTextColor="#9CA3AF"
+                    value={teamBName}
+                    onChangeText={(t) => setTeamBName(t.slice(0, 12))}
+                    maxLength={12}
+                    className="py-3 text-text-primary text-sm font-bold"
+                  />
+                </View>
+              </View>
+            </Section>
+          )}
 
           <Section title="제목" required>
             <View className="bg-background-secondary border border-border-subtle rounded-xl px-3.5">
@@ -158,7 +195,7 @@ export default function NewBattleScreen() {
             </View>
           </Section>
 
-          <Section title="원정 날짜" required>
+          <Section title="날짜 (기록용)" required>
             <Pressable
               onPress={() => setShowDatePicker(true)}
               className="bg-background-secondary border border-border-subtle rounded-xl px-3.5 py-3 active:opacity-70 flex-row items-center"

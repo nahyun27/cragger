@@ -10,8 +10,9 @@ import {
   Text,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather, Ionicons } from '@expo/vector-icons';
+import { BlurView } from 'expo-blur';
 
 import { useCommunityFeed, type PostRow, POST_TYPE_LABEL, type PostType } from '@/hooks/use-community';
 import { useFavoriteGyms } from '@/hooks/use-favorites';
@@ -20,7 +21,7 @@ import { useProfile } from '@/hooks/use-profile';
 import { useRecentSessions } from '@/hooks/use-recent-sessions';
 import { useUserStats } from '@/hooks/use-user-stats';
 import { SessionRow } from '@/components/session/session-row';
-import { useThemeColors, useThemePref, useEffectiveScheme, type ThemeColors } from '@/lib/theme';
+import { useThemeColors, useEffectiveScheme, type ThemeColors } from '@/lib/theme';
 
 const KO_WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
 
@@ -94,10 +95,19 @@ export default function HomeScreen() {
     favGymsQ.refetch();
   }
 
+  const insets = useSafeAreaInsets();
+  const scheme = useEffectiveScheme();
+
   return (
-    <SafeAreaView style={s.container} edges={['top']}>
+    <View style={s.container}>
       {/* Header & Greeting Section */}
-      <View style={s.header}>
+      <View className="z-20 border-b border-border-subtle absolute top-0 left-0 right-0" style={{ paddingTop: Math.max(insets.top, 20) }}>
+        <BlurView
+          tint={scheme === 'dark' ? 'dark' : 'light'}
+          intensity={80}
+          style={StyleSheet.absoluteFill}
+        />
+        <View style={s.header}>
         <View style={s.greetingTextContainer}>
           <Text style={s.greetingTitle} numberOfLines={1}>
             안녕하세요, {username}님
@@ -129,10 +139,11 @@ export default function HomeScreen() {
           </View>
         </Pressable>
       </View>
+      </View>
 
       <ScrollView
         style={{ flex: 1, backgroundColor: c.bg.primary }}
-        contentContainerStyle={s.scrollContent}
+        contentContainerStyle={[s.scrollContent, { paddingTop: Math.max(insets.top, 20) + 70 }]}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={refetchAll} tintColor={c.brand.primary} />
         }
@@ -358,7 +369,7 @@ export default function HomeScreen() {
           </>
         )}
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -517,9 +528,6 @@ function makeStyles(c: ThemeColors, isDark: boolean) {
     paddingHorizontal: 20,
     paddingTop: 16,
     paddingBottom: 16,
-    backgroundColor: c.bg.card,
-    borderBottomWidth: 1,
-    borderColor: c.border.subtle,
   },
   greetingTextContainer: {
     flex: 1,
