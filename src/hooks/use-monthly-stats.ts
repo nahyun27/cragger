@@ -8,6 +8,7 @@ export type MonthlyBucket = {
   monthLabel: string; // 'M월'
   sessionCount: number;
   sendCount: number;
+  maxVNum: number | null;  // 해당 월 최고 V (felt_grade ∨ crowd 평균)
 };
 
 export type GradeBucket = {
@@ -94,20 +95,43 @@ export function useMonthlyStats(opts: MonthlyStatsOpts = {}) {
         session_date: string;
       }>;
 
-      // 2) attempts (felt_grade 포함). lifetime — 분포에 필요.
+      // 2) attempts (felt_grade + problem.color/gym_id 포함). lifetime — 분포에 필요.
       const sessionIds = sessionsList.map((s) => s.id);
-      const attemptsList: Array<{ session_id: string; result: string; felt_grade: string | null }> =
-        [];
+      type AttemptRow = {
+        session_id: string;
+        result: string;
+        felt_grade: string | null;
+        problem: { color: string | null; gym_id: string | null } | null;
+      };
+      const attemptsList: AttemptRow[] = [];
       if (sessionIds.length > 0) {
-        // sessionIds 너무 많으면 chunk — 일단 단순.
         const { data: attempts, error: aErr } = await supabase
           .from('attempts')
-          .select('session_id, result, felt_grade')
+          .select('session_id, result, felt_grade, problem:problems(color, gym_id)')
           .in('session_id', sessionIds);
         if (aErr) throw new Error(aErr.message);
-        attemptsList.push(
-          ...((attempts ?? []) as Array<{ session_id: string; result: string; felt_grade: string | null }>),
-        );
+        attemptsList.push(...((attempts ?? []) as AttemptRow[]));
+      }
+
+      // crowd V그레이드 lookup — felt_grade 없는 attempt 보강 (gym_color_grade_stats)
+      const gymColorPairs = new Set<string>();
+      for (const a of attemptsList) {
+        if (a.problem?.gym_id && a.problem.color) {
+          gymColorPairs.add(`${a.problem.gym_id}:${a.problem.color}`);
+        }
+      }
+      const crowdVMap = new Map<string, number>();
+      if (gymColorPairs.size > 0) {
+        const gymIds = Array.from(new Set(Array.from(gymColorPairs).map((p) => p.split(':')[0])));
+        const { data: statsRows } = await supabase
+          .from('gym_color_grade_stats')
+          .select('gym_id, color, avg_v_grade')
+          .in('gym_id', gymIds);
+        for (const r of (statsRows ?? []) as Array<{
+          gym_id: string; color: string; avg_v_grade: number | null;
+        }>) {
+          if (r.avg_v_grade != null) crowdVMap.set(`${r.gym_id}:${r.color}`, r.avg_v_grade);
+        }
       }
 
       // session_id → session_date
@@ -115,9 +139,11 @@ export function useMonthlyStats(opts: MonthlyStatsOpts = {}) {
       for (const s of sessionsList) sidToDate.set(s.id, s.session_date);
 
       // 월별 버킷 초기화 (지난 N개월)
-      const buckets = new Map<string, { sessions: Set<string>; sends: number }>();
+      const buckets = new Map<string, {
+        sessions: Set<string>; sends: number; maxV: number | null;
+      }>();
       for (const ym of monthSequence(months, endYM)) {
-        buckets.set(ym, { sessions: new Set(), sends: 0 });
+        buckets.set(ym, { sessions: new Set(), sends: 0, maxV: null });
       }
 
       // 월별 sessionCount
@@ -127,21 +153,31 @@ export function useMonthlyStats(opts: MonthlyStatsOpts = {}) {
         if (b) b.sessions.add(s.id);
       }
 
-      // 월별 sendCount + V 분포 (lifetime)
+      // 월별 sendCount + maxV + lifetime V 분포
       const gradeCounts = new Map<string, number>();
       let maxV: { grade: string; n: number } | null = null;
       for (const a of attemptsList) {
         if (!SEND_RESULTS.has(a.result)) continue;
         const date = sidToDate.get(a.session_id);
-        if (date) {
-          const b = buckets.get(ymOf(date));
-          if (b) b.sends += 1;
+        const ym = date ? ymOf(date) : null;
+        const b = ym ? buckets.get(ym) : null;
+        if (b) b.sends += 1;
+
+        // V 그레이드: felt_grade > crowd 평균
+        let n: number | null = a.felt_grade ? vGradeToNum(a.felt_grade.trim()) : null;
+        if (n == null && a.problem?.gym_id && a.problem.color) {
+          n = crowdVMap.get(`${a.problem.gym_id}:${a.problem.color}`) ?? null;
         }
-        if (a.felt_grade) {
-          const g = a.felt_grade.trim();
-          gradeCounts.set(g, (gradeCounts.get(g) ?? 0) + 1);
-          const n = vGradeToNum(g);
-          if (n != null && (maxV == null || n > maxV.n)) maxV = { grade: g, n };
+        if (n != null) {
+          if (b && (b.maxV == null || n > b.maxV)) b.maxV = n;
+          if (a.felt_grade) {
+            const g = a.felt_grade.trim();
+            gradeCounts.set(g, (gradeCounts.get(g) ?? 0) + 1);
+            if (maxV == null || n > maxV.n) maxV = { grade: g, n };
+          } else if (maxV == null || n > maxV.n) {
+            // crowd-derived: 정수로 라벨링 (V3 같은 형태)
+            maxV = { grade: `V${Math.round(n)}`, n };
+          }
         }
       }
 
@@ -150,6 +186,7 @@ export function useMonthlyStats(opts: MonthlyStatsOpts = {}) {
         monthLabel: monthLabelOf(ym),
         sessionCount: buckets.get(ym)?.sessions.size ?? 0,
         sendCount: buckets.get(ym)?.sends ?? 0,
+        maxVNum: buckets.get(ym)?.maxV ?? null,
       }));
 
       const gradeDistribution: GradeBucket[] = Array.from(gradeCounts.entries())

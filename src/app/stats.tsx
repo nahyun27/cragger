@@ -15,6 +15,7 @@ import { Feather } from '@expo/vector-icons';
 import { BarChart, LineChart } from 'react-native-gifted-charts';
 
 import { GymStatsCard } from '@/components/stats/gym-stats-card';
+import { useDailyActivity } from '@/hooks/use-daily-activity';
 import { useMonthlyStats } from '@/hooks/use-monthly-stats';
 import { useUserStats } from '@/hooks/use-user-stats';
 import { useThemeColors, type ThemeColors } from '@/lib/theme';
@@ -89,6 +90,11 @@ export default function StatsScreen() {
         {deep && deep.monthly.some((m) => m.sessionCount > 0 || m.sendCount > 0) && (
           <MonthlyTrendCard deep={{ monthly: deep.monthly }} title="최근 6개월 추이" />
         )}
+        {deep && deep.monthly.some((m) => m.maxVNum != null) && (
+          <MonthlyVTrendCard monthly={deep.monthly} />
+        )}
+        <ActivityHeatmapCard />
+
 
         {/* 2) Scope toggle + anchor */}
         <View style={s.toggle}>
@@ -264,6 +270,160 @@ function MonthlyTrendCard({ deep, title = '최근 6개월 추이' }: { deep: { m
         hideRules
         disableScroll
       />
+    </View>
+  );
+}
+
+// ── 월별 최고 V그레이드 추이 ─────────────────────────────────
+function MonthlyVTrendCard({
+  monthly,
+}: {
+  monthly: { monthLabel: string; maxVNum: number | null }[];
+}) {
+  const c = useThemeColors();
+  const s = useMemo(() => makeStyles(c), [c]);
+  const { width: winW } = useWindowDimensions();
+
+  // gifted-charts 는 null 값을 잘 못 다루니 0으로 채우되 dataPointColor 로 빈 점 표시.
+  // 더 나은 UX: 빈 월은 점 숨김.
+  const N = monthly.length;
+  const data = monthly.map((m) => ({
+    value: m.maxVNum ?? 0,
+    label: m.monthLabel,
+    hideDataPoint: m.maxVNum == null,
+  }));
+  const innerW = chartInnerWidth(winW);
+  const initialSpacing = 10;
+  const endSpacing = 10;
+  const spacing = N > 1
+    ? Math.max(2, Math.floor((innerW - initialSpacing - endSpacing) / (N - 1)))
+    : innerW;
+  const maxVal = Math.max(...monthly.map((m) => m.maxVNum ?? 0), 4);
+  return (
+    <View style={s.chartCard}>
+      <View style={s.chartHeader}>
+        <Text style={s.chartTitle}>최고 V그레이드 추이</Text>
+        <Text style={s.chartLegendText}>월별 최고 (체감 또는 평균)</Text>
+      </View>
+      <LineChart
+        data={data}
+        color1="#7c3aed"
+        thickness={2.5}
+        curved
+        height={140}
+        width={innerW}
+        spacing={spacing}
+        initialSpacing={initialSpacing}
+        endSpacing={endSpacing}
+        dataPointsRadius={4}
+        dataPointsColor1="#7c3aed"
+        yAxisThickness={0}
+        xAxisThickness={1}
+        xAxisColor="#e2e8f0"
+        xAxisLabelTextStyle={{ color: c.text.muted, fontSize: 10 }}
+        yAxisTextStyle={{ color: c.text.muted, fontSize: 10 }}
+        noOfSections={Math.min(4, Math.ceil(maxVal))}
+        maxValue={Math.ceil(maxVal)}
+        hideRules
+        disableScroll
+      />
+    </View>
+  );
+}
+
+// ── 활동 heatmap (지난 ~52주, 7일 × N주) ────────────────────
+function ActivityHeatmapCard() {
+  const c = useThemeColors();
+  const s = useMemo(() => makeStyles(c), [c]);
+  const { data } = useDailyActivity(365);
+
+  // 셀 계산: 일요일이 row=0, 토요일이 row=6.
+  // 가장 오래된 날부터 시작해서 처음 일요일까지 빈 셀, 그 뒤 7일씩.
+  const cells = useMemo(() => {
+    if (!data) return null;
+    const days: { date: string; count: number; dow: number }[] = [];
+    const cur = new Date(data.start);
+    const end = new Date(data.end);
+    while (cur <= end) {
+      const iso = cur.toISOString().slice(0, 10);
+      days.push({ date: iso, count: data.byDate.get(iso) ?? 0, dow: cur.getDay() });
+      cur.setDate(cur.getDate() + 1);
+    }
+    return days;
+  }, [data]);
+
+  if (!cells || cells.length === 0) return null;
+
+  const max = Math.max(...cells.map((d) => d.count), 1);
+  function level(count: number): number {
+    if (count === 0) return 0;
+    const ratio = count / max;
+    if (ratio < 0.34) return 1;
+    if (ratio < 0.67) return 2;
+    return 3;
+  }
+  const intensity = ['transparent', '#a7f3d0', '#34d399', '#059669'];
+
+  // 첫 날의 요일 만큼 빈 셀 prefix
+  const leadEmpty = cells[0].dow;
+  const all = [
+    ...Array.from({ length: leadEmpty }, () => null),
+    ...cells,
+  ];
+  // 7행으로 transpose 하려면 col 별로 묶음
+  const numCols = Math.ceil(all.length / 7);
+  const grid: ({ count: number } | null)[][] = Array.from({ length: 7 }, () => []);
+  for (let i = 0; i < all.length; i++) {
+    const row = i % 7;
+    grid[row].push(all[i] == null ? null : { count: all[i]!.count });
+  }
+  // 7행 길이가 다를 수 있어 마지막 열 빈 셀로 채움
+  for (const row of grid) {
+    while (row.length < numCols) row.push(null);
+  }
+
+  const CELL = 9;
+  const GAP = 2;
+
+  return (
+    <View style={s.chartCard}>
+      <View style={s.chartHeader}>
+        <Text style={s.chartTitle}>활동 heatmap</Text>
+        <Text style={s.chartLegendText}>지난 1년</Text>
+      </View>
+      <View style={{ gap: GAP }}>
+        {grid.map((row, ri) => (
+          <View key={ri} style={{ flexDirection: 'row', gap: GAP }}>
+            {row.map((cell, ci) => (
+              <View
+                key={ci}
+                style={{
+                  width: CELL,
+                  height: CELL,
+                  borderRadius: 2,
+                  backgroundColor: cell ? intensity[level(cell.count)] : 'transparent',
+                  borderWidth: cell ? 0 : 0,
+                }}
+              />
+            ))}
+          </View>
+        ))}
+      </View>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 10, justifyContent: 'flex-end' }}>
+        <Text style={[s.chartLegendText, { marginRight: 2 }]}>적음</Text>
+        {[1, 2, 3].map((l) => (
+          <View
+            key={l}
+            style={{
+              width: CELL,
+              height: CELL,
+              borderRadius: 2,
+              backgroundColor: intensity[l],
+            }}
+          />
+        ))}
+        <Text style={[s.chartLegendText, { marginLeft: 2 }]}>많음</Text>
+      </View>
     </View>
   );
 }

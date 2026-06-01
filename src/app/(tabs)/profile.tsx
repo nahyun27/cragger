@@ -1489,6 +1489,7 @@ function ProfileMenuModal({
 }) {
   const c = useThemeColors();
   const s = React.useMemo(() => makeStyles(c), [c]);
+  const router = useRouter();
   const themePref = useThemePref((s) => s.pref);
   const setThemePref = useThemePref((s) => s.setPref);
   const [themeSheetOpen, setThemeSheetOpen] = useState(false);
@@ -1521,6 +1522,16 @@ function ProfileMenuModal({
         icon="help-circle"
         label="고객센터 / 문의하기"
         onPress={() => { onClose(); customAlert('고객센터', '준비 중인 기능입니다.'); }}
+      />
+      <MenuButton
+        icon="send"
+        label="내가 보낸 가입 요청"
+        onPress={() => { onClose(); router.push('/profile/join-requests' as never); }}
+      />
+      <MenuButton
+        icon="edit-3"
+        label="내 제보 내역"
+        onPress={() => { onClose(); router.push('/profile/submissions' as never); }}
       />
       <AdminSubmissionsMenuLink onClose={onClose} />
 
