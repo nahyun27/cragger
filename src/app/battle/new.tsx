@@ -4,7 +4,6 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -16,45 +15,60 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 
+import { GymPickerModal } from '@/components/session/gym-picker-modal';
 import { Section } from '@/components/ui/section';
+import { useGyms } from '@/hooks/use-gyms';
 import { useThemeColors } from '@/lib/theme';
 import {
   useCreateBattle,
   useLookupCrewForBattle,
   type BattleType,
+  type ScoringRules,
 } from '@/hooks/use-battles';
 
 const TITLE_MAX = 40;
 
-function endOfDay(d: Date): Date {
-  const n = new Date(d);
-  n.setHours(23, 59, 59, 0);
-  return n;
-}
+type ScoringMode = 'linear' | 'exp' | 'custom';
+
+const V_GRADES = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'] as const;
+
+const DEFAULT_CUSTOM_POINTS: Record<string, number> = {
+  '0': 1, '1': 2, '2': 4, '3': 7, '4': 12,
+  '5': 20, '6': 32, '7': 50, '8': 75, '9': 100,
+};
 
 export default function NewBattleScreen() {
-
-  const c = useThemeColors();  const router = useRouter();
+  const c = useThemeColors();
+  const router = useRouter();
   const { crewId } = useLocalSearchParams<{ crewId: string }>();
   const createBattle = useCreateBattle();
+  const { data: allGyms } = useGyms();
 
-  const [battleType, setBattleType] = useState<BattleType>('individual');
+  const [battleType, setBattleType] = useState<BattleType>('crew_internal');
   const [title, setTitle] = useState('');
-  const [startsAt, setStartsAt] = useState<Date>(() => {
+  const [battleDate, setBattleDate] = useState<Date>(() => {
     const d = new Date();
     d.setHours(0, 0, 0, 0);
     return d;
   });
-  const [endsAt, setEndsAt] = useState<Date>(() => {
-    const d = new Date();
-    d.setDate(d.getDate() + 7);
-    return endOfDay(d);
-  });
-  const [showStartPicker, setShowStartPicker] = useState(false);
-  const [showEndPicker, setShowEndPicker] = useState(false);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [gymId, setGymId] = useState<string | null>(null);
+  const [showGymModal, setShowGymModal] = useState(false);
   const [opponentCode, setOpponentCode] = useState('');
   const opponentCodeUpper = opponentCode.trim().toUpperCase();
   const opponentLookup = useLookupCrewForBattle(opponentCodeUpper);
+
+  const [scoringMode, setScoringMode] = useState<ScoringMode>('linear');
+  const [customPoints, setCustomPoints] = useState<Record<string, string>>(() => {
+    const m: Record<string, string> = {};
+    for (const k of V_GRADES) m[k] = String(DEFAULT_CUSTOM_POINTS[k]);
+    return m;
+  });
+
+  const selectedGym = useMemo(
+    () => allGyms?.find((g) => g.id === gymId) ?? null,
+    [allGyms, gymId],
+  );
 
   const opponentReady =
     battleType !== 'crew_vs_crew' ||
@@ -62,21 +76,35 @@ export default function NewBattleScreen() {
 
   const canSubmit =
     title.trim().length > 0 &&
-    endsAt.getTime() > startsAt.getTime() &&
+    !!gymId &&
     opponentReady &&
     !createBattle.isPending;
 
+  function buildScoringRules(): ScoringRules {
+    if (scoringMode === 'linear') return { type: 'linear', base: 1 };
+    if (scoringMode === 'exp') return { type: 'exp', base: 1.5 };
+    // custom
+    const v_points: Record<string, number> = {};
+    for (const k of V_GRADES) {
+      const n = parseInt(customPoints[k], 10);
+      if (!Number.isNaN(n)) v_points[k] = n;
+    }
+    return { type: 'custom', v_points };
+  }
+
   async function handleSubmit() {
-    if (!canSubmit || !crewId) return;
+    if (!canSubmit || !crewId || !gymId) return;
     try {
+      const dateStr = battleDate.toISOString().slice(0, 10);
       const { id } = await createBattle.mutateAsync({
         battleType,
         title: title.trim(),
         crewId,
         opponentCrewId:
           battleType === 'crew_vs_crew' ? opponentLookup.data?.id ?? null : null,
-        startsAt: startsAt.toISOString(),
-        endsAt: endsAt.toISOString(),
+        gymId,
+        battleDate: dateStr,
+        scoringRules: buildScoringRules(),
       });
       router.replace({ pathname: '/battle/[id]', params: { id } } as never);
     } catch (e) {
@@ -104,13 +132,13 @@ export default function NewBattleScreen() {
             <View className="flex-row gap-2">
               <TypeBtn
                 label="크루 내 개인전"
-                desc="멤버끼리 점수 경쟁"
-                active={battleType === 'individual'}
-                onPress={() => setBattleType('individual')}
+                desc="참여 멤버끼리 점수 경쟁"
+                active={battleType === 'crew_internal'}
+                onPress={() => setBattleType('crew_internal')}
               />
               <TypeBtn
                 label="크루 vs 크루"
-                desc="총점 대결"
+                desc="크루 합산 점수 대결"
                 active={battleType === 'crew_vs_crew'}
                 onPress={() => setBattleType('crew_vs_crew')}
               />
@@ -120,7 +148,7 @@ export default function NewBattleScreen() {
           <Section title="제목" required>
             <View className="bg-background-secondary border border-border-subtle rounded-xl px-3.5">
               <TextInput
-                placeholder="예: 11월 주간 대결"
+                placeholder="예: 더클라임 원정 대결"
                 placeholderTextColor="#9CA3AF"
                 value={title}
                 onChangeText={(t) => setTitle(t.slice(0, TITLE_MAX))}
@@ -130,47 +158,41 @@ export default function NewBattleScreen() {
             </View>
           </Section>
 
-          <Section title="기간" required>
-            <View className="flex-row gap-2">
-              <Pressable
-                onPress={() => setShowStartPicker(true)}
-                className="flex-1 bg-background-secondary border border-border-subtle rounded-xl px-3.5 py-3 active:opacity-70"
-              >
-                <Text className="text-text-tertiary text-xs font-semibold">시작</Text>
-                <Text className="text-text-primary text-sm font-bold mt-1">
-                  {formatDate(startsAt)}
-                </Text>
-              </Pressable>
-              <Pressable
-                onPress={() => setShowEndPicker(true)}
-                className="flex-1 bg-background-secondary border border-border-subtle rounded-xl px-3.5 py-3 active:opacity-70"
-              >
-                <Text className="text-text-tertiary text-xs font-semibold">종료</Text>
-                <Text className="text-text-primary text-sm font-bold mt-1">
-                  {formatDate(endsAt)}
-                </Text>
-              </Pressable>
-            </View>
-            {showStartPicker && (
+          <Section title="원정 날짜" required>
+            <Pressable
+              onPress={() => setShowDatePicker(true)}
+              className="bg-background-secondary border border-border-subtle rounded-xl px-3.5 py-3 active:opacity-70 flex-row items-center"
+            >
+              <Feather name="calendar" size={16} color={c.text.tertiary} />
+              <Text className="text-text-primary text-base font-bold ml-2">
+                {formatDate(battleDate)}
+              </Text>
+            </Pressable>
+            {showDatePicker && (
               <RnDatePicker
-                value={startsAt}
+                value={battleDate}
                 onChange={(d) => {
-                  setStartsAt(d);
-                  setShowStartPicker(false);
+                  setBattleDate(d);
+                  setShowDatePicker(false);
                 }}
-                onClose={() => setShowStartPicker(false)}
+                onClose={() => setShowDatePicker(false)}
               />
             )}
-            {showEndPicker && (
-              <RnDatePicker
-                value={endsAt}
-                onChange={(d) => {
-                  setEndsAt(endOfDay(d));
-                  setShowEndPicker(false);
-                }}
-                onClose={() => setShowEndPicker(false)}
-              />
-            )}
+          </Section>
+
+          <Section title="암장" required>
+            <Pressable
+              onPress={() => setShowGymModal(true)}
+              className="bg-background-secondary border border-border-subtle rounded-xl px-3.5 py-3 active:opacity-70 flex-row items-center"
+            >
+              <Feather name="map-pin" size={16} color={c.text.tertiary} />
+              <Text className={`text-base ml-2 flex-1 ${selectedGym ? 'text-text-primary font-bold' : 'text-text-muted'}`}>
+                {selectedGym
+                  ? `${selectedGym.name}${selectedGym.branch ? ` ${selectedGym.branch}` : ''}`
+                  : '암장 선택'}
+              </Text>
+              <Feather name="chevron-down" size={16} color={c.text.muted} />
+            </Pressable>
           </Section>
 
           {battleType === 'crew_vs_crew' && (
@@ -206,8 +228,7 @@ export default function NewBattleScreen() {
                           {opponentLookup.data.name}
                         </Text>
                         <Text className="text-text-tertiary text-xs">
-                          멤버 {opponentLookup.data.member_count}명 · 상대 크루장
-                          수락 후 시작
+                          멤버 {opponentLookup.data.member_count}명 · 상대 크루장 수락 후 시작
                         </Text>
                       </View>
                     )
@@ -220,6 +241,49 @@ export default function NewBattleScreen() {
               )}
             </Section>
           )}
+
+          <Section title="점수 규칙" required>
+            <View className="gap-2">
+              <ScoringModeBtn
+                label="기본 (V그레이드 × 1)"
+                desc="V3 완등 = 3점, V5 완등 = 5점"
+                active={scoringMode === 'linear'}
+                onPress={() => setScoringMode('linear')}
+              />
+              <ScoringModeBtn
+                label="지수형 (어려울수록 가중치 ↑)"
+                desc="V × 1.5^V — V5는 38점, V7은 113점"
+                active={scoringMode === 'exp'}
+                onPress={() => setScoringMode('exp')}
+              />
+              <ScoringModeBtn
+                label="직접 입력"
+                desc="V그레이드별 점수 직접 설정"
+                active={scoringMode === 'custom'}
+                onPress={() => setScoringMode('custom')}
+              />
+            </View>
+            {scoringMode === 'custom' && (
+              <View className="mt-3 bg-background-secondary rounded-xl p-3 gap-2">
+                <Text className="text-text-tertiary text-xs font-semibold">V그레이드별 점수</Text>
+                <View className="flex-row flex-wrap gap-2">
+                  {V_GRADES.map((v) => (
+                    <View key={v} className="flex-row items-center bg-background-primary rounded-lg px-2 py-1.5 border border-border-subtle">
+                      <Text className="text-text-secondary text-xs font-bold mr-1">V{v}</Text>
+                      <TextInput
+                        value={customPoints[v]}
+                        onChangeText={(t) =>
+                          setCustomPoints((p) => ({ ...p, [v]: t.replace(/[^0-9]/g, '') }))
+                        }
+                        keyboardType="number-pad"
+                        className="text-text-primary text-sm font-bold w-10 text-center"
+                      />
+                    </View>
+                  ))}
+                </View>
+              </View>
+            )}
+          </Section>
         </ScrollView>
 
         <View className="px-5 pt-3 pb-5 border-t border-border-subtle">
@@ -244,52 +308,36 @@ export default function NewBattleScreen() {
           </Pressable>
         </View>
       </KeyboardAvoidingView>
+
+      <GymPickerModal
+        visible={showGymModal}
+        gyms={allGyms ?? []}
+        selectedId={gymId}
+        onSelect={(picked) => { setGymId(picked); setShowGymModal(false); }}
+        onClose={() => setShowGymModal(false)}
+      />
     </SafeAreaView>
   );
 }
 
-function TypeBtn({
-  label,
-  desc,
-  active,
-  onPress,
-}: {
-  label: string;
-  desc: string;
-  active: boolean;
-  onPress: () => void;
+function TypeBtn({ label, desc, active, onPress }: {
+  label: string; desc: string; active: boolean; onPress: () => void;
 }) {
   return (
     <Pressable onPress={onPress} style={{ flex: 1 }}>
       {({ pressed }) => (
         <View
           style={{
-            paddingVertical: 14,
-            paddingHorizontal: 12,
-            borderRadius: 14,
-            borderWidth: 1.5,
-            borderColor: active ? '#06b6d4' : '#e2e8f0',
+            paddingVertical: 14, paddingHorizontal: 12, borderRadius: 14,
+            borderWidth: 1.5, borderColor: active ? '#06b6d4' : '#e2e8f0',
             backgroundColor: active ? '#ecfeff' : '#ffffff',
-            opacity: pressed ? 0.85 : 1,
-            gap: 4,
+            opacity: pressed ? 0.85 : 1, gap: 4,
           }}
         >
-          <Text
-            style={{
-              fontSize: 13,
-              fontWeight: '800',
-              color: active ? '#0e7490' : '#475569',
-            }}
-          >
+          <Text style={{ fontSize: 13, fontWeight: '800', color: active ? '#0e7490' : '#475569' }}>
             {label}
           </Text>
-          <Text
-            style={{
-              fontSize: 11,
-              fontWeight: '600',
-              color: active ? '#0e7490' : '#94a3b8',
-            }}
-          >
+          <Text style={{ fontSize: 11, fontWeight: '600', color: active ? '#0e7490' : '#94a3b8' }}>
             {desc}
           </Text>
         </View>
@@ -298,14 +346,34 @@ function TypeBtn({
   );
 }
 
-function RnDatePicker({
-  value,
-  onChange,
-  onClose,
-}: {
-  value: Date;
-  onChange: (d: Date) => void;
-  onClose: () => void;
+function ScoringModeBtn({ label, desc, active, onPress }: {
+  label: string; desc: string; active: boolean; onPress: () => void;
+}) {
+  return (
+    <Pressable onPress={onPress}>
+      {({ pressed }) => (
+        <View
+          style={{
+            paddingVertical: 12, paddingHorizontal: 14, borderRadius: 12,
+            borderWidth: 1.5, borderColor: active ? '#06b6d4' : '#e2e8f0',
+            backgroundColor: active ? '#ecfeff' : '#ffffff',
+            opacity: pressed ? 0.85 : 1, gap: 3,
+          }}
+        >
+          <Text style={{ fontSize: 13, fontWeight: '800', color: active ? '#0e7490' : '#475569' }}>
+            {label}
+          </Text>
+          <Text style={{ fontSize: 11, fontWeight: '600', color: active ? '#0e7490' : '#94a3b8' }}>
+            {desc}
+          </Text>
+        </View>
+      )}
+    </Pressable>
+  );
+}
+
+function RnDatePicker({ value, onChange, onClose }: {
+  value: Date; onChange: (d: Date) => void; onClose: () => void;
 }) {
   const c = useThemeColors();
   return (
@@ -333,5 +401,6 @@ function formatDate(d: Date): string {
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, '0');
   const day = String(d.getDate()).padStart(2, '0');
-  return `${y}.${m}.${day}`;
+  const days = ['일', '월', '화', '수', '목', '금', '토'];
+  return `${y}.${m}.${day} (${days[d.getDay()]})`;
 }

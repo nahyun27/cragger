@@ -652,17 +652,17 @@ function CrewBattlesSection({ crewId }: { crewId: string }) {
   const { data, isLoading, error } = useBattles(crewId);
 
   const partitioned = React.useMemo(() => {
-    if (!data) return { active: [] as Battle[], ended: [] as Battle[], pending: [] as Battle[] };
+    if (!data) return { active: [] as Battle[], ended: [] as Battle[], scheduled: [] as Battle[] };
     const active: Battle[] = [];
     const ended: Battle[] = [];
-    const pending: Battle[] = [];
+    const scheduled: Battle[] = [];
     for (const b of data) {
       const st = effectiveStatus(b);
-      if (st === 'pending') pending.push(b);
+      if (st === 'scheduled') scheduled.push(b);
       else if (st === 'ended' || st === 'declined') ended.push(b);
       else active.push(b);
     }
-    return { active, ended, pending };
+    return { active, ended, scheduled };
   }, [data]);
 
   return (
@@ -701,9 +701,9 @@ function CrewBattlesSection({ crewId }: { crewId: string }) {
         </View>
       )}
 
-      {partitioned.pending.length > 0 && (
+      {partitioned.scheduled.length > 0 && (
         <View style={s.cardListGap}>
-          {partitioned.pending.map((b) => <BattleCard key={b.id} battle={b} crewId={crewId} />)}
+          {partitioned.scheduled.map((b) => <BattleCard key={b.id} battle={b} crewId={crewId} />)}
         </View>
       )}
       {partitioned.active.length > 0 && (
@@ -731,12 +731,13 @@ function BattleCard({ battle, crewId, past }: { battle: Battle; crewId: string; 
   const isHome = battle.crew_id === crewId;
   const opponent = isHome ? battle.opponent_crew : battle.crew;
 
-  const statusMeta = {
-    pending: { bg: '#fff7ed', fg: '#c2410c', label: '수락 대기' },
+  const statusMeta = ({
+    scheduled: { bg: '#fff7ed', fg: '#c2410c', label: '예정' },
     active: { bg: '#ecfeff', fg: '#0e7490', label: '진행 중' },
     ended: { bg: '#f1f5f9', fg: '#64748b', label: '종료' },
     declined: { bg: '#fef2f2', fg: '#b91c1c', label: '거절됨' },
-  }[status] ?? { bg: '#f1f5f9', fg: '#64748b', label: status };
+  } as Record<string, { bg: string; fg: string; label: string }>)[status]
+    ?? { bg: '#f1f5f9', fg: '#64748b', label: status };
 
   return (
     <Pressable
@@ -780,7 +781,8 @@ function BattleCard({ battle, crewId, past }: { battle: Battle; crewId: string; 
           <View style={s.battleDateRow}>
             <Feather name="calendar" size={10} color={c.text.muted} />
             <Text style={s.battleDateText}>
-              {battle.starts_at.slice(5, 10).replace('-', '.')} ~ {battle.ends_at.slice(5, 10).replace('-', '.')}
+              {battle.battle_date.slice(5, 10).replace('-', '.')}
+              {battle.gym ? ` · ${battle.gym.name}${battle.gym.branch ? ` ${battle.gym.branch}` : ''}` : ''}
             </Text>
           </View>
         </View>

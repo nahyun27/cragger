@@ -1274,9 +1274,9 @@ function makeStyles(c: ThemeColors) {
 
   // Meetup info card
   meetupCard: {
-    backgroundColor: '#fffbeb',
+    backgroundColor: c.status.warningBg,
     borderWidth: 1,
-    borderColor: '#fde68a',
+    borderColor: c.status.warning + '33', // 20% opacity
     borderRadius: 14,
     padding: 14,
     marginBottom: 14,
@@ -1295,7 +1295,7 @@ function makeStyles(c: ThemeColors) {
   meetupCardTitle: {
     fontSize: 14,
     fontWeight: '800',
-    color: '#b45309',
+    color: c.status.warning,
     letterSpacing: -0.2,
   },
   meetupCardCountdown: {
@@ -1316,10 +1316,10 @@ function makeStyles(c: ThemeColors) {
     flex: 1,
     fontSize: 14,
     fontWeight: '700',
-    color: '#7c2d12',
+    color: c.text.primary,
   },
   meetupCardRemainText: {
-    color: '#92400e',
+    color: c.status.warning,
     fontWeight: '700',
   },
   meetupCardFullText: {
