@@ -19,7 +19,6 @@ type Mode = 'followers' | 'following';
 
 export function FollowListScreen({ userId, mode }: { userId: string | undefined; mode: Mode }) {
   const c = useThemeColors();
-  const s = React.useMemo(() => makeStyles(c), [c]);
   const router = useRouter();
   const followersQ = useFollowers(mode === 'followers' ? userId : undefined);
   const followingQ = useFollowing(mode === 'following' ? userId : undefined);
@@ -27,34 +26,34 @@ export function FollowListScreen({ userId, mode }: { userId: string | undefined;
   const title = mode === 'followers' ? '팔로워' : '팔로잉';
 
   return (
-    <SafeAreaView style={s.container} edges={['top']}>
-      <View style={s.header}>
+    <SafeAreaView className="flex-1 bg-background-primary" edges={['top']}>
+      <View className="flex-row items-center justify-between px-4 py-3 border-b border-border-subtle bg-background-primary">
         <Pressable onPress={() => router.back()} hitSlop={8}>
           {({ pressed }) => (
-            <View style={[s.headerBtn, pressed && { opacity: 0.6 }]}>
+            <View className={`w-10 h-10 rounded-xl items-center justify-center ${pressed ? 'opacity-60' : ''}`}>
               <Feather name="arrow-left" size={22} color={c.text.primary} />
             </View>
           )}
         </Pressable>
-        <Text style={s.headerTitle}>{title}</Text>
-        <View style={{ width: 40 }} />
+        <Text className="text-text-primary text-base font-black tracking-tight">{title}</Text>
+        <View className="w-10" />
       </View>
 
-      <ScrollView contentContainerStyle={s.list}>
+      <ScrollView contentContainerStyle={{ paddingVertical: 8 }}>
         {query.isLoading && (
-          <View style={s.loaderWrap}>
+          <View className="items-center py-8">
             <ActivityIndicator color={c.brand.primary} />
           </View>
         )}
         {query.error && (
-          <View style={s.errorBox}>
-            <Text style={s.errorText}>{query.error.message}</Text>
+          <View className="m-4 bg-status-dangerBg rounded-xl p-4">
+            <Text className="text-status-danger text-sm">{query.error.message}</Text>
           </View>
         )}
         {query.data && query.data.length === 0 && (
-          <View style={s.emptyBox}>
+          <View className="items-center py-12 gap-2">
             <Feather name="users" size={28} color={c.text.muted} />
-            <Text style={s.emptyTitle}>
+            <Text className="text-text-tertiary text-sm font-bold">
               {mode === 'followers' ? '아직 팔로워가 없어요' : '아직 팔로우한 사용자가 없어요'}
             </Text>
           </View>
@@ -69,110 +68,28 @@ export function FollowListScreen({ userId, mode }: { userId: string | undefined;
 
 function UserRow({ user }: { user: FollowUserMini }) {
   const c = useThemeColors();
-  const s = React.useMemo(() => makeStyles(c), [c]);
   const router = useRouter();
   const name = user.display_name || user.username;
   const firstChar = name.length > 0 ? name.charAt(0).toUpperCase() : '?';
   return (
     <Pressable
       onPress={() => router.push({ pathname: '/u/[id]', params: { id: user.id } } as never)}
-      style={({ pressed }) => [s.row, pressed && { opacity: 0.7 }]}
+      style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]}
     >
-      <View style={s.avatar}>
-        {user.avatar_url ? (
-          <Image source={{ uri: user.avatar_url }} style={s.avatarImg} />
-        ) : (
-          <Text style={s.avatarText}>{firstChar}</Text>
-        )}
+      <View className="flex-row items-center px-5 py-3 bg-background-primary">
+        <View className="w-11 h-11 rounded-full bg-background-subtle items-center justify-center overflow-hidden mr-3">
+          {user.avatar_url ? (
+            <Image source={{ uri: user.avatar_url }} className="w-full h-full" />
+          ) : (
+            <Text className="text-text-secondary text-base font-black text-center">{firstChar}</Text>
+          )}
+        </View>
+        <View className="flex-1 justify-center gap-1">
+          <Text className="text-text-primary text-sm font-extrabold">{name}</Text>
+          <Text className="text-text-tertiary text-xs font-semibold">@{user.username}</Text>
+        </View>
+        <Feather name="chevron-right" size={16} color={c.text.muted} />
       </View>
-      <View style={{ flex: 1, gap: 2 }}>
-        <Text style={s.name}>{name}</Text>
-        <Text style={s.handle}>@{user.username}</Text>
-      </View>
-      <Feather name="chevron-right" size={16} color={c.text.muted} />
     </Pressable>
   );
-}
-
-function makeStyles(c: ThemeColors) {
-  return StyleSheet.create({
-    container: { flex: 1, backgroundColor: c.bg.primary },
-    header: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      paddingHorizontal: 16,
-      paddingVertical: 12,
-      borderBottomWidth: StyleSheet.hairlineWidth,
-      borderBottomColor: c.border.subtle,
-      backgroundColor: c.bg.card,
-    },
-    headerBtn: {
-      width: 40,
-      height: 40,
-      borderRadius: 12,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    headerTitle: {
-      color: c.text.primary,
-      fontSize: 16,
-      fontWeight: '900',
-      letterSpacing: -0.3,
-    },
-    list: {
-      paddingVertical: 8,
-    },
-    loaderWrap: { alignItems: 'center', paddingVertical: 32 },
-    errorBox: {
-      margin: 16,
-      backgroundColor: c.status.dangerBg,
-      borderRadius: 12,
-      padding: 16,
-    },
-    errorText: { color: c.status.danger, fontSize: 13 },
-    emptyBox: {
-      alignItems: 'center',
-      paddingVertical: 48,
-      gap: 8,
-    },
-    emptyTitle: {
-      fontSize: 14,
-      fontWeight: '700',
-      color: c.text.tertiary,
-    },
-    row: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 12,
-      paddingHorizontal: 20,
-      paddingVertical: 12,
-      backgroundColor: c.bg.card,
-    },
-    avatar: {
-      width: 44,
-      height: 44,
-      borderRadius: 22,
-      backgroundColor: c.bg.subtle,
-      alignItems: 'center',
-      justifyContent: 'center',
-      overflow: 'hidden',
-    },
-    avatarImg: { width: '100%', height: '100%' },
-    avatarText: {
-      fontSize: 16,
-      fontWeight: '900',
-      color: c.text.secondary,
-    },
-    name: {
-      fontSize: 14,
-      fontWeight: '800',
-      color: c.text.primary,
-    },
-    handle: {
-      fontSize: 12,
-      color: c.text.tertiary,
-      fontWeight: '600',
-    },
-  });
 }

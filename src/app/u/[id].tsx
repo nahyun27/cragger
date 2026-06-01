@@ -1630,7 +1630,7 @@ function makeStyles(c: ThemeColors) {
     elevation: 1,
   },
   followBtnFollowingText: {
-    color: c.text.secondary,
+    color: c.text.primary,
     fontSize: 14,
     fontWeight: '800',
   },

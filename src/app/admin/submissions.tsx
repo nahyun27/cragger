@@ -13,6 +13,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 
+import { resolveColorHex, resolveColorLabel } from '@/constants/climb-colors';
 import { useGymDetail } from '@/hooks/use-gym-detail';
 import {
   useApproveGymSubmission,
@@ -47,12 +48,17 @@ const FIELD_LABEL: Record<string, string> = {
   has_locker: '락커',
   has_parking: '주차장',
   logo_url: '로고',
+  add_colors: '색깔 추가',
+  remove_colors: '색깔 제거',
 };
 
 function formatValue(field: string, value: unknown): string {
   if (value == null || value === '') return '—';
   if (typeof value === 'boolean') return value ? '있음' : '없음';
   if (field === 'logo_url' && typeof value === 'string') return '이미지 첨부됨';
+  if ((field === 'add_colors' || field === 'remove_colors') && Array.isArray(value)) {
+    return value.map((c) => resolveColorLabel(String(c))).join(', ');
+  }
   return String(value);
 }
 
@@ -184,8 +190,34 @@ function SubmissionCard({ sub }: { sub: GymSubmission }) {
         ) : (
           changedFields.map((f) => {
             const label = FIELD_LABEL[f] ?? f;
-            const oldV = (gym as unknown as Record<string, unknown>)?.[f];
             const newV = (sub.changes as unknown as Record<string, unknown>)[f];
+            // 색깔 배열은 chip 으로 표시 (oldV 비교 안 함)
+            if ((f === 'add_colors' || f === 'remove_colors') && Array.isArray(newV)) {
+              return (
+                <View key={f} style={s.diffRow}>
+                  <Text style={s.diffLabel}>{label}</Text>
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 4 }}>
+                    {(newV as string[]).map((col) => (
+                      <View key={col} style={{
+                        flexDirection: 'row', alignItems: 'center', gap: 4,
+                        backgroundColor: c.bg.subtle,
+                        paddingHorizontal: 6, paddingVertical: 3, borderRadius: 6,
+                      }}>
+                        <View style={{
+                          width: 8, height: 8, borderRadius: 4,
+                          backgroundColor: resolveColorHex(col),
+                          borderWidth: 0.5, borderColor: '#cbd5e1',
+                        }} />
+                        <Text style={{ fontSize: 11, fontWeight: '700', color: c.text.primary }}>
+                          {resolveColorLabel(col)}
+                        </Text>
+                      </View>
+                    ))}
+                  </View>
+                </View>
+              );
+            }
+            const oldV = (gym as unknown as Record<string, unknown>)?.[f];
             return (
               <View key={f} style={s.diffRow}>
                 <Text style={s.diffLabel}>{label}</Text>

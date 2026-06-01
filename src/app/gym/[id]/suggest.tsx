@@ -21,6 +21,7 @@ import { useAuth } from '@/lib/auth-context';
 import { useGymDetail } from '@/hooks/use-gym-detail';
 import { useSubmitGymInfo, type GymChanges } from '@/hooks/use-gym-submissions';
 import { uploadGymLogoSuggestion } from '@/lib/upload-image';
+import { CLIMB_COLOR_HEX, CLIMB_COLOR_LABEL, resolveColorHex } from '@/constants/climb-colors';
 import { useThemeColors, type ThemeColors } from '@/lib/theme';
 
 type StringField =
@@ -98,6 +99,8 @@ export default function SuggestGymScreen() {
   const [logoUri, setLogoUri] = useState<string | null>(null); // preview uri
   const [logoAsset, setLogoAsset] = useState<ImagePicker.ImagePickerAsset | null>(null);
   const [note, setNote] = useState('');
+  // 색깔 구성 — 현재 등록된 색깔 집합 + 토글로 add/remove 추적
+  const [colorState, setColorState] = useState<Record<string, 'registered' | 'add' | 'remove' | 'absent'>>({});
   const [uploading, setUploading] = useState(false);
 
   // dirty 셋 — 사용자가 명시적으로 토글/입력한 필드.
@@ -142,8 +145,30 @@ export default function SuggestGymScreen() {
       has_parking: gym.has_parking,
     });
     setOpenedAt(gym.opened_at ?? '');
+    // 색깔 상태: 등록된 건 'registered', 나머지는 'absent'
+    const registered = new Set(gym.color_schemes.map((cs) => cs.color.toLowerCase()));
+    const cstate: Record<string, 'registered' | 'absent'> = {};
+    for (const k of Object.keys(CLIMB_COLOR_HEX)) {
+      cstate[k] = registered.has(k) ? 'registered' : 'absent';
+    }
+    setColorState(cstate);
     setPrefilled(true);
   }, [gym, prefilled]);
+
+  // 색깔 토글:
+  // registered → remove (제보로 빼기) | absent → add (제보로 넣기)
+  // 다시 누르면 원위치.
+  function toggleColor(color: string) {
+    setColorState((prev) => {
+      const s = prev[color] ?? 'absent';
+      let next: typeof s;
+      if (s === 'registered') next = 'remove';
+      else if (s === 'remove') next = 'registered';
+      else if (s === 'add') next = 'absent';
+      else next = 'add';
+      return { ...prev, [color]: next };
+    });
+  }
 
   async function handlePickLogo() {
     if (uploading) return;
@@ -167,7 +192,8 @@ export default function SuggestGymScreen() {
 
   async function handleSubmit() {
     if (!id || !authSession?.user.id) return;
-    if (dirty.size === 0 && !note.trim()) {
+    const hasColorChange = Object.values(colorState).some((v) => v === 'add' || v === 'remove');
+    if (dirty.size === 0 && !hasColorChange && !note.trim()) {
       customAlert('알림', '수정할 항목을 1개 이상 선택하거나 메모를 작성해주세요');
       return;
     }
@@ -196,6 +222,11 @@ export default function SuggestGymScreen() {
       if (dirty.has('opened_at') && openedAt.trim()) {
         changes.opened_at = openedAt.trim();
       }
+      // 색깔 구성 — add/remove 추출
+      const addColors = Object.keys(colorState).filter((k) => colorState[k] === 'add');
+      const removeColors = Object.keys(colorState).filter((k) => colorState[k] === 'remove');
+      if (addColors.length > 0) changes.add_colors = addColors;
+      if (removeColors.length > 0) changes.remove_colors = removeColors;
       // 로고 업로드 → public URL 을 changes 에 담음
       if (dirty.has('logo_url') && logoAsset) {
         setUploading(true);
@@ -411,6 +442,59 @@ export default function SuggestGymScreen() {
               included={dirty.has('parking_info')}
               onToggle={() => (dirty.has('parking_info') ? unmarkDirty('parking_info') : markDirty('parking_info'))}
             />
+          </SectionWrap>
+
+          <SectionWrap title="색깔 구성">
+            <Text style={s.boolHint}>
+              현재 등록된 색깔에 ✓. 탭으로 추가(+) / 제거(✕) 제안.
+            </Text>
+            <View style={s.boolGrid}>
+              {Object.keys(CLIMB_COLOR_HEX).map((k) => {
+                const state = colorState[k] ?? 'absent';
+                const hex = resolveColorHex(k);
+                const label = CLIMB_COLOR_LABEL[k] ?? k;
+                const icon =
+                  state === 'registered' ? 'check'
+                  : state === 'remove' ? 'x'
+                  : state === 'add' ? 'plus'
+                  : 'circle';
+                const bg =
+                  state === 'add' ? c.brand.primary
+                  : state === 'remove' ? c.status.dangerBg
+                  : state === 'registered' ? c.bg.subtle
+                  : c.bg.card;
+                const border =
+                  state === 'remove' ? c.status.danger + '55'
+                  : c.border.subtle;
+                const iconColor =
+                  state === 'add' ? c.brand.onPrimary
+                  : state === 'remove' ? c.status.danger
+                  : c.text.tertiary;
+                const textColor =
+                  state === 'add' ? c.brand.onPrimary
+                  : state === 'remove' ? c.status.danger
+                  : c.text.secondary;
+                return (
+                  <Pressable key={k} onPress={() => toggleColor(k)}>
+                    {({ pressed }) => (
+                      <View style={[
+                        s.boolChip,
+                        {
+                          backgroundColor: bg,
+                          borderWidth: StyleSheet.hairlineWidth,
+                          borderColor: border,
+                          opacity: pressed ? 0.8 : 1,
+                        },
+                      ]}>
+                        <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: hex, borderWidth: 0.5, borderColor: '#cbd5e1' }} />
+                        <Feather name={icon as never} size={11} color={iconColor} />
+                        <Text style={[s.boolChipText, { color: textColor }]}>{label}</Text>
+                      </View>
+                    )}
+                  </Pressable>
+                );
+              })}
+            </View>
           </SectionWrap>
 
           <SectionWrap title="관리자에게 메모 (선택)">

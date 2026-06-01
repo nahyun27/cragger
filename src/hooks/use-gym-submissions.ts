@@ -30,6 +30,9 @@ export type GymChanges = {
   has_locker?: boolean;
   has_parking?: boolean;
   logo_url?: string;
+  // 색깔 구성 — 승인 시 gym_color_schemes 에 INSERT/DELETE
+  add_colors?: string[];
+  remove_colors?: string[];
 };
 
 export type GymSubmissionGymMini = {
