@@ -173,38 +173,56 @@ export default function PublicProfileScreen() {
           </View>
         </View>
 
-        {/* Follow counts + button */}
-        <View style={s.followBar}>
+        {/* Follow stats */}
+        <View style={s.followStatsRow}>
           <Pressable
             onPress={() =>
               router.push({ pathname: '/u/[id]/followers', params: { id: id! } } as never)
             }
-            style={({ pressed }) => [s.followCountBox, pressed && { opacity: 0.6 }]}
+            style={({ pressed }) => [s.followStatBox, pressed && { opacity: 0.6 }]}
           >
-            <Text style={s.followCountNum}>{counts?.followers ?? 0}</Text>
-            <Text style={s.followCountLabel}>팔로워</Text>
+            <Text style={s.followStatNum}>{counts?.followers ?? 0}</Text>
+            <Text style={s.followStatLabel}>팔로워</Text>
           </Pressable>
-          <View style={s.followCountDivider} />
+          <View style={s.followStatDivider} />
           <Pressable
             onPress={() =>
               router.push({ pathname: '/u/[id]/following', params: { id: id! } } as never)
             }
-            style={({ pressed }) => [s.followCountBox, pressed && { opacity: 0.6 }]}
+            style={({ pressed }) => [s.followStatBox, pressed && { opacity: 0.6 }]}
           >
-            <Text style={s.followCountNum}>{counts?.following ?? 0}</Text>
-            <Text style={s.followCountLabel}>팔로잉</Text>
+            <Text style={s.followStatNum}>{counts?.following ?? 0}</Text>
+            <Text style={s.followStatLabel}>팔로잉</Text>
           </Pressable>
+        </View>
+
+        {/* Follow CTA — full width, 명확한 버튼 */}
+        <View style={s.followCtaWrap}>
           <Pressable
             onPress={handleFollowToggle}
             disabled={followMut.isPending || unfollowMut.isPending}
             style={({ pressed }) => [
-              isFollowing ? s.followBtnFollowing : s.followBtnFollow,
+              isFollowing ? s.ctaFollowing : s.ctaFollow,
               pressed && { opacity: 0.7 },
             ]}
           >
-            <Text style={isFollowing ? s.followBtnFollowingText : s.followBtnFollowText}>
-              {isFollowing ? '팔로잉' : '팔로우'}
-            </Text>
+            {(followMut.isPending || unfollowMut.isPending) ? (
+              <ActivityIndicator
+                color={isFollowing ? c.text.primary : c.brand.onPrimary}
+                size="small"
+              />
+            ) : (
+              <>
+                <Feather
+                  name={isFollowing ? 'user-check' : 'user-plus'}
+                  size={15}
+                  color={isFollowing ? c.text.primary : c.brand.onPrimary}
+                />
+                <Text style={isFollowing ? s.ctaFollowingText : s.ctaFollowText}>
+                  {isFollowing ? '팔로잉' : '팔로우'}
+                </Text>
+              </>
+            )}
           </Pressable>
         </View>
 
@@ -1569,70 +1587,80 @@ function makeStyles(c: ThemeColors) {
     fontWeight: '800',
     color: c.text.secondary,
   },
-  followBar: {
+  // Follow stats — Instagram 식: 큰 숫자 + 라벨 가운데 정렬
+  followStatsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 14,
+    justifyContent: 'center',
+    gap: 32,
+    marginTop: 18,
     paddingHorizontal: 20,
-    marginTop: 14,
   },
-  followCountBox: {
+  followStatBox: {
     alignItems: 'center',
     gap: 2,
+    minWidth: 64,
   },
-  followCountNum: {
-    fontSize: 17,
+  followStatNum: {
+    fontSize: 18,
     fontWeight: '900',
     color: c.text.primary,
     letterSpacing: -0.3,
   },
-  followCountLabel: {
+  followStatLabel: {
     fontSize: 11,
     fontWeight: '700',
     color: c.text.tertiary,
+    letterSpacing: 0.2,
+    textTransform: 'uppercase',
   },
-  followCountDivider: {
+  followStatDivider: {
     width: StyleSheet.hairlineWidth,
-    height: 24,
+    height: 26,
     backgroundColor: c.border.subtle,
   },
-  followBtnFollow: {
-    flex: 1,
-    backgroundColor: c.brand.primary,
-    paddingVertical: 12,
-    borderRadius: 14,
+  // Follow CTA — 전체 너비 단독 행
+  followCtaWrap: {
+    paddingHorizontal: 20,
+    marginTop: 14,
+    marginBottom: 6,
+  },
+  ctaFollow: {
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    gap: 7,
+    backgroundColor: c.brand.primary,
+    paddingVertical: 13,
+    borderRadius: 14,
     shadowColor: c.brand.primary,
-    shadowOpacity: 0.3,
-    shadowOffset: { width: 0, height: 4 },
-    shadowRadius: 8,
-    elevation: 3,
+    shadowOpacity: 0.32,
+    shadowOffset: { width: 0, height: 5 },
+    shadowRadius: 10,
+    elevation: 4,
   },
-  followBtnFollowText: {
+  ctaFollowText: {
     color: c.brand.onPrimary,
     fontSize: 14,
-    fontWeight: '800',
+    fontWeight: '900',
+    letterSpacing: -0.2,
   },
-  followBtnFollowing: {
-    flex: 1,
-    backgroundColor: c.bg.card,
-    borderWidth: 1,
-    borderColor: c.border.subtle,
-    paddingVertical: 11, // -1 for border
-    borderRadius: 14,
+  ctaFollowing: {
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: c.shadow.color,
-    shadowOpacity: 0.04,
-    shadowOffset: { width: 0, height: 2 },
-    shadowRadius: 6,
-    elevation: 1,
+    gap: 7,
+    backgroundColor: c.bg.card,
+    borderWidth: 1.5,
+    borderColor: c.border.strong,
+    paddingVertical: 11.5,
+    borderRadius: 14,
   },
-  followBtnFollowingText: {
+  ctaFollowingText: {
     color: c.text.primary,
     fontSize: 14,
-    fontWeight: '800',
+    fontWeight: '900',
+    letterSpacing: -0.2,
   },
   privateBox: {
     alignItems: 'center',
