@@ -139,65 +139,13 @@ export default function ProfileScreen() {
       </View>
 
       <ScrollView style={{ flex: 1, backgroundColor: c.bg.primary }} contentContainerStyle={s.scrollContent}>
-        {/* Profile Card */}
-        <View style={s.profileCard}>
-          <View style={s.avatarContainer}>
-            {profile?.avatar_url ? (
-              <Image
-                source={{ uri: profile.avatar_url }}
-                style={s.avatarImage}
-                resizeMode="cover"
-              />
-            ) : (
-              <View style={s.avatarFallback}>
-                <Text style={s.avatarFallbackText}>{firstChar}</Text>
-              </View>
-            )}
-          </View>
-          <View style={s.profileInfo}>
-            <View style={s.profileNameRow}>
-              <Text style={s.profileName} numberOfLines={1}>
-                {username}
-              </Text>
-              {selectedBadge && (
-                <BadgeIcon icon={selectedBadge.icon} color={selectedBadge.color} size={14} />
-              )}
-            </View>
-            {profile?.instagram_handle ? (
-              <Pressable
-                onPress={() =>
-                  Linking.openURL(
-                    `https://instagram.com/${profile.instagram_handle}`,
-                  ).catch(() =>
-                    customAlert('열기 실패', 'Instagram 앱/브라우저를 찾을 수 없어요'),
-                  )
-                }
-                style={({ pressed }) => [{ opacity: pressed ? 0.6 : 1 }]}
-                hitSlop={6}
-              >
-                <View style={s.instaTag}>
-                  <InstagramIcon size={13} />
-                  <Text style={s.instaTagText}>
-                    @{profile.instagram_handle}
-                  </Text>
-                </View>
-              </Pressable>
-            ) : (
-              <Pressable
-                onPress={() => router.push('/profile/edit')}
-                style={({ pressed }) => [{ opacity: pressed ? 0.6 : 1 }]}
-                hitSlop={6}
-              >
-                <View style={s.instaConnectBtn}>
-                  <Feather name="plus" size={12} color={c.text.muted} />
-                  <Text style={s.instaConnectText}>Instagram 연결</Text>
-                </View>
-              </Pressable>
-            )}
-          </View>
-        </View>
-
-        <MyFollowStrip userId={profile?.id} />
+        {/* Profile card — 가로 레이아웃 (사진 좌 / 정보 우) */}
+        <MyProfileCardH
+          profile={profile}
+          username={username}
+          firstChar={firstChar}
+          selectedBadge={selectedBadge}
+        />
 
         <BodyInfoStrip
           heightCm={profile?.height_cm ?? null}
@@ -1578,6 +1526,93 @@ function ProfileMenuModal({
   );
 }
 
+function MyProfileCardH({
+  profile,
+  username,
+  firstChar,
+  selectedBadge,
+}: {
+  profile: Profile | undefined;
+  username: string;
+  firstChar: string;
+  selectedBadge: BadgeDef | null;
+}) {
+  const c = useThemeColors();
+  const s = React.useMemo(() => makeStyles(c), [c]);
+  const router = useRouter();
+  const { data: counts } = useFollowCounts(profile?.id);
+
+  return (
+    <View style={s.profileCardH}>
+      <View style={s.avatarContainerH}>
+        {profile?.avatar_url ? (
+          <Image source={{ uri: profile.avatar_url }} style={s.avatarImageH} resizeMode="cover" />
+        ) : (
+          <View style={s.avatarFallbackH}>
+            <Text style={s.avatarFallbackTextH}>{firstChar}</Text>
+          </View>
+        )}
+      </View>
+      <View style={s.profileInfoH}>
+        <View style={s.profileNameRowH}>
+          <Text style={s.profileNameH} numberOfLines={1}>{username}</Text>
+          {selectedBadge && (
+            <BadgeIcon icon={selectedBadge.icon} color={selectedBadge.color} size={14} />
+          )}
+        </View>
+        {profile?.instagram_handle ? (
+          <Pressable
+            onPress={() =>
+              Linking.openURL(`https://instagram.com/${profile.instagram_handle}`).catch(() =>
+                customAlert('열기 실패', 'Instagram 앱/브라우저를 찾을 수 없어요'),
+              )
+            }
+            hitSlop={6}
+          >
+            <View style={s.instaTagH}>
+              <InstagramIcon size={12} />
+              <Text style={s.instaTagTextH}>@{profile.instagram_handle}</Text>
+            </View>
+          </Pressable>
+        ) : (
+          <Pressable onPress={() => router.push('/profile/edit')} hitSlop={6}>
+            <View style={s.instaConnectBtnH}>
+              <Feather name="plus" size={11} color={c.text.muted} />
+              <Text style={s.instaConnectTextH}>Instagram 연결</Text>
+            </View>
+          </Pressable>
+        )}
+        <View style={s.followStatsRowH}>
+          <Pressable
+            onPress={() =>
+              profile?.id &&
+              router.push({ pathname: '/u/[id]/followers', params: { id: profile.id } } as never)
+            }
+            hitSlop={4}
+          >
+            <Text style={s.followStatLineH}>
+              <Text style={s.followStatNumH}>{counts?.followers ?? 0} </Text>
+              <Text style={s.followStatLabelH}>팔로워</Text>
+            </Text>
+          </Pressable>
+          <Pressable
+            onPress={() =>
+              profile?.id &&
+              router.push({ pathname: '/u/[id]/following', params: { id: profile.id } } as never)
+            }
+            hitSlop={4}
+          >
+            <Text style={s.followStatLineH}>
+              <Text style={s.followStatNumH}>{counts?.following ?? 0} </Text>
+              <Text style={s.followStatLabelH}>팔로잉</Text>
+            </Text>
+          </Pressable>
+        </View>
+      </View>
+    </View>
+  );
+}
+
 function MyFollowStrip({ userId }: { userId: string | undefined }) {
   const c = useThemeColors();
   const s = React.useMemo(() => makeStyles(c), [c]);
@@ -1802,7 +1837,52 @@ function makeStyles(c: ThemeColors) {
   shoeEmptyTitle: { fontSize: 14, fontWeight: '800', color: c.text.primary },
   shoeEmptySub: { fontSize: 11, color: c.text.muted, marginTop: 2 },
 
-  // Profile Card — 인스타 스타일 (중앙 정렬, 큰 아바타)
+  // Profile Card — 가로 레이아웃 (사진 좌 / 정보 우)
+  profileCardH: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingTop: 18,
+    paddingBottom: 14,
+    gap: 16,
+  },
+  avatarContainerH: {
+    width: 84,
+    height: 84,
+    borderRadius: 42,
+    borderWidth: 2,
+    borderColor: c.brand.primary,
+    padding: 3,
+  },
+  avatarImageH: { width: '100%', height: '100%', borderRadius: 36 },
+  avatarFallbackH: {
+    width: '100%', height: '100%', borderRadius: 36,
+    backgroundColor: c.bg.subtle,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  avatarFallbackTextH: { fontSize: 30, fontWeight: '900', color: c.brand.primary },
+  profileInfoH: { flex: 1, gap: 6 },
+  profileNameRowH: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  profileNameH: {
+    fontSize: 19, fontWeight: '900', color: c.text.primary,
+    letterSpacing: -0.4, flexShrink: 1,
+  },
+  instaTagH: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  instaTagTextH: { fontSize: 12, color: c.text.secondary, fontWeight: '700' },
+  instaConnectBtnH: {
+    flexDirection: 'row', alignItems: 'center', gap: 3,
+    backgroundColor: c.bg.subtle, paddingHorizontal: 8, paddingVertical: 4,
+    borderRadius: 6, alignSelf: 'flex-start',
+  },
+  instaConnectTextH: { fontSize: 11, color: c.text.muted, fontWeight: '700' },
+  followStatsRowH: {
+    flexDirection: 'row', alignItems: 'center', gap: 14, marginTop: 2,
+  },
+  followStatLineH: { fontSize: 13 },
+  followStatNumH: { fontWeight: '900', color: c.text.primary },
+  followStatLabelH: { fontWeight: '600', color: c.text.tertiary },
+
+  // Profile Card — 인스타 스타일 (중앙 정렬, 큰 아바타) — legacy
   profileCard: {
     alignItems: 'center',
     paddingHorizontal: 24,

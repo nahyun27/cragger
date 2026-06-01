@@ -13,6 +13,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TouchableOpacity,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -123,26 +124,20 @@ export default function PublicProfileScreen() {
       </View>
 
       <ScrollView style={{ flex: 1, backgroundColor: c.bg.primary }} contentContainerStyle={s.scrollContent}>
-        {/* Profile Card */}
-        <View style={s.profileCard}>
-          <View style={s.avatarContainer}>
+        {/* Profile card — 가로 레이아웃 (사진 좌 / 정보 우) */}
+        <View style={s.profileCardH}>
+          <View style={s.avatarContainerH}>
             {profile?.avatar_url ? (
-              <Image
-                source={{ uri: profile.avatar_url }}
-                style={s.avatarImage}
-                resizeMode="cover"
-              />
+              <Image source={{ uri: profile.avatar_url }} style={s.avatarImageH} resizeMode="cover" />
             ) : (
-              <View style={s.avatarFallback}>
-                <Text style={s.avatarFallbackText}>{firstChar}</Text>
+              <View style={s.avatarFallbackH}>
+                <Text style={s.avatarFallbackTextH}>{firstChar}</Text>
               </View>
             )}
           </View>
-          <View style={s.profileInfo}>
-            <View style={s.profileNameRow}>
-              <Text style={s.profileName} numberOfLines={1}>
-                {username}
-              </Text>
+          <View style={s.profileInfoH}>
+            <View style={s.profileNameRowH}>
+              <Text style={s.profileNameH} numberOfLines={1}>{username}</Text>
               {isPrivate && (
                 <View style={s.privateChip}>
                   <Feather name="lock" size={10} color={c.text.secondary} />
@@ -153,77 +148,75 @@ export default function PublicProfileScreen() {
             {profile?.instagram_handle && (
               <Pressable
                 onPress={() =>
-                  Linking.openURL(
-                    `https://instagram.com/${profile.instagram_handle}`,
-                  ).catch(() =>
+                  Linking.openURL(`https://instagram.com/${profile.instagram_handle}`).catch(() =>
                     customAlert('열기 실패', 'Instagram 앱/브라우저를 찾을 수 없어요'),
                   )
                 }
-                style={({ pressed }) => [{ opacity: pressed ? 0.6 : 1 }]}
                 hitSlop={6}
               >
-                <View style={s.instaTag}>
-                  <InstagramIcon size={13} />
-                  <Text style={s.instaTagText}>
-                    @{profile.instagram_handle}
-                  </Text>
+                <View style={s.instaTagH}>
+                  <InstagramIcon size={12} />
+                  <Text style={s.instaTagTextH}>@{profile.instagram_handle}</Text>
                 </View>
               </Pressable>
             )}
+            {/* 팔로워/팔로잉 가로 — 정보 영역 내 */}
+            <View style={s.followStatsRowH}>
+              <Pressable
+                onPress={() =>
+                  router.push({ pathname: '/u/[id]/followers', params: { id: id! } } as never)
+                }
+                hitSlop={4}
+              >
+                <Text style={s.followStatLineH}>
+                  <Text style={s.followStatNumH}>{counts?.followers ?? 0} </Text>
+                  <Text style={s.followStatLabelH}>팔로워</Text>
+                </Text>
+              </Pressable>
+              <Pressable
+                onPress={() =>
+                  router.push({ pathname: '/u/[id]/following', params: { id: id! } } as never)
+                }
+                hitSlop={4}
+              >
+                <Text style={s.followStatLineH}>
+                  <Text style={s.followStatNumH}>{counts?.following ?? 0} </Text>
+                  <Text style={s.followStatLabelH}>팔로잉</Text>
+                </Text>
+              </Pressable>
+            </View>
           </View>
         </View>
 
-        {/* Follow stats */}
-        <View style={s.followStatsRow}>
-          <Pressable
-            onPress={() =>
-              router.push({ pathname: '/u/[id]/followers', params: { id: id! } } as never)
-            }
-            style={({ pressed }) => [s.followStatBox, pressed && { opacity: 0.6 }]}
-          >
-            <Text style={s.followStatNum}>{counts?.followers ?? 0}</Text>
-            <Text style={s.followStatLabel}>팔로워</Text>
-          </Pressable>
-          <View style={s.followStatDivider} />
-          <Pressable
-            onPress={() =>
-              router.push({ pathname: '/u/[id]/following', params: { id: id! } } as never)
-            }
-            style={({ pressed }) => [s.followStatBox, pressed && { opacity: 0.6 }]}
-          >
-            <Text style={s.followStatNum}>{counts?.following ?? 0}</Text>
-            <Text style={s.followStatLabel}>팔로잉</Text>
-          </Pressable>
-        </View>
-
-        {/* Follow CTA — full width, 명확한 버튼 */}
-        <View style={s.followCtaWrap}>
-          <Pressable
+        {/* 팔로우 버튼 — 카드 아래 full-width */}
+        <View style={s.ctaRow}>
+          <TouchableOpacity
             onPress={handleFollowToggle}
             disabled={followMut.isPending || unfollowMut.isPending}
-            style={({ pressed }) => [
-              isFollowing ? s.ctaFollowing : s.ctaFollow,
-              pressed && { opacity: 0.7 },
+            activeOpacity={0.7}
+            style={[
+              s.ctaBtnBase,
+              isFollowing ? s.ctaBtnFollowing : s.ctaBtnFollow,
             ]}
           >
             {(followMut.isPending || unfollowMut.isPending) ? (
-              <ActivityIndicator
-                color={isFollowing ? c.text.primary : c.brand.onPrimary}
-                size="small"
-              />
+              <ActivityIndicator color={isFollowing ? c.brand.primary : c.brand.onPrimary} size="small" />
             ) : (
               <>
                 <Feather
                   name={isFollowing ? 'user-check' : 'user-plus'}
-                  size={15}
-                  color={isFollowing ? c.text.primary : c.brand.onPrimary}
+                  size={16}
+                  color={isFollowing ? c.brand.primary : c.brand.onPrimary}
                 />
-                <Text style={isFollowing ? s.ctaFollowingText : s.ctaFollowText}>
+                <Text style={[
+                  s.ctaBtnText,
+                  { color: isFollowing ? c.brand.primary : c.brand.onPrimary },
+                ]}>
                   {isFollowing ? '팔로잉' : '팔로우'}
                 </Text>
               </>
             )}
-          </Pressable>
+          </TouchableOpacity>
         </View>
 
         {canSeeContent && (
@@ -1587,7 +1580,115 @@ function makeStyles(c: ThemeColors) {
     fontWeight: '800',
     color: c.text.secondary,
   },
-  // Follow stats — Instagram 식: 큰 숫자 + 라벨 가운데 정렬
+  // ── 새 가로 레이아웃 (사진 좌 / 정보 우) ─────────────────
+  profileCardH: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingTop: 18,
+    paddingBottom: 14,
+    gap: 16,
+  },
+  avatarContainerH: {
+    width: 84,
+    height: 84,
+    borderRadius: 42,
+    borderWidth: 2,
+    borderColor: c.brand.primary,
+    padding: 3,
+  },
+  avatarImageH: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 36,
+  },
+  avatarFallbackH: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 36,
+    backgroundColor: c.bg.subtle,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarFallbackTextH: {
+    fontSize: 30,
+    fontWeight: '900',
+    color: c.brand.primary,
+  },
+  profileInfoH: {
+    flex: 1,
+    gap: 6,
+  },
+  profileNameRowH: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  profileNameH: {
+    fontSize: 19,
+    fontWeight: '900',
+    color: c.text.primary,
+    letterSpacing: -0.4,
+    flexShrink: 1,
+  },
+  instaTagH: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  instaTagTextH: {
+    fontSize: 12,
+    color: c.text.secondary,
+    fontWeight: '700',
+  },
+  followStatsRowH: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    marginTop: 2,
+  },
+  followStatLineH: {
+    fontSize: 13,
+  },
+  followStatNumH: {
+    fontWeight: '900',
+    color: c.text.primary,
+  },
+  followStatLabelH: {
+    fontWeight: '600',
+    color: c.text.tertiary,
+  },
+  // ── 팔로우 CTA ──────────────────────────────────────────
+  ctaRow: {
+    flexDirection: 'row',
+    paddingHorizontal: 20,
+    paddingTop: 4,
+    paddingBottom: 14,
+  },
+  ctaBtnBase: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    height: 44,
+    borderRadius: 12,
+  },
+  ctaBtnFollow: {
+    backgroundColor: c.brand.primary,
+  },
+  ctaBtnFollowing: {
+    backgroundColor: c.bg.card,
+    borderWidth: 1.5,
+    borderColor: c.brand.primary,
+  },
+  ctaBtnText: {
+    fontSize: 14,
+    fontWeight: '900',
+    letterSpacing: -0.2,
+  },
+
+  // Follow stats — Instagram 식: 큰 숫자 + 라벨 가운데 정렬 (legacy)
   followStatsRow: {
     flexDirection: 'row',
     alignItems: 'center',
