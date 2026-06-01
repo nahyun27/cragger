@@ -150,16 +150,26 @@ function RecruitingCrewMiniCard({ crew }: { crew: CrewSummary }) {
   const s = useMemo(() => makeStyles(c), [c]);
   const router = useRouter();
   const firstChar = crew.name.length > 0 ? crew.name.charAt(0).toUpperCase() : '?';
+  // 7일 이내 생성된 크루는 NEW 뱃지
+  const ageDays = (Date.now() - new Date(crew.created_at).getTime()) / 86_400_000;
+  const isNew = ageDays < 7;
   return (
     <Pressable
       onPress={() => router.push({ pathname: '/crew/[id]', params: { id: crew.id } } as never)}
       style={({ pressed }) => [s.recruitCard, pressed && { opacity: 0.85 }]}
     >
-      <View style={s.recruitCardAvatar}>
-        {crew.image_url ? (
-          <Image source={{ uri: crew.image_url }} style={s.recruitCardAvatarImg} />
-        ) : (
-          <Text style={s.recruitCardAvatarText}>{firstChar}</Text>
+      <View style={{ position: 'relative' }}>
+        <View style={[s.recruitCardAvatar, { overflow: 'hidden' }]}>
+          {crew.image_url ? (
+            <Image source={{ uri: crew.image_url }} style={s.recruitCardAvatarImg} />
+          ) : (
+            <Text style={s.recruitCardAvatarText}>{firstChar}</Text>
+          )}
+        </View>
+        {isNew && (
+          <View style={s.newBadge}>
+            <Text style={s.newBadgeText}>NEW</Text>
+          </View>
         )}
       </View>
       <Text style={s.recruitCardName} numberOfLines={1}>{crew.name}</Text>
@@ -535,7 +545,24 @@ function makeStyles(c: ThemeColors) {
       backgroundColor: c.bg.card,
       alignItems: 'center',
       justifyContent: 'center',
-      overflow: 'hidden',
+      position: 'relative',
+    },
+    newBadge: {
+      position: 'absolute',
+      top: -4,
+      right: -6,
+      backgroundColor: c.status.danger,
+      paddingHorizontal: 5,
+      paddingVertical: 1,
+      borderRadius: 5,
+      borderWidth: 1.5,
+      borderColor: c.bg.card,
+    },
+    newBadgeText: {
+      color: '#ffffff',
+      fontSize: 8,
+      fontWeight: '900',
+      letterSpacing: 0.3,
     },
     recruitCardAvatarImg: { width: '100%', height: '100%' },
     recruitCardAvatarText: {
