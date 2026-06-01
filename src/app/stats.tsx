@@ -336,7 +336,7 @@ function ActivityHeatmapCard() {
   const c = useThemeColors();
   const s = useMemo(() => makeStyles(c), [c]);
   const { width: winW } = useWindowDimensions();
-  const { data } = useDailyActivity(365);
+  const { data } = useDailyActivity(180);
 
   // 셀 계산: 일요일이 row=0, 토요일이 row=6.
   // 가장 오래된 날부터 시작해서 처음 일요일까지 빈 셀, 그 뒤 7일씩.
@@ -392,7 +392,7 @@ function ActivityHeatmapCard() {
     <View style={s.chartCard}>
       <View style={s.chartHeader}>
         <Text style={s.chartTitle}>활동 heatmap</Text>
-        <Text style={s.chartLegendText}>지난 1년</Text>
+        <Text style={s.chartLegendText}>지난 6개월</Text>
       </View>
       <View style={{ gap: GAP }}>
         {grid.map((row, ri) => (
