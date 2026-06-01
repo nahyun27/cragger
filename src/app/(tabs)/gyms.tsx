@@ -348,7 +348,7 @@ export default function GymsScreen() {
                   <Text style={s.emptyTitle}>검색 결과가 없어요</Text>
                   <Text style={s.emptySubtitle}>필터를 변경하거나 다른 검색어를 입력해 보세요.</Text>
                   <Pressable
-                    onPress={() => router.push('/gyms/request')}
+                    onPress={() => router.push('/gyms/suggest-new' as never)}
                     style={({ pressed }) => [s.requestBtn, pressed && { opacity: 0.8 }]}
                   >
                     <Text style={s.requestBtnText}>
@@ -361,7 +361,7 @@ export default function GymsScreen() {
             ListFooterComponent={
               data && filtered.length > 0 ? (
                 <Pressable
-                  onPress={() => router.push('/gyms/request')}
+                  onPress={() => router.push('/gyms/suggest-new' as never)}
                   style={({ pressed }) => [s.footerBtn, pressed && { opacity: 0.8 }]}
                 >
                   <Text style={s.footerBtnText}>

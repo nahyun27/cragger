@@ -83,20 +83,27 @@ export function useIsAdmin() {
   });
 }
 
-// ── 제보 보내기 ─────────────────────────────────────────────
+// ── 제보 보내기 (기존 암장 수정 또는 신규 제안) ───────────────
+// gymId 가 null 이면 신규 암장 제안 — changes 에 name, city 필수.
 export function useSubmitGymInfo() {
   const queryClient = useQueryClient();
   const { session: authSession } = useAuth();
   return useMutation({
     mutationFn: async (args: {
-      gymId: string;
+      gymId: string | null;
       changes: GymChanges;
       note?: string;
     }): Promise<{ id: string }> => {
       const userId = authSession?.user.id;
       if (!userId) throw new Error('Not authenticated');
       const keys = Object.keys(args.changes);
-      if (keys.length === 0 && !args.note?.trim()) {
+      if (args.gymId == null) {
+        // 신규 제안 — name + city 필수
+        const c = args.changes as Record<string, unknown>;
+        if (!c.name || !c.city) {
+          throw new Error('새 암장 제안은 이름과 시/도가 필수예요');
+        }
+      } else if (keys.length === 0 && !args.note?.trim()) {
         throw new Error('수정할 항목이나 메모를 1개 이상 입력해주세요');
       }
       const { data, error } = await supabase
