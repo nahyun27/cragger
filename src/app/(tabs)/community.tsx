@@ -21,7 +21,7 @@ import {
   type PostRow,
   type PostType,
 } from '@/hooks/use-community';
-import { useRecruitingCrews, type CrewSummary } from '@/hooks/use-crews';
+import { useDiscoverCrews, type CrewSummary } from '@/hooks/use-crews';
 import { useThemeColors, type ThemeColors } from '@/lib/theme';
 
 type FilterKey = 'all' | PostType;
@@ -115,17 +115,20 @@ function describeMeetup(post: PostRow): {
   };
 }
 
-// ── 공개 모집 크루 가로 스크롤 ──────────────────────────────────
+// ── 크루 둘러보기 가로 스크롤 (모집 + 최근) ─────────────────────
 function RecruitingCrewsStrip() {
   const c = useThemeColors();
   const s = useMemo(() => makeStyles(c), [c]);
   const router = useRouter();
-  const { data } = useRecruitingCrews(10);
+  const { data } = useDiscoverCrews(10);
   if (!data || data.length === 0) return null;
+  const hasAnyRecruiting = data.some((d) => d.is_recruiting);
   return (
     <View style={s.recruitStrip}>
       <View style={s.recruitStripHeader}>
-        <Text style={s.recruitStripTitle}>공개 모집 중인 크루</Text>
+        <Text style={s.recruitStripTitle}>
+          {hasAnyRecruiting ? '모집 중 · 새로 생긴 크루' : '새로 생긴 크루'}
+        </Text>
         <Pressable onPress={() => router.push('/crews/explore' as never)} hitSlop={6}>
           {({ pressed }) => (
             <Text style={[s.recruitStripMore, pressed && { opacity: 0.6 }]}>전체 보기</Text>
@@ -176,6 +179,11 @@ function RecruitingCrewMiniCard({ crew }: { crew: CrewSummary }) {
       <Text style={s.recruitCardMeta} numberOfLines={1}>
         {[crew.region, `${crew.member_count}명`].filter(Boolean).join(' · ')}
       </Text>
+      {crew.is_recruiting && (
+        <View style={s.recruitingChip}>
+          <Text style={s.recruitingChipText}>모집중</Text>
+        </View>
+      )}
     </Pressable>
   );
 }
@@ -563,6 +571,18 @@ function makeStyles(c: ThemeColors) {
       fontSize: 8,
       fontWeight: '900',
       letterSpacing: 0.3,
+    },
+    recruitingChip: {
+      backgroundColor: c.status.successBg,
+      paddingHorizontal: 6,
+      paddingVertical: 2,
+      borderRadius: 5,
+      marginTop: 2,
+    },
+    recruitingChipText: {
+      color: c.status.success,
+      fontSize: 9,
+      fontWeight: '900',
     },
     recruitCardAvatarImg: { width: '100%', height: '100%' },
     recruitCardAvatarText: {

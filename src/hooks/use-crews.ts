@@ -77,6 +77,50 @@ export function useRecruitingCrews(limit?: number) {
   });
 }
 
+// ── 커뮤니티용: 모집 + 최근 만들어진 크루 (mix) ───────────────
+// 모집 중인 크루 우선, 부족하면 최근 created_at 으로 보충.
+export function useDiscoverCrews(limit: number = 10) {
+  return useQuery({
+    queryKey: ['crews', 'discover', limit] as const,
+    staleTime: 60_000,
+    queryFn: async (): Promise<CrewSummary[]> => {
+      const [recruitingR, recentR] = await Promise.all([
+        supabase
+          .from('crews')
+          .select(CREW_COLS)
+          .eq('is_recruiting', true)
+          .order('created_at', { ascending: false })
+          .limit(limit),
+        supabase
+          .from('crews')
+          .select(CREW_COLS)
+          .order('created_at', { ascending: false })
+          .limit(limit),
+      ]);
+      if (recruitingR.error) throw new Error(recruitingR.error.message);
+      if (recentR.error) throw new Error(recentR.error.message);
+      const recruiting = (recruitingR.data ?? []) as unknown as CrewSummary[];
+      const recent = (recentR.data ?? []) as unknown as CrewSummary[];
+      const seen = new Set<string>();
+      const merged: CrewSummary[] = [];
+      for (const c of recruiting) {
+        if (!seen.has(c.id)) {
+          seen.add(c.id);
+          merged.push(c);
+        }
+      }
+      for (const c of recent) {
+        if (merged.length >= limit) break;
+        if (!seen.has(c.id)) {
+          seen.add(c.id);
+          merged.push(c);
+        }
+      }
+      return merged;
+    },
+  });
+}
+
 // ── 내 크루 목록 ──────────────────────────────────────────────
 export function useMyCrews() {
   const { session: authSession } = useAuth();

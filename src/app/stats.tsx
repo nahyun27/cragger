@@ -335,6 +335,7 @@ function MonthlyVTrendCard({
 function ActivityHeatmapCard() {
   const c = useThemeColors();
   const s = useMemo(() => makeStyles(c), [c]);
+  const { width: winW } = useWindowDimensions();
   const { data } = useDailyActivity(365);
 
   // 셀 계산: 일요일이 row=0, 토요일이 row=6.
@@ -382,8 +383,10 @@ function ActivityHeatmapCard() {
     while (row.length < numCols) row.push(null);
   }
 
-  const CELL = 9;
+  // 카드 너비에 맞게 셀 크기 동적 계산 (chartInnerWidth 활용)
   const GAP = 2;
+  const innerW = chartInnerWidth(winW);
+  const CELL = Math.max(3, Math.floor((innerW - (numCols - 1) * GAP) / numCols));
 
   return (
     <View style={s.chartCard}>
