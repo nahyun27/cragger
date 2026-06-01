@@ -1,4 +1,5 @@
 import { customAlert } from '@/components/ui/custom-alert';
+import { FeaturedBadgeChip } from '@/components/ui/featured-badge-chip';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useState, useMemo} from 'react';
 import {
@@ -512,7 +513,10 @@ function PostHeader({ post }: { post: PostRow }) {
         )}
       </View>
       <View style={s.authorInfo}>
-        <Text style={s.authorName}>{authorName}</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+          <Text style={s.authorName}>{authorName}</Text>
+          <FeaturedBadgeChip badgeKey={post.author?.featured_badge_key} size={13} />
+        </View>
         <Text style={s.timestamp}>{formatRelativeTime(post.created_at)}</Text>
       </View>
       <View style={[s.badge, { backgroundColor: badge.bg, borderColor: badge.border }]}>
@@ -789,7 +793,10 @@ function CommentItem({
       <View style={s.commentContent}>
         <View style={s.commentHeader}>
           <View style={s.commentAuthorInfo}>
-            <Text style={s.commentAuthor}>{authorName}</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+              <Text style={s.commentAuthor}>{authorName}</Text>
+              <FeaturedBadgeChip badgeKey={comment.author?.featured_badge_key} size={10} />
+            </View>
             <Text style={s.commentTime}>{formatRelativeTime(comment.created_at)}</Text>
           </View>
           {!isEditing && (

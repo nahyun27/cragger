@@ -86,7 +86,14 @@ export default function ProfileScreen() {
   );
   const { data: stats, isLoading, error } = useUserStats(thisMonthRange);
   const [menuVisible, setMenuVisible] = useState(false);
-  const [selectedBadge, setSelectedBadge] = useState<BadgeDef | null>(null);
+  const updateProfile = useUpdateProfile();
+  // 대표 뱃지 — DB(profiles.featured_badge_key) 에서 가져와 적용. 토글 시 mutate.
+  const selectedBadge: BadgeDef | null = profile?.featured_badge_key
+    ? (BADGES_BY_KEY[profile.featured_badge_key] ?? null)
+    : null;
+  const setSelectedBadge = (badge: BadgeDef | null) => {
+    updateProfile.mutate({ featuredBadgeKey: badge?.key ?? null });
+  };
 
   // 마이페이지 진입 시 1회 뱃지 체크. 신규 획득 있으면 토스트.
   const badgeCheck = useBadgeCheck();
@@ -507,7 +514,7 @@ function BadgesSection({
   onSelectBadge,
 }: {
   selectedBadge: BadgeDef | null;
-  onSelectBadge: (badge: BadgeDef) => void;
+  onSelectBadge: (badge: BadgeDef | null) => void;
 }) {
   const c = useThemeColors();
   const s = React.useMemo(() => makeStyles(c), [c]);
@@ -526,6 +533,7 @@ function BadgesSection({
 
   function handleBadgePress(badge: BadgeDef) {
     const earnedAt = earnedMap.get(badge.key);
+    const isCurrent = selectedBadge?.key === badge.key;
     if (earnedAt) {
       const dateStr = new Date(earnedAt).toLocaleDateString('ko-KR');
       customAlert(
@@ -533,7 +541,9 @@ function BadgesSection({
         `달성일: ${dateStr}\n\n${badge.hint}`,
         [
           { text: '닫기', style: 'cancel' },
-          { text: '대표 배지로 설정', onPress: () => onSelectBadge(badge) },
+          isCurrent
+            ? { text: '대표 배지 해제', style: 'destructive', onPress: () => onSelectBadge(null) }
+            : { text: '대표 배지로 설정', onPress: () => onSelectBadge(badge) },
         ],
         undefined,
         <BadgeIcon icon={badge.icon} color={badge.color} size={36} />,

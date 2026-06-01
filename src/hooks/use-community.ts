@@ -25,6 +25,7 @@ export type PostAuthor = {
   username: string;
   display_name: string | null;
   avatar_url: string | null;
+  featured_badge_key: string | null;
 };
 
 export type PostGym = {
@@ -54,7 +55,7 @@ export type PostRow = {
 };
 
 const POST_SELECT_COLS =
-  'id, author_id, post_type, title, body, gym_id, image_urls, like_count, comment_count, created_at, meetup_at, meetup_capacity, meetup_location, participant_count, author:profiles!posts_author_id_fkey(id, username, display_name, avatar_url), gym:gyms(id, name, branch)';
+  'id, author_id, post_type, title, body, gym_id, image_urls, like_count, comment_count, created_at, meetup_at, meetup_capacity, meetup_location, participant_count, author:profiles!posts_author_id_fkey(id, username, display_name, avatar_url, featured_badge_key), gym:gyms(id, name, branch)';
 
 const PAGE_SIZE = 20;
 
@@ -281,7 +282,7 @@ export function useComments(postId: string | undefined) {
       const { data, error } = await supabase
         .from('post_comments')
         .select(
-          'id, post_id, author_id, body, created_at, parent_comment_id, author:profiles!post_comments_author_id_fkey(id, username, display_name, avatar_url)',
+          'id, post_id, author_id, body, created_at, parent_comment_id, author:profiles!post_comments_author_id_fkey(id, username, display_name, avatar_url, featured_badge_key)',
         )
         .eq('post_id', postId!)
         .order('created_at', { ascending: true });
@@ -491,7 +492,7 @@ export function useMeetupParticipants(postId: string | undefined) {
       const { data, error } = await supabase
         .from('meetup_participants')
         .select(
-          'user_id, status, joined_at, user:profiles!meetup_participants_user_id_fkey(id, username, display_name, avatar_url)',
+          'user_id, status, joined_at, user:profiles!meetup_participants_user_id_fkey(id, username, display_name, avatar_url, featured_badge_key)',
         )
         .eq('post_id', postId!)
         .eq('status', 'joined')

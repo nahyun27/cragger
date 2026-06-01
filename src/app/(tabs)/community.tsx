@@ -22,6 +22,7 @@ import {
   type PostType,
 } from '@/hooks/use-community';
 import { useDiscoverCrews, type CrewSummary } from '@/hooks/use-crews';
+import { FeaturedBadgeChip } from '@/components/ui/featured-badge-chip';
 import { useThemeColors, type ThemeColors } from '@/lib/theme';
 
 type FilterKey = 'all' | PostType;
@@ -406,7 +407,10 @@ function PostCard({
             )}
           </View>
           <View style={s.userText}>
-            <Text style={s.userName} numberOfLines={1}>{authorName}</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+              <Text style={s.userName} numberOfLines={1}>{authorName}</Text>
+              <FeaturedBadgeChip badgeKey={post.author?.featured_badge_key} size={12} />
+            </View>
             <Text style={s.timeText}>{formatRelativeTime(post.created_at)}</Text>
           </View>
         </View>

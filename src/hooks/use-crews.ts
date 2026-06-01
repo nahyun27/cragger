@@ -17,6 +17,7 @@ export type CrewUserMini = {
   username: string;
   display_name: string | null;
   avatar_url: string | null;
+  featured_badge_key: string | null;
 };
 
 export const CREW_REGION_OPTIONS = [
@@ -171,7 +172,7 @@ export function useCrewDetail(crewId: string | undefined) {
         supabase.from('crews').select(CREW_COLS).eq('id', crewId!).single(),
         supabase
           .from('crew_members')
-          .select('user_id, role, joined_at, user:profiles!crew_members_user_id_fkey(id, username, display_name, avatar_url)')
+          .select('user_id, role, joined_at, user:profiles!crew_members_user_id_fkey(id, username, display_name, avatar_url, featured_badge_key)')
           .eq('crew_id', crewId!)
           .order('joined_at', { ascending: true }),
       ]);

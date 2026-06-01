@@ -57,6 +57,7 @@ import {
   useRequestJoinCrewById,
   type CrewJoinRequest,
 } from '@/hooks/use-crew-requests';
+import { FeaturedBadgeChip } from '@/components/ui/featured-badge-chip';
 import { Sheet } from '@/components/ui/sheet';
 import { useThemeColors, type ThemeColors } from '@/lib/theme';
 
@@ -1154,10 +1155,13 @@ function MemberRow({
               </Text>
             )}
           </View>
-          <Text style={s.memberNameText} numberOfLines={1}>
-            {name}
-            {isMe && <Text style={s.memberMeTag}> (나)</Text>}
-          </Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, flex: 1 }}>
+            <Text style={s.memberNameText} numberOfLines={1}>
+              {name}
+              {isMe && <Text style={s.memberMeTag}> (나)</Text>}
+            </Text>
+            <FeaturedBadgeChip badgeKey={member.user?.featured_badge_key} size={12} />
+          </View>
           {member.role === 'owner' && (
             <View style={s.memberOwnerBadge}>
               <Text style={s.memberOwnerText}>크루장</Text>

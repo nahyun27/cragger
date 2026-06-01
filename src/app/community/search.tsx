@@ -23,6 +23,7 @@ import {
   type PostType,
 } from '@/hooks/use-community';
 import { useSearchUsers, type SearchUser } from '@/hooks/use-follows';
+import { FeaturedBadgeChip } from '@/components/ui/featured-badge-chip';
 import { useThemeColors, type ThemeColors } from '@/lib/theme';
 
 const BADGE_COLORS: Record<string, { bg: string; text: string }> = {
@@ -261,6 +262,7 @@ function ResultCard({
         <Text style={s.authorName} numberOfLines={1}>
           {authorName}
         </Text>
+        <FeaturedBadgeChip badgeKey={post.author?.featured_badge_key} size={11} />
         <View style={[s.badge, { backgroundColor: badge.bg }]}>
           <Text style={[s.badgeText, { color: badge.text }]}>{label}</Text>
         </View>

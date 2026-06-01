@@ -1,5 +1,6 @@
 import { customAlert } from '@/components/ui/custom-alert';
 import { BadgeIcon } from '@/components/ui/badge-icon';
+import { FeaturedBadgeChip } from '@/components/ui/featured-badge-chip';
 import { InstagramIcon } from '@/components/ui/instagram-icon';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useState } from 'react';
@@ -138,6 +139,7 @@ export default function PublicProfileScreen() {
           <View style={s.profileInfoH}>
             <View style={s.profileNameRowH}>
               <Text style={s.profileNameH} numberOfLines={1}>{username}</Text>
+              <FeaturedBadgeChip badgeKey={profile?.featured_badge_key} size={15} />
               {isPrivate && (
                 <View style={s.privateChip}>
                   <Feather name="lock" size={10} color={c.text.secondary} />
