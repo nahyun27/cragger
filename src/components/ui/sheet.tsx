@@ -20,7 +20,7 @@ import {
   type StyleProp,
   type ViewStyle,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useThemeColors, type ThemeColors } from '@/lib/theme';
 
@@ -59,10 +59,12 @@ export function Sheet({
   children,
 }: SheetProps) {
   const c = useThemeColors();
+  const insets = useSafeAreaInsets();
   const s = useMemo(() => makeStyles(c), [c]);
 
   const animationType = variant === 'center' ? 'fade' : 'slide';
   const transparent = variant !== 'full';
+  const footerBottomPad = Math.max(insets.bottom, 12);
 
   if (variant === 'full') {
     return (
@@ -93,7 +95,9 @@ export function Sheet({
               {children}
             </ScrollView>
           )}
-          {footer && <View style={s.footer}>{footer}</View>}
+          {footer && (
+            <View style={[s.footer, { paddingBottom: footerBottomPad }]}>{footer}</View>
+          )}
         </SafeAreaView>
       </Modal>
     );
@@ -145,7 +149,9 @@ export function Sheet({
               {children}
             </ScrollView>
           )}
-          {footer && <View style={s.footer}>{footer}</View>}
+          {footer && (
+            <View style={[s.footer, { paddingBottom: footerBottomPad }]}>{footer}</View>
+          )}
         </View>
       </View>
     </Modal>

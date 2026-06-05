@@ -226,11 +226,14 @@ export function BadgeIcon({ icon, color, size = 20 }: BadgeIconProps) {
   }
 
   // V그레이드 / 리드 — 방패 모양 + 흰 텍스트
-  if (/^V\d/.test(icon) || /^5\.\d/.test(icon)) {
-    const w = size * 1.8;
-    const h = size * 2.1;
-    const r = size * 0.3; // Top border radius
-    const pointHeight = size * 0.6;
+  if (/^V\d/.test(icon) || /^5\.\d/.test(icon) || icon === 'VB') {
+    // height 기준 정규화 — 다른 뱃지(size*1.6 정사각) 과 같은 줄높이 맞춤.
+    // 내부 비율 (1.8w × 2.1h) 은 그대로 유지하면서 전체 스케일만 축소.
+    const sz = size * (1.6 / 2.1);
+    const w = sz * 1.8;
+    const h = sz * 2.1;
+    const r = sz * 0.3; // Top border radius
+    const pointHeight = sz * 0.6;
     
     // SVG path for a tag/shield: flat top with rounded corners, straight sides, pointed bottom
     const path = `
@@ -267,12 +270,12 @@ export function BadgeIcon({ icon, color, size = 20 }: BadgeIconProps) {
           {/* Glossy gradient overlay */}
           <Path d={path} fill="url(#grad)" />
           {/* Subtle inner highlight/border */}
-          <Path d={path} fill="none" stroke="#ffffff" strokeWidth={size * 0.08} strokeOpacity={0.4} />
+          <Path d={path} fill="none" stroke="#ffffff" strokeWidth={sz * 0.08} strokeOpacity={0.4} />
         </Svg>
-        <View style={{ flex: 1, justifyContent: 'center', marginTop: -size * 0.25 }}>
+        <View style={{ flex: 1, justifyContent: 'center', marginTop: -sz * 0.25 }}>
           <Text style={[textIconStyles.text, {
             color: '#ffffff',
-            fontSize: icon.length >= 4 ? size * 0.5 : size * 0.75,
+            fontSize: icon.length >= 4 ? sz * 0.5 : sz * 0.75,
             textShadowColor: 'rgba(0,0,0,0.2)',
             textShadowOffset: { width: 0, height: 1 },
             textShadowRadius: 2,
@@ -286,8 +289,11 @@ export function BadgeIcon({ icon, color, size = 20 }: BadgeIconProps) {
 
   // 첫 대결 (battle-shield) — 커스텀 방패 + 교차된 칼 모양
   if (icon === 'battle-shield') {
-    const w = size * 1.6;
-    const h = size * 1.9;
+    // height 기준 정규화 — 다른 뱃지(size*1.6) 와 같은 줄높이.
+    // 내부 비율 (1.6w × 1.9h) 그대로 유지.
+    const sz = size * (1.6 / 1.9);
+    const w = sz * 1.6;
+    const h = sz * 1.9;
     const cut = h * 0.12; // 양쪽 모서리 아주 조금 깎음
     
     // Classic crest/shield shape: peaked top, slightly concave top edges, straight sides, curved bottom
@@ -321,19 +327,19 @@ export function BadgeIcon({ icon, color, size = 20 }: BadgeIconProps) {
           </Defs>
           <Path d={shieldPath} fill={color} />
           <Path d={shieldPath} fill="url(#battle-grad)" />
-          <Path d={shieldPath} fill="none" stroke="#ffffff" strokeWidth={size * 0.08} strokeOpacity={0.4} />
+          <Path d={shieldPath} fill="none" stroke="#ffffff" strokeWidth={sz * 0.08} strokeOpacity={0.4} />
         </Svg>
-        <View style={{ flex: 1, justifyContent: 'center', paddingTop: size * 0.05 }}>
-          <MaterialCommunityIcons 
-            name="sword-cross" 
-            size={size * 0.9} 
-            color="#ffffff" 
-            style={{ 
-              textShadowColor: 'rgba(0,0,0,0.3)', 
-              textShadowOffset: { width: 0, height: 1 }, 
+        <View style={{ flex: 1, justifyContent: 'center', paddingTop: sz * 0.05 }}>
+          <MaterialCommunityIcons
+            name="sword-cross"
+            size={sz * 0.9}
+            color="#ffffff"
+            style={{
+              textShadowColor: 'rgba(0,0,0,0.3)',
+              textShadowOffset: { width: 0, height: 1 },
               textShadowRadius: 2,
-              opacity: 0.95 
-            }} 
+              opacity: 0.95
+            }}
           />
         </View>
       </View>
@@ -341,6 +347,57 @@ export function BadgeIcon({ icon, color, size = 20 }: BadgeIconProps) {
   }
 
   // 레인보우 — 무지개 모양 (부채꼴 쿼터)
+  // 제보 왕 (crown) — 금빛 그라데이션 원반 + 왕관 + 광택 반사
+  if (icon === 'crown') {
+    const w = size * 1.7;
+    const h = size * 1.7;
+    const rad = w / 2;
+    const goldTop = '#fde68a';     // 밝은 황금 하이라이트
+    const goldMid = color;          // 전달받은 brand color (디폴트 #b45309)
+    const goldDeep = '#78350f';    // 어두운 황금 음영
+
+    return (
+      <View style={{
+        width: w,
+        height: h,
+        alignItems: 'center',
+        justifyContent: 'center',
+        shadowColor: color,
+        shadowOpacity: 0.4,
+        shadowRadius: 8,
+        shadowOffset: { width: 0, height: 4 },
+        elevation: 6,
+      }}>
+        <Svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} style={{ position: 'absolute' }}>
+          <Defs>
+            <SvgLinearGradient id="crown-grad" x1="0" y1="0" x2="0" y2="1">
+              <Stop offset="0%" stopColor={goldTop} stopOpacity="1" />
+              <Stop offset="50%" stopColor={goldMid} stopOpacity="1" />
+              <Stop offset="100%" stopColor={goldDeep} stopOpacity="1" />
+            </SvgLinearGradient>
+            <SvgLinearGradient id="crown-shine" x1="0" y1="0" x2="0" y2="1">
+              <Stop offset="0%" stopColor="#ffffff" stopOpacity="0.5" />
+              <Stop offset="60%" stopColor="#ffffff" stopOpacity="0" />
+            </SvgLinearGradient>
+          </Defs>
+          <Circle cx={rad} cy={rad} r={rad} fill="url(#crown-grad)" />
+          <Circle cx={rad} cy={rad - rad * 0.18} r={rad * 0.78} fill="url(#crown-shine)" />
+          <Circle cx={rad} cy={rad} r={rad - size * 0.04} fill="none" stroke="#ffffff" strokeWidth={size * 0.06} strokeOpacity={0.55} />
+        </Svg>
+        <MaterialCommunityIcons
+          name="crown"
+          size={size * 1.0}
+          color="#ffffff"
+          style={{
+            textShadowColor: 'rgba(120,53,15,0.55)',
+            textShadowOffset: { width: 0, height: 1 },
+            textShadowRadius: 2,
+          }}
+        />
+      </View>
+    );
+  }
+
   if (icon === 'rainbow') {
     const w = size * 1.6;
     const h = size * 1.6;
