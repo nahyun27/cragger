@@ -149,11 +149,9 @@ supabase/
 
 ## 작업 원칙
 
-- 한 번에 하나의 마일스톤만. 기능 늘리지 않음.
 - 위험한 부분(인증, 공유 카드, 카카오맵)은 초반에 PoC로 검증.
-- v2.0 기능(친구·대결·모임·랭킹·커뮤니티)은 출시 후. 지금은 생각하지 않음.
 - 커밋은 작업 단위가 끝나면 자동으로 진행. git status·커밋 메시지 제안 단계 생략. 단, 다음 경우엔 멈추고 확인: (1) 마이그레이션 파일 추가/수정, (2) 환경변수/시크릿 관련 파일 변경, (3) package.json dependency 추가, (4) 대규모 리팩토링 (파일 10개 이상 또는 디렉토리 구조 변경).
-- DB 마이그레이션은 `supabase/migrations/`에 표준 형식(YYYYMMDDHHMMSS_name.sql)으로 추가 후 `supabase db push`로 적용. SQL Editor 수동 적용 금지.
+- DB 마이그레이션은 `supabase/migrations/`에 표준 형식(YYYYMMDDHHMMSS_name.sql)으로 추가 후 `supabase db push`로 적용. 
 
 ## Known issues
 

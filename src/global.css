@@ -5,9 +5,10 @@
 @layer base {
   :root {
     /* Bluish slate gray palette — matches the community/log tab background. */
-    --background-primary: #ffffff;
-    --background-secondary: #f8fafc; /* slate-50 */
-    --background-tertiary: #f1f5f9;  /* slate-100 */
+    --background-primary: #eef2f7;   /* 페이지 배경 (theme.ts bg.primary 와 동일) */
+    --background-secondary: #f8fafc; /* slate-50 — 입력/보조 박스 */
+    --background-tertiary: #f1f5f9;  /* slate-100 — 보조 영역 */
+    --background-card:      #ffffff; /* 카드 — theme.ts bg.card 와 동일 */
 
     --text-primary: #0f172a;   /* slate-900 */
     --text-secondary: #334155; /* slate-700 */
@@ -38,9 +39,10 @@
   }
 
   .dark {
-    --background-primary: #020617; /* slate-950 */
-    --background-secondary: #0f172a; /* slate-900 */
-    --background-tertiary: #1e293b;  /* slate-800 */
+    --background-primary: #0a1220;   /* 페이지 배경 (theme.ts bg.primary 와 동일) */
+    --background-secondary: #0f172a; /* slate-900 — 입력/보조 박스 */
+    --background-tertiary: #1e293b;  /* slate-800 — 보조 영역 */
+    --background-card:      #1e293b; /* 카드 — theme.ts bg.card 와 동일 */
 
     --text-primary: #f8fafc;   /* slate-50 */
     --text-secondary: #94a3b8; /* slate-400 */

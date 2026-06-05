@@ -12,6 +12,7 @@ module.exports = {
           primary: "var(--background-primary)",
           secondary: "var(--background-secondary)",
           tertiary: "var(--background-tertiary)",
+          card: "var(--background-card)",
         },
         text: {
           primary: "var(--text-primary)",

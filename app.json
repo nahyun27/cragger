@@ -15,6 +15,7 @@
     },
     "android": {
       "name": "크래거",
+      "package": "com.cragger.app",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -41,11 +42,39 @@
       ],
       "expo-sharing",
       "expo-secure-store",
-      "@react-native-community/datetimepicker"
+      "@react-native-community/datetimepicker",
+      [
+        "@react-native-kakao/core",
+        {
+          "nativeAppKey": "d09b0c3a5e47ff05356be90d04a4a643",
+          "android": {
+            "authCodeHandlerActivity": true
+          },
+          "ios": {
+            "handleKakaoOpenUrl": true,
+            "kakaoOpenSdkScheme": true
+          }
+        }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "extraMavenRepos": [
+              "https://devrepo.kakao.com/nexus/content/groups/public/"
+            ]
+          }
+        }
+      ]
     ],
     "experiments": {
-      "typedRoutes": true,
-      "reactCompiler": true
+      "typedRoutes": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "b3188238-c5ed-4f70-b369-37cac0e2fe6c"
+      }
     }
   }
 }
