@@ -1,17 +1,20 @@
 import { customAlert } from '@/components/ui/custom-alert';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React from 'react';
+import React, { useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
   Pressable,
   ScrollView,
+  StyleSheet,
   Text,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 
+import { ActionMenu, type ActionMenuItem } from '@/components/ui/action-menu';
+import { ScreenHeader } from '@/components/ui/screen-header';
 import { resolveColorHex, resolveColorLabel } from '@/constants/climb-colors';
 import { useThemeColors } from '@/lib/theme';
 import {
@@ -32,6 +35,25 @@ function formatLongDate(iso: string): string {
   return `${y}.${m}.${day} (${w})`;
 }
 
+const MEMBERSHIP_TYPE_LABEL: Record<'monthly' | 'period' | 'passes' | 'single', string> = {
+  monthly: '월간',
+  period: '기간',
+  passes: '다회권',
+  single: '1회권',
+};
+
+function membershipLabel(m: {
+  membership_type: 'monthly' | 'period' | 'passes' | 'single';
+  total_passes: number | null;
+  used_passes: number;
+}): string {
+  const base = MEMBERSHIP_TYPE_LABEL[m.membership_type];
+  if (m.membership_type === 'passes' && m.total_passes != null) {
+    return `${base} · ${m.used_passes}/${m.total_passes} 사용`;
+  }
+  return base;
+}
+
 function formatDuration(min: number): string {
   if (min < 60) return `${min}분`;
   if (min % 60 === 0) return `${min / 60}시간`;
@@ -50,8 +72,10 @@ export default function SessionDetailScreen() {
 
   const c = useThemeColors();  const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { data, isLoading, error } = useSessionDetail(id);
   const deleteSession = useDeleteSession();
+  const [menuOpen, setMenuOpen] = useState(false);
 
   function handleDelete() {
     if (!id || deleteSession.isPending) return;
@@ -114,97 +138,166 @@ export default function SessionDetailScreen() {
   // mixed 는 아직 한 폼에서 못 다뤄서 제외. boulder/lead/empty 만 수정 가능.
   const canEdit = data.discipline !== 'mixed';
 
+  const menuItems: ActionMenuItem[] = [
+    ...(canEdit ? [{
+      icon: 'edit-3' as const, label: '수정',
+      onPress: () => router.push({ pathname: '/session/[id]/edit', params: { id: id! } }),
+    }] : []),
+    {
+      icon: 'trash-2' as const, label: '삭제', tone: 'danger' as const,
+      loading: deleteSession.isPending,
+      onPress: handleDelete,
+    },
+  ];
+
   return (
-    <SafeAreaView className="flex-1 bg-background-card" edges={['top', 'bottom']}>
-      <View className="flex-row items-center justify-between px-4 py-[14px] bg-background-card border-b border-border-subtle">
-        <Pressable onPress={() => router.back()} className="w-10 h-10 rounded-xl items-center justify-center -ml-2 active:opacity-60" hitSlop={8}>
-          <Feather name="arrow-left" size={24} color={c.text.primary} />
-        </Pressable>
-        <Text className="text-text-primary text-[18px] font-extrabold tracking-[-0.4px]">기록 상세</Text>
-        <View className="flex-row gap-1">
+    <SafeAreaView className="flex-1 bg-background-card" edges={['left', 'right']}>
+      <ScreenHeader
+        title="기록 상세"
+        onBack={() => router.back()}
+        rightActions={[{ icon: 'more-vertical', onPress: () => setMenuOpen(true) }]}
+      />
+      <ActionMenu
+        visible={menuOpen}
+        onClose={() => setMenuOpen(false)}
+        items={menuItems}
+      />
+
+      <ScrollView
+        className="flex-1 bg-background-primary"
+        contentContainerClassName="p-5 gap-6"
+        contentContainerStyle={{ paddingBottom: insets.bottom + 12 }}
+        contentInsetAdjustmentBehavior="never"
+        automaticallyAdjustContentInsets={false}
+      >
+        <Text className="text-text-primary text-3xl font-extrabold tracking-tight">
+          {formatLongDate(data.session_date)}
+        </Text>
+
+        {data.gym && (
           <Pressable
             onPress={() =>
-              router.push({
-                pathname: '/session/[id]/share',
-                params: { id: id! },
-              })
+              router.push({ pathname: '/gym/[id]', params: { id: data.gym!.id } })
             }
-            className="w-10 h-10 rounded-xl items-center justify-center active:opacity-60"
-            hitSlop={8}
           >
-            <Feather name="share" size={20} color={c.text.tertiary} />
-          </Pressable>
-          {canEdit && (
-            <Pressable
-              onPress={() =>
-                router.push({ pathname: '/session/[id]/edit', params: { id: id! } })
-              }
-              className="w-10 h-10 rounded-xl items-center justify-center active:opacity-60"
-              hitSlop={8}
-            >
-              <Feather name="edit-3" size={20} color={c.text.tertiary} />
-            </Pressable>
-          )}
-          <Pressable
-            onPress={handleDelete}
-            disabled={deleteSession.isPending}
-            className="w-10 h-10 rounded-xl items-center justify-center active:opacity-60"
-            hitSlop={8}
-          >
-            {deleteSession.isPending ? (
-              <ActivityIndicator size="small" />
-            ) : (
-              <Feather name="trash-2" size={20} color={c.status.danger} />
+            {({ pressed }) => (
+              <View
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  backgroundColor: c.bg.card,
+                  borderWidth: StyleSheet.hairlineWidth,
+                  borderColor: c.border.subtle,
+                  borderRadius: 14,
+                  paddingVertical: 14,
+                  paddingHorizontal: 14,
+                  opacity: pressed ? 0.7 : 1,
+                }}
+              >
+                <View
+                  style={{
+                    width: 40, height: 40, borderRadius: 12,
+                    backgroundColor: c.brand.primaryLight,
+                    alignItems: 'center', justifyContent: 'center',
+                    marginRight: 12,
+                  }}
+                >
+                  <Feather name="map-pin" size={18} color={c.brand.primaryDeep} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text
+                    style={{ color: c.text.tertiary, fontSize: 11, fontWeight: '900', letterSpacing: 0.3 }}
+                  >
+                    오늘 등반한 곳
+                  </Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'baseline', flexWrap: 'wrap', marginTop: 2 }}>
+                    <Text style={{ color: c.text.primary, fontSize: 16, fontWeight: '900', letterSpacing: -0.3 }}>
+                      {data.gym!.name}
+                    </Text>
+                    {data.gym!.branch ? (
+                      <Text style={{ color: c.brand.primary, fontSize: 13, fontWeight: '800', marginLeft: 6 }}>
+                        {data.gym!.branch}
+                      </Text>
+                    ) : null}
+                  </View>
+                </View>
+                <Feather name="chevron-right" size={18} color={c.text.muted} />
+              </View>
             )}
           </Pressable>
-        </View>
-      </View>
+        )}
 
-      <ScrollView className="flex-1 bg-background-primary" contentContainerClassName="p-5 gap-6">
-        <View className="gap-2">
-          <Text className="text-text-primary text-3xl font-extrabold tracking-tight">
-            {formatLongDate(data.session_date)}
-          </Text>
-
-          {data.gym && (
-            <Pressable
-              onPress={() =>
-                router.push({ pathname: '/gym/[id]', params: { id: data.gym!.id } })
-              }
-              className="flex-row items-baseline gap-2 flex-wrap mt-1 active:opacity-60"
-              hitSlop={4}
+        {data.membership && (
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              padding: 14,
+              borderRadius: 14,
+              backgroundColor: c.brand.primaryLight,
+              borderWidth: StyleSheet.hairlineWidth,
+              borderColor: c.brand.primary + '40',
+            }}
+          >
+            <View
+              style={{
+                width: 38, height: 38, borderRadius: 12,
+                backgroundColor: c.brand.primary,
+                alignItems: 'center', justifyContent: 'center',
+                marginRight: 12,
+              }}
             >
-              <Text className="text-lg font-bold text-text-primary">
-                {data.gym.name}
+              <Feather name="credit-card" size={17} color={c.brand.onPrimary} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 11, fontWeight: '900', color: c.brand.primaryDeep, letterSpacing: 0.3 }}>
+                사용한 회원권
               </Text>
-              {data.gym.branch && (
-                <Text className="text-sm font-semibold text-brand-primary">
-                  {data.gym.branch}
-                </Text>
-              )}
-              <Feather name="chevron-right" size={14} color={c.text.tertiary} />
-            </Pressable>
-          )}
-        </View>
+              <Text style={{ fontSize: 13.5, fontWeight: '900', color: c.text.primary, marginTop: 2, letterSpacing: -0.2 }}>
+                {membershipLabel(data.membership)}
+              </Text>
+            </View>
+          </View>
+        )}
 
-        <View className="flex-row flex-wrap gap-4 bg-background-secondary p-4 rounded-2xl border border-border-subtle">
-          {data.duration_min != null && (
-            <View className="flex-row items-center gap-1.5">
-              <Feather name="clock" size={16} color={c.text.tertiary} />
-              <Text className="text-text-secondary text-sm font-medium">
-                {formatDuration(data.duration_min)}
-              </Text>
-            </View>
-          )}
-          {cond && (
-            <View className="flex-row items-center gap-1.5">
-              <Feather name={cond.icon} size={16} color={cond.color} />
-              <Text className="text-text-secondary text-sm font-medium">
-                컨디션 {cond.label}
-              </Text>
-            </View>
-          )}
-        </View>
+        {data.duration_min == null && cond == null ? (
+          canEdit ? (
+            <Pressable
+              onPress={() => router.push({ pathname: '/session/[id]/edit', params: { id: id! } })}
+              className="flex-row items-center justify-between bg-background-secondary border border-dashed border-border-strong p-4 rounded-2xl active:opacity-70"
+            >
+              <View className="flex-row items-center gap-2 flex-1">
+                <Feather name="clock" size={15} color={c.text.muted} />
+                <Text className="text-text-tertiary text-sm font-semibold">
+                  시간·컨디션이 비어 있어요
+                </Text>
+              </View>
+              <View className="flex-row items-center gap-1">
+                <Text className="text-brand-primary text-xs font-extrabold">입력하러 가기</Text>
+                <Feather name="chevron-right" size={14} color={c.brand.primary} />
+              </View>
+            </Pressable>
+          ) : null
+        ) : (
+          <View className="flex-row flex-wrap gap-4 bg-background-secondary p-4 rounded-2xl border border-border-subtle">
+            {data.duration_min != null && (
+              <View className="flex-row items-center gap-1.5">
+                <Feather name="clock" size={16} color={c.text.tertiary} />
+                <Text className="text-text-secondary text-sm font-medium">
+                  {formatDuration(data.duration_min)}
+                </Text>
+              </View>
+            )}
+            {cond && (
+              <View className="flex-row items-center gap-1.5">
+                <Feather name={cond.icon} size={16} color={cond.color} />
+                <Text className="text-text-secondary text-sm font-medium">
+                  컨디션 {cond.label}
+                </Text>
+              </View>
+            )}
+          </View>
+        )}
 
         {/* 볼더링 색깔 섹션 */}
         {(data.discipline === 'boulder' || data.discipline === 'mixed') && visibleColors.length > 0 && (
@@ -252,6 +345,68 @@ export default function SessionDetailScreen() {
             <Text className="text-text-primary text-sm leading-6">{data.notes}</Text>
           </View>
         )}
+
+        {/* 공유 썸네일 CTA */}
+        <Pressable
+          onPress={() => router.push({ pathname: '/session/[id]/share', params: { id: id! } })}
+        >
+          {({ pressed }) => (
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                paddingVertical: 16,
+                paddingHorizontal: 18,
+                borderRadius: 18,
+                backgroundColor: c.brand.primary,
+                opacity: pressed ? 0.92 : 1,
+                shadowColor: c.brand.primary,
+                shadowOpacity: 0.35,
+                shadowRadius: 14,
+                shadowOffset: { width: 0, height: 6 },
+                elevation: 6,
+              }}
+            >
+              <View
+                style={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: 12,
+                  backgroundColor: 'rgba(255,255,255,0.2)',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  marginRight: 12,
+                }}
+              >
+                <Feather name="share-2" size={18} color={c.brand.onPrimary} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text
+                  style={{
+                    color: c.brand.onPrimary,
+                    fontSize: 15,
+                    fontWeight: '900',
+                    letterSpacing: -0.3,
+                  }}
+                >
+                  공유 썸네일 만들기
+                </Text>
+                <Text
+                  style={{
+                    color: c.brand.onPrimary,
+                    fontSize: 11.5,
+                    fontWeight: '700',
+                    marginTop: 2,
+                    opacity: 0.85,
+                  }}
+                >
+                  오늘의 기록을 카드 이미지로 저장·공유
+                </Text>
+              </View>
+              <Feather name="arrow-right" size={18} color={c.brand.onPrimary} />
+            </View>
+          )}
+        </Pressable>
       </ScrollView>
     </SafeAreaView>
   );

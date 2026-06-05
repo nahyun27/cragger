@@ -20,11 +20,24 @@ export async function checkBadgesAndNotify(): Promise<void> {
     if (!user) return;
     const { newlyEarned } = await syncBadges(user.id);
     if (newlyEarned.length === 0) return;
+
+    // 1) 즉시 토스트 (현재 화면에 보임)
     const msg = newlyEarned.map((b) => `${b.icon}  ${b.name}`).join('\n');
     customAlert(
       newlyEarned.length === 1 ? '🏅 새 뱃지 획득!' : `🏅 새 뱃지 ${newlyEarned.length}개!`,
       msg,
     );
+
+    // 2) 알림 센터에도 누적 — 뒤에 다시 확인 가능. link 는 마이페이지(뱃지 섹션).
+    //    pref 가 꺼져 있어도 일단 insert 한다 (받은 뱃지 history 성격).
+    const rows = newlyEarned.map((b) => ({
+      user_id: user.id,
+      type: 'badge_earned',
+      title: `🏅 새 뱃지 — ${b.name}`,
+      body: `${b.name} 뱃지를 획득했어요! (${b.hint})`,
+      link: '/(tabs)/profile',
+    }));
+    await supabase.from('notifications').insert(rows);
   } catch {
     // silent
   } finally {

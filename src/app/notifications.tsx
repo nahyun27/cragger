@@ -2,7 +2,9 @@ import { useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { useMemo } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { EmptyState } from '@/components/ui/empty-state';
+import { ScreenHeader } from '@/components/ui/screen-header';
 
 import {
   useMarkAllRead,
@@ -39,6 +41,7 @@ function formatRelative(iso: string): string {
 
 export default function NotificationsScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const c = useThemeColors();
   const s = useMemo(() => makeStyles(c), [c]);
   const { data, isLoading, error } = useNotifications();
@@ -48,17 +51,11 @@ export default function NotificationsScreen() {
   const hasUnread = (data ?? []).some((n) => !n.read_at);
 
   return (
-    <SafeAreaView style={s.container} edges={['top']}>
-      <View style={s.header}>
-        <Pressable onPress={() => router.back()} hitSlop={8}>
-          {({ pressed }) => (
-            <View style={[s.headerBtn, pressed && { opacity: 0.6 }]}>
-              <Feather name="arrow-left" size={22} color={c.text.primary} />
-            </View>
-          )}
-        </Pressable>
-        <Text style={s.headerTitle}>알림</Text>
-        {hasUnread ? (
+    <SafeAreaView style={s.container} edges={['left', 'right']}>
+      <ScreenHeader
+        title="알림"
+        onBack={() => router.back()}
+        rightSlot={hasUnread ? (
           <Pressable onPress={() => markAll.mutate()} hitSlop={8}>
             {({ pressed }) => (
               <View style={[s.allReadBtn, pressed && { opacity: 0.6 }]}>
@@ -66,10 +63,8 @@ export default function NotificationsScreen() {
               </View>
             )}
           </Pressable>
-        ) : (
-          <View style={{ width: 38 }} />
-        )}
-      </View>
+        ) : undefined}
+      />
 
       {isLoading && (
         <View style={s.center}>
@@ -84,15 +79,20 @@ export default function NotificationsScreen() {
       )}
 
       {data && data.length === 0 && (
-        <View style={s.center}>
-          <Feather name="bell-off" size={32} color={c.border.strong} />
-          <Text style={s.emptyTitle}>알림이 없어요</Text>
-          <Text style={s.emptySubtitle}>크루 공지가 올라오면 여기로 알려드릴게요</Text>
-        </View>
+        <EmptyState
+          icon="bell-off"
+          tone="muted"
+          title="알림이 없어요"
+          description="크루 공지가 올라오면 여기로 알려드릴게요"
+        />
       )}
 
       {data && data.length > 0 && (
-        <ScrollView contentContainerStyle={s.list}>
+        <ScrollView
+          contentContainerStyle={[s.list, { paddingBottom: insets.bottom + 12 }]}
+          contentInsetAdjustmentBehavior="never"
+          automaticallyAdjustContentInsets={false}
+        >
           {data.map((n) => (
             <NotificationRow
               key={n.id}
@@ -150,6 +150,9 @@ function makeStyles(c: ThemeColors) {
       justifyContent: 'space-between',
       paddingHorizontal: 16,
       paddingVertical: 8,
+      backgroundColor: c.bg.card,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: c.border.subtle,
     },
     headerBtn: {
       width: 38,

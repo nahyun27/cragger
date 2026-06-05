@@ -30,9 +30,12 @@ export type GymChanges = {
   has_locker?: boolean;
   has_parking?: boolean;
   logo_url?: string;
+  logo_bg_hex?: string | null;  // '#000000' | '#ffffff' | 기타 hex | null = 기본 카드 배경
   // 색깔 구성 — 승인 시 gym_color_schemes 에 INSERT/DELETE
   add_colors?: string[];
   remove_colors?: string[];
+  // 색깔 순서 — 승인 시 gym_color_schemes.order_index 갱신 (배열 인덱스 그대로 사용)
+  color_order?: string[];
 };
 
 export type GymSubmissionGymMini = {
@@ -125,6 +128,23 @@ export function useSubmitGymInfo() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['gym-submissions'] });
+    },
+  });
+}
+
+// ── 단일 제보 (내 제보 또는 admin) ───────────────────────────
+export function useGymSubmission(submissionId: string | undefined) {
+  return useQuery({
+    queryKey: ['gym-submissions', 'detail', submissionId] as const,
+    enabled: !!submissionId,
+    queryFn: async (): Promise<GymSubmission> => {
+      const { data, error } = await supabase
+        .from('gym_submissions')
+        .select(SUBMISSION_COLS)
+        .eq('id', submissionId!)
+        .single();
+      if (error) throw new Error(error.message);
+      return data as unknown as GymSubmission;
     },
   });
 }

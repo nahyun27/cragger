@@ -1,6 +1,5 @@
 import React, { forwardRef } from 'react';
 import { Image, Text, View } from 'react-native';
-import { Feather } from '@expo/vector-icons';
 
 import { resolveColorHex } from '@/constants/climb-colors';
 import type { SessionDetail } from '@/hooks/use-session';
@@ -13,12 +12,6 @@ function formatDate(iso: string): string {
   const m = String(d.getMonth() + 1).padStart(2, '0');
   const day = String(d.getDate()).padStart(2, '0');
   return `${y}.${m}.${day} (${KO_WEEKDAYS[d.getDay()]})`;
-}
-
-function formatDuration(min: number): string {
-  if (min < 60) return `${min}분`;
-  if (min % 60 === 0) return `${min / 60}시간`;
-  return `${(min / 60).toFixed(1)}시간`;
 }
 
 type Props = {
@@ -96,6 +89,12 @@ export const SessionShareCard = forwardRef<View, Props>(
       ? `${session.gym.name}${session.gym.branch ? ` ${session.gym.branch}` : ''}`
       : '암장 미선택';
 
+    // 암장 로고 — 있으면 카드에 워터마크처럼 노출.
+    // 사진/투명 배경(영상 위) → 우측 상단 작게, 솔리드 색깔 → 가운데 하단 부드럽게.
+    const gymLogoUrl = session.gym?.logo_url ?? null;
+    const hasOverlay = backgroundImageUri != null || backgroundColor === 'transparent';
+    const logoPosition: 'topRight' | 'centerBottom' = hasOverlay ? 'topRight' : 'centerBottom';
+
     return (
       <View
         ref={ref}
@@ -128,6 +127,57 @@ export const SessionShareCard = forwardRef<View, Props>(
           />
         )}
 
+        {/* Gym logo — 우측 상단 (사진/투명 배경일 때) */}
+        {gymLogoUrl && logoPosition === 'topRight' && (
+          <View
+            style={{
+              position: 'absolute',
+              top: size * 0.05,
+              right: size * 0.05,
+              width: size * 0.13,
+              height: size * 0.13,
+              borderRadius: size * 0.065,
+              backgroundColor: 'rgba(255,255,255,0.95)',
+              alignItems: 'center',
+              justifyContent: 'center',
+              overflow: 'hidden',
+              zIndex: 2,
+              shadowColor: '#000',
+              shadowOpacity: 0.18,
+              shadowRadius: 6,
+              shadowOffset: { width: 0, height: 2 },
+              elevation: 4,
+            }}
+          >
+            <Image
+              source={{ uri: gymLogoUrl }}
+              style={{ width: '78%', height: '78%' }}
+              resizeMode="contain"
+            />
+          </View>
+        )}
+
+        {/* Gym logo — 가운데 하단 워터마크 (솔리드 배경일 때) */}
+        {gymLogoUrl && logoPosition === 'centerBottom' && (
+          <View
+            style={{
+              position: 'absolute',
+              bottom: size * 0.06,
+              left: 0,
+              right: 0,
+              alignItems: 'center',
+              opacity: 0.4,
+              zIndex: 1,
+            }}
+          >
+            <Image
+              source={{ uri: gymLogoUrl }}
+              style={{ width: size * 0.18, height: size * 0.09 }}
+              resizeMode="contain"
+            />
+          </View>
+        )}
+
         {/* Top Header */}
         <View style={{ zIndex: 1 }}>
           <Text
@@ -154,93 +204,99 @@ export const SessionShareCard = forwardRef<View, Props>(
           </Text>
         </View>
 
-        {/* Center Content based on selected Layout Type */}
+        {/* Layout content — bottom-anchored */}
         <View
           style={{
-            flex: 1,
-            justifyContent: 'center',
             alignItems: 'center',
             zIndex: 1,
-            marginVertical: size * 0.04,
+            marginTop: size * 0.04,
           }}
         >
           {layoutType === 'grid' && isLead && (
-            <View
-              style={{
-                flexDirection: 'row',
-                flexWrap: 'wrap',
-                justifyContent: 'center',
-                alignItems: 'center',
-                gap: 8,
-                paddingHorizontal: 16,
-              }}
-            >
+            <View style={{ width: '100%', gap: size * 0.018, paddingHorizontal: size * 0.04 }}>
               {leadSorted.length === 0 ? (
-                <Text style={{ color: textMutedColor, fontSize: size * 0.04, fontWeight: '500' }}>
+                <Text style={{ color: textMutedColor, fontSize: size * 0.04, fontWeight: '500', textAlign: 'center' }}>
                   완등 기록 없음
                 </Text>
               ) : (
-                leadSorted.map((r) => (
-                  <View
-                    key={r.grade}
-                    style={{
-                      paddingHorizontal: size * 0.04,
-                      paddingVertical: size * 0.022,
-                      backgroundColor: itemBg,
-                      borderWidth: 1.5,
-                      borderColor: itemBorder,
-                      borderRadius: 14,
-                      alignItems: 'center',
-                    }}
-                  >
-                    <Text style={{ color: textColor, fontSize: size * 0.05, fontWeight: '900', letterSpacing: -0.3 }}>
-                      {r.grade}
-                    </Text>
-                    <Text style={{ color: textMutedColor, fontSize: size * 0.025, fontWeight: '700', marginTop: 1 }}>
-                      ×{r.sends}
-                    </Text>
-                  </View>
-                ))
+                leadSorted.map((r) => {
+                  const chipSize = size * 0.08;
+                  const overlap = chipSize * 0.35;
+                  return (
+                    <View key={r.grade} style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap' }}>
+                      <View
+                        style={{
+                          minWidth: size * 0.13,
+                          paddingHorizontal: size * 0.025,
+                          paddingVertical: size * 0.012,
+                          borderRadius: chipSize / 2,
+                          backgroundColor: '#06b6d4',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          marginRight: size * 0.025,
+                        }}
+                      >
+                        <Text
+                          style={{
+                            color: '#ffffff',
+                            fontSize: size * 0.034,
+                            fontWeight: '900',
+                            letterSpacing: -0.3,
+                          }}
+                        >
+                          {r.grade}
+                        </Text>
+                      </View>
+                      {Array.from({ length: r.sends }).map((_, i) => (
+                        <View
+                          key={i}
+                          style={{
+                            width: chipSize,
+                            height: chipSize,
+                            borderRadius: chipSize / 2,
+                            backgroundColor: '#06b6d4',
+                            borderWidth: 2,
+                            borderColor: backgroundColor,
+                            marginLeft: i === 0 ? 0 : -overlap,
+                          }}
+                        />
+                      ))}
+                    </View>
+                  );
+                })
               )}
             </View>
           )}
 
           {layoutType === 'grid' && !isLead && (
-            <View
-              style={{
-                flexDirection: 'row',
-                flexWrap: 'wrap',
-                justifyContent: 'center',
-                alignItems: 'center',
-                gap: Math.max(6, dotSize * 0.16),
-                paddingHorizontal: 12,
-              }}
-            >
-              {dots.length === 0 ? (
-                <Text style={{ color: textMutedColor, fontSize: size * 0.04, fontWeight: '500' }}>
+            <View style={{ width: '100%', gap: size * 0.018, paddingHorizontal: size * 0.04 }}>
+              {sends.length === 0 ? (
+                <Text style={{ color: textMutedColor, fontSize: size * 0.04, fontWeight: '500', textAlign: 'center' }}>
                   완등 기록 없음
                 </Text>
               ) : (
-                dots.map((d) => {
-                  const hex = resolveColorHex(d.color);
-                  const needsBorder = d.color === 'white' || d.color === 'yellow';
+                sends.map((cc) => {
+                  const hex = resolveColorHex(cc.color);
+                  const needsBorder = cc.color === 'white' || cc.color === 'yellow';
+                  const chipSize = size * 0.08;
+                  const overlap = chipSize * 0.35;
                   return (
-                    <View
-                      key={d.key}
-                      style={{
-                        width: dotSize,
-                        height: dotSize,
-                        borderRadius: dotSize / 2,
-                        backgroundColor: hex,
-                        borderWidth: needsBorder ? 1 : 0,
-                        borderColor: '#cbd5e1',
-                        shadowColor: hex,
-                        shadowOpacity: 0.2,
-                        shadowRadius: 2,
-                        shadowOffset: { width: 0, height: 1 },
-                        elevation: 1,
-                      }}
-                    />
+                    <View key={cc.color} style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap' }}>
+                      {Array.from({ length: cc.sends }).map((_, i) => (
+                        <View
+                          key={i}
+                          style={{
+                            width: chipSize,
+                            height: chipSize,
+                            borderRadius: chipSize / 2,
+                            backgroundColor: hex,
+                            borderWidth: 2,
+                            borderColor: needsBorder ? (isDarkBg ? '#1e293b' : '#cbd5e1') : backgroundColor,
+                            marginLeft: i === 0 ? 0 : -overlap,
+                          }}
+                        />
+                      ))}
+                    </View>
                   );
                 })
               )}
@@ -248,9 +304,9 @@ export const SessionShareCard = forwardRef<View, Props>(
           )}
 
           {layoutType === 'list' && isLead && (
-            <View style={{ width: '100%', gap: 6, paddingHorizontal: 10 }}>
+            <View style={{ gap: size * 0.012, alignSelf: 'stretch', alignItems: 'flex-start', paddingHorizontal: size * 0.04 }}>
               {leadSorted.length === 0 ? (
-                <Text style={{ color: textMutedColor, fontSize: size * 0.04, fontWeight: '500', textAlign: 'center' }}>
+                <Text style={{ color: textMutedColor, fontSize: size * 0.04, fontWeight: '500' }}>
                   완등 기록 없음
                 </Text>
               ) : (
@@ -260,20 +316,19 @@ export const SessionShareCard = forwardRef<View, Props>(
                     style={{
                       flexDirection: 'row',
                       alignItems: 'center',
-                      justifyContent: 'space-between',
-                      paddingVertical: size * 0.024,
-                      paddingHorizontal: size * 0.035,
+                      paddingVertical: size * 0.014,
+                      paddingHorizontal: size * 0.025,
                       backgroundColor: itemBg,
                       borderWidth: 1,
                       borderColor: itemBorder,
-                      borderRadius: 16,
+                      borderRadius: size * 0.04,
                     }}
                   >
-                    <Text style={{ color: textColor, fontWeight: '900', fontSize: size * 0.05, letterSpacing: -0.3 }}>
+                    <Text style={{ color: textColor, fontWeight: '900', fontSize: size * 0.04, letterSpacing: -0.3, marginRight: size * 0.025 }}>
                       {r.grade}
                     </Text>
-                    <Text style={{ color: textColor, fontWeight: '800', fontSize: size * 0.038 }}>
-                      {r.sends} 완등
+                    <Text style={{ color: textMutedColor, fontWeight: '800', fontSize: size * 0.032 }}>
+                      ×{r.sends}
                     </Text>
                   </View>
                 ))
@@ -282,9 +337,9 @@ export const SessionShareCard = forwardRef<View, Props>(
           )}
 
           {layoutType === 'list' && !isLead && (
-            <View style={{ width: '100%', gap: 6, paddingHorizontal: 10 }}>
+            <View style={{ gap: size * 0.012, alignSelf: 'stretch', alignItems: 'flex-start', paddingHorizontal: size * 0.04 }}>
               {sends.length === 0 ? (
-                <Text style={{ color: textMutedColor, fontSize: size * 0.04, fontWeight: '500', textAlign: 'center' }}>
+                <Text style={{ color: textMutedColor, fontSize: size * 0.04, fontWeight: '500' }}>
                   완등 기록 없음
                 </Text>
               ) : (
@@ -296,32 +351,30 @@ export const SessionShareCard = forwardRef<View, Props>(
                       style={{
                         flexDirection: 'row',
                         alignItems: 'center',
-                        justifyContent: 'space-between',
-                        paddingVertical: size * 0.024,
-                        paddingHorizontal: size * 0.035,
+                        paddingVertical: size * 0.014,
+                        paddingHorizontal: size * 0.025,
                         backgroundColor: itemBg,
                         borderWidth: 1,
                         borderColor: itemBorder,
-                        borderRadius: 16,
+                        borderRadius: size * 0.04,
                       }}
                     >
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                        <View
-                          style={{
-                            width: 14,
-                            height: 14,
-                            borderRadius: 7,
-                            backgroundColor: hex,
-                            borderWidth: c.color === 'white' ? 1 : 0,
-                            borderColor: '#cbd5e1',
-                          }}
-                        />
-                        <Text style={{ color: textColor, fontWeight: '700', fontSize: size * 0.038 }}>
-                          {c.color.toUpperCase()}
-                        </Text>
-                      </View>
-                      <Text style={{ color: textColor, fontWeight: '800', fontSize: size * 0.038 }}>
-                        {c.sends} 완등
+                      <View
+                        style={{
+                          width: size * 0.034,
+                          height: size * 0.034,
+                          borderRadius: (size * 0.034) / 2,
+                          backgroundColor: hex,
+                          borderWidth: c.color === 'white' ? 1 : 0,
+                          borderColor: '#cbd5e1',
+                          marginRight: size * 0.02,
+                        }}
+                      />
+                      <Text style={{ color: textColor, fontWeight: '800', fontSize: size * 0.034, marginRight: size * 0.02 }}>
+                        {c.color.toUpperCase()}
+                      </Text>
+                      <Text style={{ color: textMutedColor, fontWeight: '800', fontSize: size * 0.032 }}>
+                        ×{c.sends}
                       </Text>
                     </View>
                   );
@@ -331,222 +384,104 @@ export const SessionShareCard = forwardRef<View, Props>(
           )}
 
           {layoutType === 'stats' && isLead && (
-            <View style={{ alignItems: 'center', justifyContent: 'center', gap: size * 0.05 }}>
-              {/* Hero — 최고 등급 + 완등 수 */}
-              <View
-                style={{
-                  paddingHorizontal: size * 0.08,
-                  paddingVertical: size * 0.045,
-                  borderRadius: size * 0.06,
-                  borderWidth: 4,
-                  borderColor: '#06b6d4',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  backgroundColor: itemBg,
-                  shadowColor: '#06b6d4',
-                  shadowOpacity: 0.1,
-                  shadowRadius: 8,
-                  elevation: 2,
-                  minWidth: size * 0.5,
-                }}
-              >
-                <Text style={{ color: textMutedColor, fontSize: size * 0.028, fontWeight: '700', letterSpacing: 1 }}>
-                  TOP GRADE
+            <View style={{ gap: size * 0.025, alignSelf: 'stretch', alignItems: 'flex-start', paddingHorizontal: size * 0.04 }}>
+              {leadSorted.length === 0 ? (
+                <Text style={{ color: textMutedColor, fontSize: size * 0.04, fontWeight: '500' }}>
+                  완등 기록 없음
                 </Text>
-                <Text
-                  style={{
-                    color: '#06b6d4',
-                    fontSize: size * 0.14,
-                    fontWeight: '900',
-                    letterSpacing: -1,
-                    marginTop: 2,
-                  }}
-                >
-                  {topGrade ?? '—'}
-                </Text>
-                <Text style={{ color: textMutedColor, fontSize: size * 0.032, fontWeight: '700', marginTop: 4 }}>
-                  완등 {totalSends}
-                </Text>
-              </View>
-
-              {leadSorted.length > 0 && (
-                <View
-                  style={{
-                    flexDirection: 'row',
-                    flexWrap: 'wrap',
-                    justifyContent: 'center',
-                    gap: 6,
-                    paddingHorizontal: 20,
-                  }}
-                >
-                  {leadSorted.map((r) => (
+              ) : (
+                leadSorted.map((r) => {
+                  const dot = size * 0.08;
+                  return (
                     <View
                       key={r.grade}
-                      style={{
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                        gap: 4,
-                        paddingVertical: 4,
-                        paddingHorizontal: 8,
-                        backgroundColor: itemBg,
-                        borderWidth: 1,
-                        borderColor: itemBorder,
-                        borderRadius: 10,
-                      }}
+                      style={{ flexDirection: 'row', alignItems: 'center' }}
                     >
-                      <Text style={{ color: textColor, fontSize: size * 0.032, fontWeight: '900' }}>
-                        {r.grade}
-                      </Text>
-                      <Text style={{ color: textMutedColor, fontSize: size * 0.028, fontWeight: '700' }}>
-                        ×{r.sends}
+                      <View
+                        style={{
+                          minWidth: dot,
+                          height: dot,
+                          paddingHorizontal: size * 0.022,
+                          borderRadius: dot / 2,
+                          backgroundColor: '#06b6d4',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          marginRight: size * 0.04,
+                        }}
+                      >
+                        <Text
+                          style={{
+                            color: '#ffffff',
+                            fontSize: size * 0.038,
+                            fontWeight: '900',
+                            letterSpacing: -0.3,
+                          }}
+                        >
+                          {r.grade}
+                        </Text>
+                      </View>
+                      <Text
+                        style={{
+                          color: textColor,
+                          fontSize: size * 0.072,
+                          fontWeight: '900',
+                          letterSpacing: -1,
+                        }}
+                      >
+                        {r.sends}
                       </Text>
                     </View>
-                  ))}
-                </View>
+                  );
+                })
               )}
             </View>
           )}
 
           {layoutType === 'stats' && !isLead && (
-            <View style={{ alignItems: 'center', justifyContent: 'center', gap: size * 0.05 }}>
-              <View
-                style={{
-                  width: size * 0.36,
-                  height: size * 0.36,
-                  borderRadius: (size * 0.36) / 2,
-                  borderWidth: 4,
-                  borderColor: '#06b6d4',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  backgroundColor: itemBg,
-                  shadowColor: '#06b6d4',
-                  shadowOpacity: 0.1,
-                  shadowRadius: 8,
-                  elevation: 2,
-                }}
-              >
-                <Text style={{ color: '#06b6d4', fontSize: size * 0.11, fontWeight: '900' }}>
-                  {totalSends}
+            <View style={{ gap: size * 0.025, alignSelf: 'stretch', alignItems: 'flex-start', paddingHorizontal: size * 0.04 }}>
+              {sends.length === 0 ? (
+                <Text style={{ color: textMutedColor, fontSize: size * 0.04, fontWeight: '500' }}>
+                  완등 기록 없음
                 </Text>
-                <Text style={{ color: textMutedColor, fontSize: size * 0.028, fontWeight: '700', letterSpacing: 1 }}>
-                  TOTAL SENDS
-                </Text>
-              </View>
-
-              {sends.length > 0 && (
-                <View
-                  style={{
-                    flexDirection: 'row',
-                    flexWrap: 'wrap',
-                    justifyContent: 'center',
-                    gap: 6,
-                    paddingHorizontal: 20,
-                  }}
-                >
-                  {sends.map((c) => (
+              ) : (
+                sends.map((cc) => {
+                  const hex = resolveColorHex(cc.color);
+                  const needsBorder = cc.color === 'white' || cc.color === 'yellow';
+                  const dot = size * 0.08;
+                  return (
                     <View
-                      key={c.color}
-                      style={{
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                        gap: 5,
-                        paddingVertical: 4,
-                        paddingHorizontal: 8,
-                        backgroundColor: itemBg,
-                        borderWidth: 1,
-                        borderColor: itemBorder,
-                        borderRadius: 10,
-                      }}
+                      key={cc.color}
+                      style={{ flexDirection: 'row', alignItems: 'center' }}
                     >
                       <View
                         style={{
-                          width: 8,
-                          height: 8,
-                          borderRadius: 4,
-                          backgroundColor: resolveColorHex(c.color),
-                          borderWidth: c.color === 'white' ? 0.5 : 0,
+                          width: dot,
+                          height: dot,
+                          borderRadius: dot / 2,
+                          backgroundColor: hex,
+                          borderWidth: needsBorder ? 1 : 0,
                           borderColor: '#cbd5e1',
+                          marginRight: size * 0.04,
                         }}
                       />
-                      <Text style={{ color: textColor, fontSize: size * 0.03, fontWeight: '800' }}>
-                        {c.sends}
+                      <Text
+                        style={{
+                          color: textColor,
+                          fontSize: size * 0.072,
+                          fontWeight: '900',
+                          letterSpacing: -1,
+                        }}
+                      >
+                        {cc.sends}
                       </Text>
                     </View>
-                  ))}
-                </View>
+                  );
+                })
               )}
             </View>
           )}
         </View>
 
-        {/* Bottom Metadata & Brand Footer */}
-        <View style={{ zIndex: 1 }}>
-          <View
-            style={{
-              flexDirection: 'row',
-              justifyContent: 'center',
-              alignItems: 'center',
-              backgroundColor: itemBg,
-              borderWidth: 1,
-              borderColor: itemBorder,
-              paddingVertical: size * 0.024,
-              paddingHorizontal: size * 0.04,
-              borderRadius: 14,
-              marginBottom: size * 0.04,
-            }}
-          >
-            <Feather
-              name="check-circle"
-              size={size * 0.038}
-              color="#06b6d4"
-              style={{ marginRight: 6 }}
-            />
-            <Text
-              style={{
-                color: textColor,
-                fontSize: size * 0.035,
-                fontWeight: '700',
-              }}
-            >
-              오늘의 완등 {totalSends}개
-              {session.duration_min != null && ` · ${formatDuration(session.duration_min)}`}
-            </Text>
-          </View>
-
-          <View
-            style={{
-              flexDirection: 'row',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              borderTopWidth: 1,
-              borderColor: textSubtleColor,
-              paddingTop: size * 0.03,
-            }}
-          >
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-              <Feather name="trending-up" size={14} color="#06b6d4" />
-              <Text
-                style={{
-                  color: '#06b6d4',
-                  fontSize: size * 0.036,
-                  fontWeight: '800',
-                  letterSpacing: 0.5,
-                }}
-              >
-                Cragger
-              </Text>
-            </View>
-            <Text
-              style={{
-                color: textMutedColor,
-                fontSize: size * 0.026,
-                fontWeight: '500',
-              }}
-            >
-              cragger.app
-            </Text>
-          </View>
-        </View>
       </View>
     );
   },

@@ -1,17 +1,16 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
-import { GRID_COLORS, type GridColor } from '@/components/climb/color-grid';
+import { type GridColor } from '@/components/climb/color-grid';
 import { useAuth } from '@/lib/auth-context';
 import { supabase } from '@/lib/supabase';
 
-// 8개 표준 색깔 × 사용자의 현재 grade_votes (있으면)
+// 해당 암장에 등록된 색깔 × 사용자의 현재 grade_votes (있으면).
+// 정책: 등록된 색만 노출 — 새 색깔이 필요하면 '정보 제보'에서 추가 (vote.tsx 참고).
 export type VoteableColor = {
   color: GridColor;
   currentVote: string | null; // grade ('V0', 'V3+'…) — null이면 미투표
 };
 
-// 시도 여부 무관하게 8색 다 노출. grade_votes에 들어있는 사용자 행만 가져와서
-// 8색에 매핑. 미투표 색깔은 currentVote=null.
 export function useVoteableColors(gymId: string | undefined) {
   const { session: authSession } = useAuth();
   const userId = authSession?.user.id;
@@ -19,18 +18,29 @@ export function useVoteableColors(gymId: string | undefined) {
     queryKey: ['gyms', gymId, 'voteable-colors', userId] as const,
     enabled: !!gymId && !!userId,
     queryFn: async (): Promise<VoteableColor[]> => {
-      const { data, error } = await supabase
+      // 1) 암장에 등록된 색
+      const { data: schemeRows, error: schemeErr } = await supabase
+        .from('gym_color_schemes')
+        .select('color, order_index')
+        .eq('gym_id', gymId!)
+        .order('order_index', { ascending: true });
+      if (schemeErr) throw new Error(schemeErr.message);
+      const registered = ((schemeRows ?? []) as Array<{ color: string }>).map((r) => r.color);
+
+      // 2) 내 grade_votes
+      const { data: voteRows, error: voteErr } = await supabase
         .from('grade_votes')
         .select('color, grade')
         .eq('user_id', userId!)
         .eq('gym_id', gymId!);
-      if (error) throw new Error(error.message);
+      if (voteErr) throw new Error(voteErr.message);
       const voteMap = new Map<string, string>();
-      for (const r of (data ?? []) as Array<{ color: string; grade: string }>) {
+      for (const r of (voteRows ?? []) as Array<{ color: string; grade: string }>) {
         voteMap.set(r.color, r.grade);
       }
-      return GRID_COLORS.map((c) => ({
-        color: c,
+
+      return registered.map((c) => ({
+        color: c as GridColor,
         currentVote: voteMap.get(c) ?? null,
       }));
     },

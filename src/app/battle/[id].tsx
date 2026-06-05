@@ -9,12 +9,16 @@ import {
   Text,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 
 import { FeaturedBadgeChip } from '@/components/ui/featured-badge-chip';
+import { ScreenHeader } from '@/components/ui/screen-header';
+import { EmptyState } from '@/components/ui/empty-state';
+import { CLIMB_COLOR_HEX, CLIMB_COLOR_LABEL, resolveColorHex, resolveColorLabel } from '@/constants/climb-colors';
 import { useAuth } from '@/lib/auth-context';
 import { useThemeColors } from '@/lib/theme';
+import { useBattleRecording, type ColorCountMap } from '@/hooks/use-battle-recording';
 import {
   effectiveStatus,
   useAcceptBattle,
@@ -27,6 +31,7 @@ import {
   useEndBattle,
   useJoinBattle,
   useLeaveBattle,
+  useMyBattleSends,
   useStartBattle,
   type Battle,
   type BattleScoreEntry,
@@ -54,6 +59,7 @@ export default function BattleDetailScreen() {
   const c = useThemeColors();
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { session: authSession } = useAuth();
   const meId = authSession?.user.id;
   const battleQ = useBattle(id);
@@ -64,6 +70,7 @@ export default function BattleDetailScreen() {
     refetchInterval: status === 'active' ? 5_000 : undefined,
   });
   const participantsQ = useBattleParticipants(id);
+  const mySends = useMyBattleSends(id);
   const join = useJoinBattle();
   const leave = useLeaveBattle();
   const changeTeam = useChangeBattleTeam();
@@ -72,6 +79,11 @@ export default function BattleDetailScreen() {
   const accept = useAcceptBattle();
   const decline = useDeclineBattle();
   const deleteBattle = useDeleteBattle();
+  const recording = useBattleRecording({
+    battleId: battle?.id,
+    gymId: battle?.gym_id,
+    battleDate: battle?.battle_date,
+  });
 
   if (battleQ.isLoading) {
     return (
@@ -98,6 +110,8 @@ export default function BattleDetailScreen() {
   const isEnded = status === 'ended';
   const isScheduled = status === 'scheduled';
   const isDeclined = status === 'declined';
+  // 점수 공개 — 'after_end' 이면 종료 전까지 점수/랭크를 가린다
+  const hideScores = (battle.score_visibility ?? 'live') === 'after_end' && !isEnded;
   const myParticipant = (participantsQ.data ?? []).find((p) => p.user_id === meId);
   const isMeJoined = !!myParticipant;
   const myTeam = myParticipant?.team ?? null;
@@ -168,11 +182,6 @@ export default function BattleDetailScreen() {
     ]);
   }
 
-  function handleRecord() {
-    if (!battle) return;
-    router.push({ pathname: '/session/new', params: { gymId: battle.gym_id } } as never);
-  }
-
   function handleAccept() {
     accept.mutate(battle!.id, {
       onError: (e) => customAlert('실패', e instanceof Error ? e.message : '오류'),
@@ -197,22 +206,23 @@ export default function BattleDetailScreen() {
     : '암장 미지정';
 
   return (
-    <SafeAreaView className="flex-1 bg-background-primary" edges={['top']}>
-      <View className="flex-row items-center justify-between px-4 py-2 border-b border-border-subtle">
-        <Pressable onPress={() => router.back()} className="p-2 -ml-2 active:opacity-60" hitSlop={8}>
-          <Feather name="arrow-left" size={24} color={c.text.primary} />
-        </Pressable>
-        <Text className="text-text-primary text-base font-bold">대결</Text>
-        {isCreator ? (
-          <Pressable onPress={handleDelete} className="p-2 active:opacity-60" hitSlop={8}>
-            <Feather name="trash-2" size={20} color={c.status.danger} />
-          </Pressable>
-        ) : (
-          <View style={{ width: 40 }} />
-        )}
-      </View>
+    <SafeAreaView className="flex-1 bg-background-primary" edges={['left', 'right']}>
+      <ScreenHeader
+        title="대결"
+        onBack={() => router.back()}
+        rightActions={
+          isCreator
+            ? [{ icon: 'trash-2', tone: 'danger', onPress: handleDelete }]
+            : undefined
+        }
+      />
 
-      <ScrollView contentContainerClassName="p-5 gap-5 pb-8">
+      <ScrollView
+        contentContainerClassName="p-5 gap-5"
+        contentContainerStyle={{ paddingBottom: insets.bottom + 12 }}
+        contentInsetAdjustmentBehavior="never"
+        automaticallyAdjustContentInsets={false}
+      >
         {/* Hero */}
         <View className="gap-2 pt-1">
           <View className="flex-row items-center gap-2">
@@ -243,13 +253,23 @@ export default function BattleDetailScreen() {
         </View>
 
         {/* 크루 vs 크루 점수 비교 */}
-        {isCrewVs && rankingQ.data && (
+        {isCrewVs && rankingQ.data && !hideScores && (
           <CrewVsCrewCard battle={battle} totals={rankingQ.data.crewTotals} status={status} />
         )}
 
         {/* 팀전 점수 비교 */}
-        {isTeam && rankingQ.data && (
+        {isTeam && rankingQ.data && !hideScores && (
           <TeamVsTeamCard totals={rankingQ.data.teamTotals} status={status} />
+        )}
+
+        {/* 점수 숨김 안내 */}
+        {hideScores && (isCrewVs || isTeam || (rankingQ.data && rankingQ.data.individuals.length > 0)) && (
+          <View className="bg-background-card border border-border-subtle rounded-2xl p-3.5 flex-row items-center gap-2">
+            <Feather name="eye-off" size={14} color={c.text.tertiary} />
+            <Text className="text-text-secondary text-[12px] font-bold flex-1">
+              점수는 대결 종료 후 공개돼요
+            </Text>
+          </View>
         )}
 
         {/* 호스트 시작/종료 */}
@@ -340,15 +360,13 @@ export default function BattleDetailScreen() {
               </Pressable>
             )}
             {isMeJoined && status === 'active' && (
-              <Pressable
-                onPress={handleRecord}
-                className="py-3 rounded-xl items-center justify-center flex-row gap-2 bg-brand-primary/10 border border-brand-primary/30"
-              >
-                <Feather name="edit-3" size={15} color={c.brand.primary} />
-                <Text className="text-brand-primary text-sm font-extrabold">
-                  지금 기록하기 ({gymLabel})
-                </Text>
-              </Pressable>
+              <RecordingPanel
+                counts={recording.counts}
+                colorGrades={battle.color_grades ?? []}
+                onAdd={recording.addSend}
+                onRemove={recording.removeSend}
+                gymLabel={gymLabel}
+              />
             )}
           </View>
         )}
@@ -374,6 +392,71 @@ export default function BattleDetailScreen() {
               accepting={accept.isPending}
               declining={decline.isPending}
             />
+          </View>
+        )}
+
+        {/* 내 결과 — 본인이 참가한 대결에서만 노출 */}
+        {!isScheduled && !isDeclined && mySends.data && mySends.data.total > 0 && (
+          <View
+            style={{
+              backgroundColor: c.brand.primaryLight,
+              borderRadius: 16,
+              padding: 14,
+              gap: 10,
+              borderWidth: 1,
+              borderColor: c.brand.primary + '33',
+            }}
+          >
+            <View className="flex-row items-center justify-between">
+              <View className="flex-row items-center gap-2">
+                <Feather name="award" size={14} color={c.brand.primaryDeep} />
+                <Text style={{ fontSize: 12, fontWeight: '900', color: c.brand.primaryDeep, letterSpacing: 0.2 }}>
+                  내 결과
+                </Text>
+              </View>
+              <View className="flex-row items-baseline gap-1">
+                <Text style={{ fontSize: 22, fontWeight: '900', color: c.brand.primaryDeep, letterSpacing: -0.5 }}>
+                  {mySends.data.total}
+                </Text>
+                <Text style={{ fontSize: 12, fontWeight: '800', color: c.brand.primaryDeep }}>완등</Text>
+              </View>
+            </View>
+            {mySends.data.byColor.length > 0 && (
+              <View className="flex-row flex-wrap" style={{ gap: 6 }}>
+                {mySends.data.byColor.map((entry) => (
+                  <View
+                    key={entry.color}
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 6,
+                      paddingLeft: 8,
+                      paddingRight: 10,
+                      paddingVertical: 5,
+                      borderRadius: 999,
+                      backgroundColor: c.bg.card,
+                    }}
+                  >
+                    <View
+                      style={{
+                        width: 14,
+                        height: 14,
+                        borderRadius: 7,
+                        backgroundColor: resolveColorHex(entry.color),
+                        borderWidth: 1,
+                        borderColor: '#cbd5e1',
+                      }}
+                    />
+                    <Text style={{ fontSize: 12, fontWeight: '900', color: c.text.primary, letterSpacing: -0.2 }}>
+                      {resolveColorLabel(entry.color)}
+                    </Text>
+                    <Text style={{ fontSize: 11.5, fontWeight: '800', color: c.text.tertiary }}>
+                      ×{entry.count}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            )}
           </View>
         )}
 
@@ -404,14 +487,17 @@ export default function BattleDetailScreen() {
                   isMe={p.user_id === meId}
                   isLast={i === arr.length - 1}
                   isWinner={isEnded && i === 0 && p.score > 0}
+                  hideScore={hideScores && p.user_id !== meId}
                 />
               ))}
             </View>
           ) : (
-            <View className="bg-background-secondary border border-border-subtle rounded-2xl p-6 items-center gap-1">
-              <Feather name="users" size={20} color={c.text.muted} />
-              <Text className="text-text-tertiary text-sm font-semibold">아직 참가자가 없어요</Text>
-            </View>
+            <EmptyState
+              compact
+              icon="users"
+              tone="muted"
+              title="아직 참가자가 없어요"
+            />
           )}
         </View>
       </ScrollView>
@@ -557,12 +643,149 @@ function PendingActions({
   );
 }
 
-function ParticipantRow({ participant, rank, isMe, isLast, isWinner }: {
+function RecordingPanel({
+  counts, colorGrades, onAdd, onRemove, gymLabel,
+}: {
+  counts: ColorCountMap;
+  colorGrades: Array<{ color: string; points: number }>;
+  onAdd: (color: string) => void;
+  onRemove: (color: string) => void;
+  gymLabel: string;
+}) {
+  const c = useThemeColors();
+  const total = Object.values(counts).reduce((s, n) => s + n, 0);
+  // 호스트가 정한 순서대로 (쉬운→어려운)
+  const colors = colorGrades.filter((e) => CLIMB_COLOR_HEX[e.color]);
+  return (
+    <View className="rounded-2xl border border-brand-primary/30 bg-brand-primary/5 p-3.5 gap-3">
+      <View className="flex-row items-center justify-between">
+        <View className="flex-row items-center gap-1.5">
+          <Feather name="zap" size={13} color={c.brand.primary} />
+          <Text className="text-brand-primary text-[12px] font-extrabold">
+            바로 기록 — {gymLabel}
+          </Text>
+        </View>
+        <Text className="text-text-tertiary text-[11px] font-bold">
+          오늘 완등 {total}
+        </Text>
+      </View>
+      {colors.length === 0 ? (
+        <Text className="text-text-tertiary text-[12px] font-semibold text-center py-3">
+          호스트가 색깔별 점수를 아직 설정하지 않았어요
+        </Text>
+      ) : (
+        <View className="gap-2">
+          {colors.map(({ color, points }) => (
+            <ColorCountRow
+              key={color}
+              color={color}
+              count={counts[color] ?? 0}
+              points={points}
+              onAdd={() => onAdd(color)}
+              onRemove={() => onRemove(color)}
+            />
+          ))}
+        </View>
+      )}
+    </View>
+  );
+}
+
+function ColorCountRow({
+  color, count, points, onAdd, onRemove,
+}: {
+  color: string;
+  count: number;
+  points: number;
+  onAdd: () => void;
+  onRemove: () => void;
+}) {
+  const c = useThemeColors();
+  const hex = CLIMB_COLOR_HEX[color];
+  const label = CLIMB_COLOR_LABEL[color] ?? color;
+  const isLight = color === 'white' || color === 'yellow' || color === 'lime' || color === 'sky';
+  return (
+    <View
+      className="flex-row items-center gap-2 px-2 py-2 rounded-xl"
+      style={{ backgroundColor: c.bg.card, borderWidth: 1, borderColor: c.border.subtle }}
+    >
+      <View
+        style={{
+          width: 28,
+          height: 28,
+          borderRadius: 14,
+          backgroundColor: hex,
+          borderWidth: isLight ? 1 : 0,
+          borderColor: c.border.subtle,
+        }}
+      />
+      <Text className="text-text-primary text-[13px] font-extrabold flex-1" numberOfLines={1}>
+        {label}
+      </Text>
+      <View
+        style={{
+          paddingHorizontal: 7,
+          paddingVertical: 2,
+          borderRadius: 6,
+          backgroundColor: c.bg.subtle,
+        }}
+      >
+        <Text className="text-text-secondary text-[11px] font-extrabold">{points}점</Text>
+      </View>
+      <Pressable
+        onPress={onRemove}
+        disabled={count <= 0}
+        hitSlop={6}
+        style={{
+          width: 32,
+          height: 32,
+          borderRadius: 16,
+          backgroundColor: count > 0 ? c.bg.subtle : 'transparent',
+          alignItems: 'center',
+          justifyContent: 'center',
+          opacity: count > 0 ? 1 : 0.4,
+        }}
+        className="active:opacity-60"
+      >
+        <Feather name="minus" size={16} color={c.text.primary} />
+      </Pressable>
+      <View
+        style={{
+          minWidth: 28,
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <Text className="text-text-primary text-[16px] font-black tracking-tight">
+          {count}
+        </Text>
+      </View>
+      <Pressable
+        onPress={onAdd}
+        hitSlop={6}
+        style={{
+          width: 32,
+          height: 32,
+          borderRadius: 16,
+          backgroundColor: c.brand.primary,
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+        className="active:opacity-80"
+      >
+        <Feather name="plus" size={16} color={c.brand.onPrimary} />
+      </Pressable>
+    </View>
+  );
+}
+
+function ParticipantRow({ participant, rank, isMe, isLast, isWinner, hideScore }: {
   participant: BattleScoreEntry;
   rank: number;
   isMe: boolean;
   isLast: boolean;
   isWinner: boolean;
+  hideScore: boolean;
 }) {
   const c = useThemeColors();
   const name = participant.display_name || participant.username;
@@ -572,7 +795,9 @@ function ParticipantRow({ participant, rank, isMe, isLast, isWinner }: {
       style={{ borderBottomWidth: isLast ? 0 : 1, borderColor: c.border.subtle }}
     >
       <View className="w-7 items-center justify-center">
-        {isWinner ? (
+        {hideScore ? (
+          <Feather name="lock" size={13} color={c.text.muted} />
+        ) : isWinner ? (
           <Text className="text-lg">👑</Text>
         ) : (
           <Text className={`text-sm font-black ${rank <= 3 ? 'text-brand-primaryDeep' : 'text-text-muted'}`}>
@@ -598,11 +823,11 @@ function ParticipantRow({ participant, rank, isMe, isLast, isWinner }: {
           <FeaturedBadgeChip badgeKey={participant.featured_badge_key} size={11} />
         </View>
         <Text className="text-[11px] font-semibold text-text-muted mt-0.5">
-          완등 {participant.send_count}
+          {hideScore ? '비공개' : `완등 ${participant.send_count}`}
         </Text>
       </View>
       <Text className="text-lg font-black text-text-primary tracking-tight">
-        {participant.score}
+        {hideScore ? '—' : participant.score}
       </Text>
     </View>
   );

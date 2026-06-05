@@ -51,7 +51,7 @@ export type ThemeColors = {
 export const lightColors: ThemeColors = {
   isDark: false,
   bg: {
-    primary:  '#f8fafc',
+    primary:  '#eef2f7',  // 페이지 배경 — 카드(흰색) 와 대비를 위해 살짝 진한 회색조
     card:     '#ffffff',
     subtle:   '#f1f5f9',
     accent:   '#ecfeff',
@@ -91,7 +91,7 @@ export const lightColors: ThemeColors = {
 export const darkColors: ThemeColors = {
   isDark: true,
   bg: {
-    primary:  '#0f172a',
+    primary:  '#0a1220',  // 페이지 배경 — 카드(slate-800) 보다 더 어두워서 떠 보임
     card:     '#1e293b',
     subtle:   '#334155',
     accent:   '#164e63',

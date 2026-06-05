@@ -9,7 +9,9 @@ import {
   Text,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { EmptyState } from '@/components/ui/empty-state';
+import { ScreenHeader } from '@/components/ui/screen-header';
 import { Feather } from '@expo/vector-icons';
 
 import { useRecruitingCrews, type CrewSummary } from '@/hooks/use-crews';
@@ -19,23 +21,18 @@ export default function ExploreCrewsScreen() {
   const c = useThemeColors();
   const s = React.useMemo(() => makeStyles(c), [c]);
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { data, isLoading, error } = useRecruitingCrews();
 
   return (
-    <SafeAreaView style={s.container} edges={['top']}>
-      <View style={s.header}>
-        <Pressable onPress={() => router.back()} hitSlop={8}>
-          {({ pressed }) => (
-            <View style={[s.headerBtn, pressed && { opacity: 0.6 }]}>
-              <Feather name="arrow-left" size={22} color={c.text.primary} />
-            </View>
-          )}
-        </Pressable>
-        <Text style={s.headerTitle}>공개 모집 크루</Text>
-        <View style={{ width: 40 }} />
-      </View>
+    <SafeAreaView style={s.container} edges={['left', 'right']}>
+      <ScreenHeader title="공개 모집 크루" onBack={() => router.back()} />
 
-      <ScrollView contentContainerStyle={s.list}>
+      <ScrollView
+        contentContainerStyle={[s.list, { paddingBottom: insets.bottom + 12 }]}
+        contentInsetAdjustmentBehavior="never"
+        automaticallyAdjustContentInsets={false}
+      >
         {isLoading && (
           <View style={s.loaderWrap}>
             <ActivityIndicator color={c.brand.primary} />
@@ -47,11 +44,12 @@ export default function ExploreCrewsScreen() {
           </View>
         )}
         {data && data.length === 0 && (
-          <View style={s.emptyBox}>
-            <Feather name="users" size={28} color={c.text.muted} />
-            <Text style={s.emptyTitle}>지금 모집 중인 크루가 없어요</Text>
-            <Text style={s.emptySub}>나중에 다시 확인해보세요</Text>
-          </View>
+          <EmptyState
+            icon="users"
+            tone="muted"
+            title="지금 모집 중인 크루가 없어요"
+            description="나중에 다시 확인해보세요"
+          />
         )}
         {data?.map((crew) => (
           <RecruitingCrewCard key={crew.id} crew={crew} />

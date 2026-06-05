@@ -7,6 +7,20 @@ import { supabase } from '@/lib/supabase';
 export type BattleType = 'crew_internal' | 'crew_internal_team' | 'crew_vs_crew';
 export type BattleStatus = 'scheduled' | 'active' | 'ended' | 'declined';
 export type TeamSide = 'a' | 'b';
+export type ScoreVisibility = 'live' | 'after_end';
+
+// 호스트가 색깔별 점수를 지정 — 순서 = 난이도 순(쉬운 것부터)
+// [{ color: 'yellow', points: 5 }, { color: 'green', points: 10 }, ...]
+export type ColorGrade = { color: string; points: number };
+export type ColorGrades = ColorGrade[];
+
+// 빠른 lookup 용 — color → points
+export function colorGradesMap(g: ColorGrades | null | undefined): Record<string, number> {
+  const m: Record<string, number> = {};
+  if (!g) return m;
+  for (const e of g) m[e.color] = e.points;
+  return m;
+}
 
 export type ScoringRules =
   | { type: 'linear'; base: number }              // V × base
@@ -34,6 +48,8 @@ export type Battle = {
   battle_date: string;       // YYYY-MM-DD (기록용)
   status: BattleStatus;
   scoring_rules: ScoringRules;
+  color_grades: ColorGrades;
+  score_visibility: ScoreVisibility;
   team_a_name: string | null;
   team_b_name: string | null;
   created_by: string;
@@ -44,7 +60,7 @@ export type Battle = {
 };
 
 const BATTLE_COLS =
-  'id, battle_type, title, crew_id, opponent_crew_id, gym_id, battle_date, status, scoring_rules, team_a_name, team_b_name, created_by, created_at, crew:crews!battles_crew_id_fkey(id, name), opponent_crew:crews!battles_opponent_crew_id_fkey(id, name), gym:gyms!battles_gym_id_fkey(id, name, branch)';
+  'id, battle_type, title, crew_id, opponent_crew_id, gym_id, battle_date, status, scoring_rules, color_grades, score_visibility, team_a_name, team_b_name, created_by, created_at, crew:crews!battles_crew_id_fkey(id, name), opponent_crew:crews!battles_opponent_crew_id_fkey(id, name), gym:gyms!battles_gym_id_fkey(id, name, branch)';
 
 // 호스트가 수동으로 status 를 바꿈. 날짜는 기록용이라 자동 전환 없음.
 export function effectiveStatus(b: Battle): BattleStatus {
@@ -292,7 +308,8 @@ export function useBattleRanking(battleId: string | undefined, opts?: { refetchI
           }
         }
 
-        // 점수 누적
+        // 점수 누적 — 우선순위: battle.color_grades(host, 직접 점수) > felt_grade × scoring_rules > crowd × scoring_rules
+        const cgMap = colorGradesMap(battle.color_grades);
         for (const a of (attempts ?? []) as Array<{
           session_id: string;
           result: string;
@@ -300,15 +317,21 @@ export function useBattleRanking(battleId: string | undefined, opts?: { refetchI
           problem: { color: string | null } | null;
         }>) {
           if (!SEND_RESULTS.has(a.result)) continue;
-          let v: number | null = vGradeToNum(a.felt_grade);
-          if (v == null && a.problem?.color) v = crowdVMap.get(a.problem.color) ?? null;
-          if (v == null) continue;
+          const color = a.problem?.color ?? null;
           const uid = sessionToUser.get(a.session_id);
           if (!uid) continue;
           const entry = scoreMap.get(uid);
           if (!entry) continue;
-          entry.score += vToScore(v, battle.scoring_rules);
           entry.send_count += 1;
+          // 1순위: 호스트가 정한 직접 점수
+          if (color && cgMap[color] != null) {
+            entry.score += cgMap[color];
+            continue;
+          }
+          // 2/3순위: V grade → scoring_rules
+          let v: number | null = vGradeToNum(a.felt_grade);
+          if (v == null && color) v = crowdVMap.get(color) ?? null;
+          if (v != null) entry.score += vToScore(v, battle.scoring_rules);
         }
       }
 
@@ -360,6 +383,68 @@ export function useBattleRanking(battleId: string | undefined, opts?: { refetchI
   });
 }
 
+// 내가 이 대결에서 색깔별로 몇 개 완등했는지 — 카드/상세 둘 다에서 씀.
+// 대결 날짜 + 대결 암장 + 내 세션 → 완등 attempts 를 color 별로 묶음.
+export type MyBattleColorSend = { color: string; count: number };
+export type MyBattleSends = {
+  total: number;       // 총 완등 개수
+  byColor: MyBattleColorSend[];  // 개수 내림차순
+};
+
+export function useMyBattleSends(battleId: string | undefined) {
+  const { session } = useAuth();
+  const uid = session?.user.id;
+  return useQuery({
+    queryKey: ['battles', 'my-sends', battleId, uid] as const,
+    enabled: !!battleId && !!uid,
+    queryFn: async (): Promise<MyBattleSends> => {
+      // 1) battle 로드
+      const { data: bRow, error: bErr } = await supabase
+        .from('battles')
+        .select('id, gym_id, battle_date')
+        .eq('id', battleId!)
+        .single();
+      if (bErr) throw new Error(bErr.message);
+      const b = bRow as { id: string; gym_id: string; battle_date: string };
+
+      // 2) 내 세션 (대결 날짜 + 암장)
+      const { data: sessions, error: sErr } = await supabase
+        .from('sessions')
+        .select('id')
+        .eq('user_id', uid!)
+        .eq('gym_id', b.gym_id)
+        .eq('session_date', b.battle_date);
+      if (sErr) throw new Error(sErr.message);
+      const sIds = ((sessions ?? []) as Array<{ id: string }>).map((r) => r.id);
+      if (sIds.length === 0) return { total: 0, byColor: [] };
+
+      // 3) 해당 세션의 완등 attempts + 색깔
+      const { data: attempts, error: aErr } = await supabase
+        .from('attempts')
+        .select('result, problem:problems(color)')
+        .in('session_id', sIds);
+      if (aErr) throw new Error(aErr.message);
+
+      const colorCounts = new Map<string, number>();
+      let total = 0;
+      for (const a of (attempts ?? []) as Array<{
+        result: string;
+        problem: { color: string | null } | null;
+      }>) {
+        if (!SEND_RESULTS.has(a.result)) continue;
+        total += 1;
+        const col = a.problem?.color;
+        if (!col) continue;
+        colorCounts.set(col, (colorCounts.get(col) ?? 0) + 1);
+      }
+      const byColor: MyBattleColorSend[] = Array.from(colorCounts.entries())
+        .map(([color, count]) => ({ color, count }))
+        .sort((x, y) => y.count - x.count);
+      return { total, byColor };
+    },
+  });
+}
+
 function emptyTeamTotals(battle: Battle): TeamTotal[] {
   return [
     { team: 'a', name: battle.team_a_name ?? 'A팀', score: 0, send_count: 0 },
@@ -394,6 +479,8 @@ export type CreateBattleArgs = {
   gymId: string;
   battleDate: string;             // YYYY-MM-DD
   scoringRules: ScoringRules;
+  colorGrades: ColorGrades;         // {"red": 5, "yellow": 3.5, ...}
+  scoreVisibility: ScoreVisibility;
   teamAName?: string;              // crew_internal_team 일 때
   teamBName?: string;
 };
@@ -416,6 +503,8 @@ export function useCreateBattle() {
           battle_date: args.battleDate,
           status: 'scheduled',
           scoring_rules: args.scoringRules,
+          color_grades: args.colorGrades,
+          score_visibility: args.scoreVisibility,
           team_a_name: args.teamAName ?? null,
           team_b_name: args.teamBName ?? null,
           created_by: userId,

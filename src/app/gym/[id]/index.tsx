@@ -1,23 +1,32 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   ActivityIndicator,
+  Image,
+  Linking,
   Pressable,
   ScrollView,
+  StyleSheet,
   Text,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Feather, Ionicons } from '@expo/vector-icons';
+import { Feather, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 
 import {
   COLOR_VOTE_THRESHOLD,
   resolveColorHex,
   resolveColorLabel,
 } from '@/constants/climb-colors';
+import { GymThumbnail } from '@/components/gym/gym-thumbnail';
 import { useFavoriteGymIds, useToggleFavorite } from '@/hooks/use-favorites';
-import { useGymDetail, type ColorScheme, type ColorStat } from '@/hooks/use-gym-detail';
-import { useThemeColors } from '@/lib/theme';
+import { useGymDetail, type ColorScheme, type ColorStat, type GymDetail } from '@/hooks/use-gym-detail';
+import { useMySessionsAtGym } from '@/hooks/use-session';
+import { useThemeColors, type ThemeColors } from '@/lib/theme';
+import { BottomCTA } from '@/components/ui/bottom-cta';
+import { ScreenHeader } from '@/components/ui/screen-header';
+import { Section } from '@/components/ui/section';
+import { EmptyState } from '@/components/ui/empty-state';
 
 export default function GymDetailScreen() {
 
@@ -31,7 +40,7 @@ export default function GymDetailScreen() {
   if (isLoading) {
     return (
       <SafeAreaView
-        className="flex-1 bg-background-primary items-center justify-center"
+        style={{ flex: 1, backgroundColor: c.bg.primary, alignItems: 'center', justifyContent: 'center' }}
         edges={['top', 'bottom']}
       >
         <ActivityIndicator />
@@ -42,7 +51,7 @@ export default function GymDetailScreen() {
   if (error || !data) {
     return (
       <SafeAreaView
-        className="flex-1 bg-background-primary items-center justify-center p-6"
+        style={{ flex: 1, backgroundColor: c.bg.primary, alignItems: 'center', justifyContent: 'center', padding: 24 }}
         edges={['top', 'bottom']}
       >
         <Text className="text-status-danger text-center mb-4">
@@ -70,205 +79,130 @@ export default function GymDetailScreen() {
     .join(' · ');
 
   return (
-    <SafeAreaView className="flex-1 bg-background-primary" edges={['top', 'bottom']}>
-      {/* Header */}
-      <View className="flex-row items-center justify-between px-4 py-[14px] bg-background-primary border-b border-border-subtle">
-        <Pressable onPress={() => router.back()} className="w-10 h-10 rounded-xl items-center justify-center -ml-2 active:opacity-60" hitSlop={8}>
-          <Feather name="arrow-left" size={24} color={c.text.primary} />
-        </Pressable>
-        <Text className="text-text-primary text-[18px] font-extrabold tracking-[-0.4px]">암장 정보</Text>
-        <View className="flex-row gap-1">
-          <Pressable
-            onPress={() =>
-              router.push({ pathname: '/gym/[id]/suggest', params: { id: id! } } as never)
-            }
-            className="w-10 h-10 rounded-xl items-center justify-center active:opacity-60"
-            hitSlop={8}
-          >
-            <Feather name="edit-3" size={20} color={c.text.tertiary} />
-          </Pressable>
+    <SafeAreaView style={{ flex: 1, backgroundColor: c.bg.primary }} edges={['left', 'right']}>
+      <ScreenHeader
+        title="암장 정보"
+        onBack={() => router.back()}
+        rightSlot={
           <Pressable
             onPress={() => {
               if (!id) return;
               toggleFavorite.mutate({ gymId: id, currentlyFavorite: favorited });
             }}
-            className="w-10 h-10 rounded-xl items-center justify-center -mr-2 active:opacity-60"
             hitSlop={8}
+            style={({ pressed }) => ({
+              width: 40, height: 40, borderRadius: 12,
+              alignItems: 'center', justifyContent: 'center',
+              opacity: pressed ? 0.6 : 1,
+            })}
           >
-            <Ionicons
-              name={favorited ? "star" : "star-outline"}
-              size={24}
+            <MaterialCommunityIcons
+              name={favorited ? 'star' : 'star-outline'}
+              size={26}
               color={favorited ? '#f59e0b' : '#94a3b8'}
             />
           </Pressable>
-        </View>
-      </View>
+        }
+      />
 
-      <ScrollView className="flex-1 bg-background-primary" contentContainerClassName="p-5 gap-6">
-        {/* Title Section */}
-        <View className="gap-1.5">
-          <View className="flex-row items-baseline gap-2 flex-wrap">
-            <Text className="text-2xl font-extrabold text-text-primary tracking-tight">
-              {data.name}
-            </Text>
-            {data.branch && (
-              <Text className="text-lg font-bold text-brand-primary">
-                {data.branch}
-              </Text>
-            )}
-          </View>
-          {location && (
-            <View className="flex-row items-start gap-1.5 mt-1.5">
-              <Feather name="map-pin" size={14} color={c.text.tertiary} style={{ marginTop: 2 }} />
-              <Text className="text-text-secondary text-sm flex-1 leading-5">
-                {[location, data.address].filter(Boolean).join(' · ')}
-              </Text>
-            </View>
-          )}
-        </View>
+      <ScrollView
+        style={{ flex: 1, backgroundColor: c.bg.primary }}
+        contentContainerStyle={{ padding: 18, gap: 16, paddingBottom: 16 }}
+        contentInsetAdjustmentBehavior="never"
+        automaticallyAdjustContentInsets={false}
+      >
+        {/* Hero */}
+        <GymHero gym={data} location={location} c={c} />
 
-        {/* Spec Cards Grid */}
-        {(data.size_pyeong || data.floors_count || data.opened_at) && (
-          <View className="flex-row gap-3">
-            {data.size_pyeong && (
-              <View 
-                className="flex-1 bg-background-primary p-3.5 rounded-2xl border border-border-subtle items-center"
-                style={{ shadowColor: c.shadow.color, shadowOpacity: 0.04, shadowRadius: 8, shadowOffset: { width: 0, height: 2 }, elevation: 2 }}
-              >
-                <Feather name="maximize-2" size={16} color={c.brand.primary} className="mb-1.5" />
-                <Text className="text-text-tertiary text-[11px] mb-1 font-semibold">규모</Text>
-                <Text className="text-text-primary text-sm font-extrabold">{data.size_pyeong}평</Text>
-              </View>
-            )}
-            {data.floors_count && (
-              <View 
-                className="flex-1 bg-background-primary p-3.5 rounded-2xl border border-border-subtle items-center"
-                style={{ shadowColor: c.shadow.color, shadowOpacity: 0.04, shadowRadius: 8, shadowOffset: { width: 0, height: 2 }, elevation: 2 }}
-              >
-                <Feather name="layers" size={16} color={c.brand.primary} className="mb-1.5" />
-                <Text className="text-text-tertiary text-[11px] mb-1 font-semibold">층수</Text>
-                <Text className="text-text-primary text-sm font-extrabold">{data.floors_count}층</Text>
-              </View>
-            )}
-            {data.opened_at && (
-              <View 
-                className="flex-1 bg-background-primary p-3.5 rounded-2xl border border-border-subtle items-center"
-                style={{ shadowColor: c.shadow.color, shadowOpacity: 0.04, shadowRadius: 8, shadowOffset: { width: 0, height: 2 }, elevation: 2 }}
-              >
-                <Feather name="calendar" size={16} color={c.brand.primary} className="mb-1.5" />
-                <Text className="text-text-tertiary text-[11px] mb-1 font-semibold">오픈</Text>
-                <Text className="text-text-primary text-sm font-extrabold">
-                  {new Date(data.opened_at).getFullYear()}년
-                </Text>
-              </View>
-            )}
-          </View>
-        )}
-
-        {/* Facilities Badges Section */}
-        {(data.has_boulder || data.has_lead || data.has_top_rope || data.has_speed || data.has_auto_belay || data.has_moonboard || data.has_kilter || data.has_tension) && (
-          <View className="flex-row flex-wrap gap-1.5">
-            {data.has_boulder && (
-              <View className="bg-background-secondary border border-border-subtle px-2.5 py-1 rounded-md">
-                <Text className="text-text-secondary text-[11px] font-bold">볼더링</Text>
-              </View>
-            )}
-            {data.has_lead && (
-              <View className="bg-background-secondary border border-border-subtle px-2.5 py-1 rounded-md">
-                <Text className="text-text-secondary text-[11px] font-bold">리드</Text>
-              </View>
-            )}
-            {data.has_top_rope && (
-              <View className="bg-background-secondary border border-border-subtle px-2.5 py-1 rounded-md">
-                <Text className="text-text-secondary text-[11px] font-bold">탑로프</Text>
-              </View>
-            )}
-            {data.has_speed && (
-              <View className="bg-background-secondary border border-border-subtle px-2.5 py-1 rounded-md">
-                <Text className="text-text-secondary text-[11px] font-bold">스피드</Text>
-              </View>
-            )}
-            {data.has_auto_belay && (
-              <View className="bg-background-secondary border border-border-subtle px-2.5 py-1 rounded-md">
-                <Text className="text-text-secondary text-[11px] font-bold">오토빌레이</Text>
-              </View>
-            )}
-            {data.has_moonboard && (
-              <View className="flex-row items-center gap-1 px-2.5 py-1 rounded-md border" style={{ backgroundColor: 'rgba(147, 51, 234, 0.15)', borderColor: 'rgba(147, 51, 234, 0.3)' }}>
-                <Feather name="zap" size={10} color="#a855f7" />
-                <Text className="text-[11px] font-extrabold" style={{ color: '#a855f7' }}>문보드</Text>
-              </View>
-            )}
-            {data.has_kilter && (
-              <View className="flex-row items-center gap-1 px-2.5 py-1 rounded-md border" style={{ backgroundColor: 'rgba(59, 130, 246, 0.15)', borderColor: 'rgba(59, 130, 246, 0.3)' }}>
-                <Feather name="zap" size={10} color="#3b82f6" />
-                <Text className="text-[11px] font-extrabold" style={{ color: '#3b82f6' }}>킬터보드</Text>
-              </View>
-            )}
-            {data.has_tension && (
-              <View className="flex-row items-center gap-1 px-2.5 py-1 rounded-md border" style={{ backgroundColor: 'rgba(249, 115, 22, 0.15)', borderColor: 'rgba(249, 115, 22, 0.3)' }}>
-                <Feather name="zap" size={10} color="#f97316" />
-                <Text className="text-[11px] font-extrabold" style={{ color: '#f97316' }}>텐션보드</Text>
-              </View>
-            )}
-          </View>
-        )}
-
-        {/* Description */}
-        {data.description && (
-          <View className="bg-brand-primary/5 border border-brand-primary/10 rounded-2xl p-4">
-            <Text className="text-text-primary text-sm leading-6">
-              {data.description}
-            </Text>
-          </View>
-        )}
-
-        {/* Difficulty — official + crowd vote merged */}
-        <View className="gap-3.5">
-          <View className="flex-row items-center justify-between">
-            <View className="flex-row items-end gap-2">
-              <Text className="text-text-primary text-lg font-bold">난이도</Text>
-              <Text className="text-text-tertiary text-xs mb-0.5">공식 / 체감 평균</Text>
-            </View>
-            <Pressable
-              onPress={() =>
-                router.push({ pathname: '/gym/[id]/vote', params: { id: data.id } })
-              }
-              className="bg-brand-primary/10 border border-brand-primary/30 rounded-full py-1.5 px-3 flex-row items-center gap-1 active:opacity-70"
-            >
-              <Feather name="thumbs-up" size={11} color={c.brand.primary} />
-              <Text className="text-brand-primary font-bold text-xs">투표하기</Text>
-            </Pressable>
-          </View>
-          {data.color_schemes.length === 0 && data.color_stats.length === 0 ? (
-            <View className="p-8 items-center justify-center bg-background-secondary rounded-2xl border border-border-subtle">
-              <Feather name="bar-chart-2" size={24} color={c.text.muted} className="mb-2" />
-              <Text className="text-text-secondary text-sm">아직 난이도 데이터가 없습니다</Text>
-            </View>
-          ) : (
-            <View className="bg-background-secondary border border-border-subtle rounded-2xl p-3 gap-1.5">
-              {mergeColorRows(data.color_schemes, data.color_stats).map((row) => (
-                <ColorRow key={row.color} row={row} />
-              ))}
-            </View>
-          )}
-        </View>
-      </ScrollView>
-
-      {/* Sticky record button */}
-      <View className="px-5 pt-3 pb-3 border-t border-border-subtle bg-background-primary">
+        {/* 정보 제보 카드 — 정보 수정 + 누락 정보 추가 모두 환영 (초반 베타라 데이터 모으는 게 핵심) */}
         <Pressable
           onPress={() =>
-            router.push({ pathname: '/session/new', params: { gymId: data.id } })
+            router.push({ pathname: '/gym/[id]/suggest', params: { id: id! } } as never)
           }
-          className="bg-brand-primary rounded-2xl py-4 px-6 items-center flex-row justify-center gap-2 active:opacity-90 shadow-sm"
         >
-          <Feather name="edit-3" size={16} color="white" />
-          <Text className="text-white font-bold text-base">
-            이 암장에서 기록하기
-          </Text>
+          {({ pressed }) => (
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 12,
+                padding: 14,
+                borderRadius: 14,
+                borderWidth: 1.5,
+                borderColor: c.brand.primary + '55',
+                backgroundColor: c.bg.card,
+                borderStyle: 'dashed',
+                opacity: pressed ? 0.75 : 1,
+              }}
+            >
+              <View
+                style={{
+                  width: 34, height: 34, borderRadius: 11,
+                  alignItems: 'center', justifyContent: 'center',
+                  backgroundColor: c.brand.primaryLight,
+                }}
+              >
+                <Feather name="edit-3" size={16} color={c.brand.primaryDeep} />
+              </View>
+              <View style={{ flex: 1, gap: 2 }}>
+                <Text style={{ color: c.text.primary, fontWeight: '900', fontSize: 13.5, letterSpacing: -0.2 }}>
+                  정보 수정·추가 제보하기
+                </Text>
+                <Text style={{ color: c.text.tertiary, fontSize: 11.5, fontWeight: '700' }}>
+                  더 정확한 정보로 함께 만들어가요. 어떤 항목이든 환영!
+                </Text>
+              </View>
+              <Feather name="chevron-right" size={16} color={c.text.muted} />
+            </View>
+          )}
         </Pressable>
-      </View>
+
+        {/* Spec stats */}
+        {(data.size_pyeong || data.floors_count || data.opened_at) && (
+          <GymSpecRow gym={data} c={c} />
+        )}
+
+        {/* 종목 (볼더링/리드/...) */}
+        <DisciplinesSection gym={data} c={c} />
+
+        {/* 트레이닝 보드 (문보드/킬터/텐션) */}
+        {(data.has_moonboard || data.has_kilter || data.has_tension) && (
+          <TrainingBoardsSection gym={data} />
+        )}
+
+        {/* 편의시설 */}
+        {(data.has_shower || data.has_locker || data.has_parking || data.parking_info) && (
+          <AmenitiesSection gym={data} c={c} />
+        )}
+
+        {/* 소개 */}
+        {data.description && (
+          <Section title="소개" icon="align-left">
+            <Text style={{ color: c.text.primary, fontSize: 13.5, lineHeight: 21, fontWeight: '600' }}>
+              {data.description}
+            </Text>
+          </Section>
+        )}
+
+        {/* 난이도 */}
+        <DifficultySection
+          gym={data}
+          c={c}
+          onVote={() => router.push({ pathname: '/gym/[id]/vote', params: { id: data.id } })}
+          onSuggest={() => router.push({ pathname: '/gym/[id]/suggest', params: { id: data.id } } as never)}
+        />
+
+        {/* 이 암장에서의 추억 */}
+        <MySessionsAtGymSection gymId={id!} />
+      </ScrollView>
+
+      <BottomCTA
+        label="이 암장에서 기록하기"
+        icon="edit-3"
+        onPress={() =>
+          router.push({ pathname: '/session/new', params: { gymId: data.id } })
+        }
+      />
     </SafeAreaView>
   );
 }
@@ -279,6 +213,355 @@ type MergedColorRow = {
   scheme: ColorScheme | null;
   stat: ColorStat | null;
 };
+
+/* ──────────────────────────────────────────────────────────── */
+/* GymHero — 로고 + 이름 + 지점 + 주소 + 빠른 액션 (전화/인스타/지도)  */
+/* ──────────────────────────────────────────────────────────── */
+
+function GymHero({
+  gym, location, c,
+}: { gym: GymDetail; location: string; c: ThemeColors }) {
+  const addressLine = [location, gym.address].filter(Boolean).join(' · ');
+  const actions = useMemo(() => {
+    const out: { icon: keyof typeof Feather.glyphMap; label: string; onPress: () => void }[] = [];
+    if (addressLine) {
+      const q = encodeURIComponent(
+        `${gym.name}${gym.branch ? ` ${gym.branch}` : ''} ${gym.address ?? ''}`.trim(),
+      );
+      out.push({
+        icon: 'navigation',
+        label: '길찾기',
+        onPress: () => Linking.openURL(`https://map.kakao.com/?q=${q}`).catch(() => {}),
+      });
+    }
+    if (gym.phone) {
+      out.push({
+        icon: 'phone',
+        label: '전화',
+        onPress: () => Linking.openURL(`tel:${gym.phone}`).catch(() => {}),
+      });
+    }
+    if (gym.instagram_handle) {
+      out.push({
+        icon: 'instagram',
+        label: 'Instagram',
+        onPress: () =>
+          Linking.openURL(`https://instagram.com/${gym.instagram_handle}`).catch(() => {}),
+      });
+    }
+    if (gym.website_url) {
+      out.push({
+        icon: 'globe',
+        label: '웹사이트',
+        onPress: () => Linking.openURL(gym.website_url!).catch(() => {}),
+      });
+    }
+    return out;
+  }, [gym, addressLine]);
+
+  return (
+    <View
+      style={{
+        backgroundColor: c.bg.card,
+        borderRadius: 18,
+        padding: 16,
+        gap: 12,
+        borderWidth: StyleSheet.hairlineWidth,
+        borderColor: c.border.subtle,
+      }}
+    >
+      <View style={{ flexDirection: 'row', gap: 14, alignItems: 'center' }}>
+        <GymThumbnail
+          name={gym.name}
+          branch={gym.branch}
+          size={64}
+          logoUrl={gym.logo_url}
+          logoBgHex={gym.logo_bg_hex ?? null}
+        />
+        <View style={{ flex: 1, gap: 4 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 6, flexWrap: 'wrap' }}>
+            <Text style={{ fontSize: 20, fontWeight: '900', color: c.text.primary, letterSpacing: -0.4 }}>
+              {gym.name}
+            </Text>
+            {gym.branch ? (
+              <Text style={{ fontSize: 14, fontWeight: '800', color: c.brand.primary, letterSpacing: -0.2 }}>
+                {gym.branch}
+              </Text>
+            ) : null}
+          </View>
+          {addressLine ? (
+            <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 4 }}>
+              <Feather name="map-pin" size={12} color={c.text.tertiary} style={{ marginTop: 2 }} />
+              <Text style={{ flex: 1, color: c.text.secondary, fontSize: 12, fontWeight: '600', lineHeight: 17 }}>
+                {addressLine}
+              </Text>
+            </View>
+          ) : null}
+        </View>
+      </View>
+
+      {actions.length > 0 && (
+        <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
+          {actions.map((a) => (
+            <Pressable key={a.label} onPress={a.onPress} hitSlop={4}>
+              {({ pressed }) => (
+                <View
+                  style={{
+                    flexDirection: 'row', alignItems: 'center', gap: 5,
+                    paddingHorizontal: 11, paddingVertical: 7, borderRadius: 999,
+                    backgroundColor: c.bg.subtle,
+                    opacity: pressed ? 0.7 : 1,
+                  }}
+                >
+                  <Feather name={a.icon} size={12} color={c.brand.primary} />
+                  <Text style={{ fontSize: 11.5, fontWeight: '800', color: c.text.primary, letterSpacing: -0.2 }}>
+                    {a.label}
+                  </Text>
+                </View>
+              )}
+            </Pressable>
+          ))}
+        </View>
+      )}
+    </View>
+  );
+}
+
+/* ──────────────────────────────────────────────────────────── */
+/* GymSpecRow — 규모 / 층수 / 오픈 (3-cell 통계 타일)            */
+/* ──────────────────────────────────────────────────────────── */
+
+function GymSpecRow({ gym, c }: { gym: GymDetail; c: ThemeColors }) {
+  const tiles: { icon: keyof typeof Feather.glyphMap; label: string; value: string }[] = [];
+  if (gym.size_pyeong) tiles.push({ icon: 'maximize-2', label: '규모', value: `${gym.size_pyeong}평` });
+  if (gym.floors_count) tiles.push({ icon: 'layers', label: '층수', value: `${gym.floors_count}층` });
+  if (gym.opened_at) {
+    tiles.push({ icon: 'calendar', label: '오픈', value: `${new Date(gym.opened_at).getFullYear()}년` });
+  }
+  if (tiles.length === 0) return null;
+
+  return (
+    <View style={{ flexDirection: 'row', gap: 8 }}>
+      {tiles.map((t) => (
+        <View
+          key={t.label}
+          style={{
+            flex: 1,
+            backgroundColor: c.bg.card,
+            borderRadius: 14,
+            paddingVertical: 12, paddingHorizontal: 8,
+            alignItems: 'center', gap: 4,
+            borderWidth: StyleSheet.hairlineWidth,
+            borderColor: c.border.subtle,
+          }}
+        >
+          <View
+            style={{
+              width: 30, height: 30, borderRadius: 9,
+              alignItems: 'center', justifyContent: 'center',
+              backgroundColor: c.brand.primaryLight,
+            }}
+          >
+            <Feather name={t.icon} size={14} color={c.brand.primaryDeep} />
+          </View>
+          <Text style={{ fontSize: 10.5, fontWeight: '800', color: c.text.tertiary, letterSpacing: 0.3 }}>
+            {t.label}
+          </Text>
+          <Text style={{ fontSize: 14, fontWeight: '900', color: c.text.primary, letterSpacing: -0.2 }}>
+            {t.value}
+          </Text>
+        </View>
+      ))}
+    </View>
+  );
+}
+
+/* ──────────────────────────────────────────────────────────── */
+/* DisciplinesSection — 종목 (볼더링/리드/탑로프/스피드/오토빌레이) */
+/* ──────────────────────────────────────────────────────────── */
+
+const DISCIPLINES: { key: keyof GymDetail; label: string; icon: keyof typeof Feather.glyphMap }[] = [
+  { key: 'has_boulder', label: '볼더링', icon: 'square' },
+  { key: 'has_lead', label: '리드', icon: 'trending-up' },
+  { key: 'has_top_rope', label: '탑로프', icon: 'arrow-up' },
+  { key: 'has_speed', label: '스피드', icon: 'zap' },
+  { key: 'has_auto_belay', label: '오토빌레이', icon: 'shield' },
+];
+
+function DisciplinesSection({ gym, c }: { gym: GymDetail; c: ThemeColors }) {
+  const items = DISCIPLINES.filter((d) => Boolean(gym[d.key as keyof GymDetail]));
+  if (items.length === 0) return null;
+  return (
+    <Section title="종목" icon="trending-up">
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+        {items.map((d) => (
+          <View
+            key={d.label}
+            style={{
+              flexDirection: 'row', alignItems: 'center', gap: 5,
+              paddingHorizontal: 10, paddingVertical: 6, borderRadius: 999,
+              backgroundColor: c.bg.subtle,
+            }}
+          >
+            <Feather name={d.icon} size={11} color={c.brand.primary} />
+            <Text style={{ fontSize: 12, fontWeight: '800', color: c.text.primary, letterSpacing: -0.2 }}>
+              {d.label}
+            </Text>
+          </View>
+        ))}
+      </View>
+    </Section>
+  );
+}
+
+/* ──────────────────────────────────────────────────────────── */
+/* TrainingBoardsSection — 문보드/킬터/텐션 컬러칩                */
+/* ──────────────────────────────────────────────────────────── */
+
+const BOARDS = [
+  { key: 'has_moonboard' as const, label: '문보드', color: '#a855f7' },
+  { key: 'has_kilter' as const, label: '킬터보드', color: '#3b82f6' },
+  { key: 'has_tension' as const, label: '텐션보드', color: '#f97316' },
+];
+
+function TrainingBoardsSection({ gym }: { gym: GymDetail }) {
+  const items = BOARDS.filter((b) => Boolean(gym[b.key]));
+  if (items.length === 0) return null;
+  return (
+    <Section title="트레이닝 보드" icon="grid">
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+        {items.map((b) => (
+          <View
+            key={b.label}
+            style={{
+              flexDirection: 'row', alignItems: 'center', gap: 5,
+              paddingHorizontal: 10, paddingVertical: 6, borderRadius: 999,
+              backgroundColor: b.color + '20',
+              borderWidth: 1, borderColor: b.color + '55',
+            }}
+          >
+            <Feather name="zap" size={10} color={b.color} />
+            <Text style={{ fontSize: 12, fontWeight: '900', color: b.color, letterSpacing: -0.2 }}>
+              {b.label}
+            </Text>
+          </View>
+        ))}
+      </View>
+    </Section>
+  );
+}
+
+/* ──────────────────────────────────────────────────────────── */
+/* AmenitiesSection — 샤워실 / 락커 / 주차장 + 주차 메모          */
+/* ──────────────────────────────────────────────────────────── */
+
+const AMENITIES: { key: keyof GymDetail; label: string; icon: keyof typeof Feather.glyphMap }[] = [
+  { key: 'has_shower', label: '샤워실', icon: 'droplet' },
+  { key: 'has_locker', label: '락커', icon: 'lock' },
+  { key: 'has_parking', label: '주차장', icon: 'truck' },
+];
+
+function AmenitiesSection({ gym, c }: { gym: GymDetail; c: ThemeColors }) {
+  const items = AMENITIES.filter((a) => Boolean(gym[a.key as keyof GymDetail]));
+  return (
+    <Section title="편의시설" icon="coffee">
+      {items.length > 0 && (
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+          {items.map((a) => (
+            <View
+              key={a.label}
+              style={{
+                flexDirection: 'row', alignItems: 'center', gap: 5,
+                paddingHorizontal: 10, paddingVertical: 6, borderRadius: 999,
+                backgroundColor: c.status.successBg,
+              }}
+            >
+              <Feather name={a.icon} size={11} color={c.status.success} />
+              <Text style={{ fontSize: 12, fontWeight: '800', color: c.status.success, letterSpacing: -0.2 }}>
+                {a.label}
+              </Text>
+            </View>
+          ))}
+        </View>
+      )}
+      {gym.parking_info ? (
+        <View
+          style={{
+            flexDirection: 'row', gap: 8,
+            padding: 10, borderRadius: 10,
+            backgroundColor: c.bg.subtle,
+          }}
+        >
+          <Feather name="info" size={12} color={c.text.tertiary} style={{ marginTop: 2 }} />
+          <Text style={{ flex: 1, fontSize: 12, color: c.text.secondary, fontWeight: '600', lineHeight: 17 }}>
+            {gym.parking_info}
+          </Text>
+        </View>
+      ) : null}
+    </Section>
+  );
+}
+
+/* ──────────────────────────────────────────────────────────── */
+/* DifficultySection — 색깔별 난이도 + 투표 진입                 */
+/* ──────────────────────────────────────────────────────────── */
+
+function DifficultySection({
+  gym, c, onVote, onSuggest,
+}: { gym: GymDetail; c: ThemeColors; onVote: () => void; onSuggest: () => void }) {
+  const rows = mergeColorRows(gym.color_schemes, gym.color_stats);
+  // 색깔 자체가 등록 안 돼 있으면 투표 불가 → 제보 유도.
+  // color_schemes 가 비었으면 어떤 색깔에 투표할지 정의가 안 된 상태.
+  const hasColors = gym.color_schemes.length > 0;
+  return (
+    <Section
+      title="난이도"
+      icon="bar-chart-2"
+      desc={hasColors ? '공식 표기 + 사용자 체감 평균' : '아직 등록된 색깔이 없어요'}
+    >
+      {hasColors ? (
+        <>
+          <View style={{ gap: 4 }}>
+            {rows.map((row) => (
+              <ColorRow key={row.color} row={row} />
+            ))}
+          </View>
+          <Pressable onPress={onVote}>
+            {({ pressed }) => (
+              <View
+                style={{
+                  flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+                  gap: 6, paddingVertical: 11, borderRadius: 12,
+                  backgroundColor: c.brand.primary,
+                  opacity: pressed ? 0.85 : 1,
+                  marginTop: 4,
+                }}
+              >
+                <Feather name="thumbs-up" size={13} color={c.brand.onPrimary} />
+                <Text style={{ fontSize: 13, fontWeight: '900', color: c.brand.onPrimary, letterSpacing: -0.2 }}>
+                  내 체감 난이도 투표하기
+                </Text>
+              </View>
+            )}
+          </Pressable>
+        </>
+      ) : (
+        <EmptyState
+          compact
+          icon="edit-3"
+          tone="muted"
+          title="이 암장의 색깔이 등록되어 있지 않아요"
+          description={'난이도 투표는 색깔 정보가 있어야 가능해요.\n어떤 색깔이 있는지 제보해주세요!'}
+          action={{
+            label: '색깔 정보 제보하기',
+            icon: 'edit-3',
+            onPress: onSuggest,
+          }}
+        />
+      )}
+    </Section>
+  );
+}
 
 function mergeColorRows(
   schemes: ColorScheme[],
@@ -363,10 +646,10 @@ function ColorRow({ row }: { row: MergedColorRow }) {
   const subText = hasEnoughVotes && stat ? `${stat.vote_count}표` : null;
 
   return (
-    <View className="flex-row items-center gap-3 px-3 py-2.5 rounded-xl bg-background-primary">
+    <View className="flex-row items-center gap-3 px-2 py-2 rounded-xl">
       {/* Color circle */}
       <View
-        className="w-8 h-8 rounded-full"
+        className="w-7 h-7 rounded-full"
         style={[
           { backgroundColor: row.hex },
           needsBorder ? { borderWidth: 1, borderColor: '#D4D4D8' } : null,
@@ -374,8 +657,8 @@ function ColorRow({ row }: { row: MergedColorRow }) {
       />
 
       {/* Name */}
-      <View style={{ width: 60 }}>
-        <Text className="text-text-primary text-sm font-bold">{label}</Text>
+      <View style={{ width: 54 }}>
+        <Text className="text-text-primary text-[13px] font-bold">{label}</Text>
       </View>
 
       {/* Slider */}
@@ -423,3 +706,103 @@ function ColorRow({ row }: { row: MergedColorRow }) {
   );
 }
 
+
+
+function MySessionsAtGymSection({ gymId }: { gymId: string }) {
+  const c = useThemeColors();
+  const router = useRouter();
+  const { data, isLoading } = useMySessionsAtGym(gymId, 10);
+
+  if (isLoading) return null;
+  if (!data || data.length === 0) return null;
+
+  return (
+    <View style={{ gap: 12 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+        <Feather name="heart" size={14} color={c.brand.primary} />
+        <Text style={{ fontSize: 15, fontWeight: '900', color: c.text.primary, letterSpacing: -0.3 }}>
+          이 암장에서의 추억
+        </Text>
+        <View
+          style={{
+            paddingHorizontal: 7,
+            paddingVertical: 1.5,
+            borderRadius: 999,
+            backgroundColor: c.bg.subtle,
+            minWidth: 22,
+            alignItems: 'center',
+            marginLeft: 2,
+          }}
+        >
+          <Text style={{ fontSize: 11, fontWeight: '900', color: c.text.muted }}>{data.length}</Text>
+        </View>
+      </View>
+      <View
+        style={{
+          backgroundColor: c.bg.card,
+          borderRadius: 14,
+          borderWidth: StyleSheet.hairlineWidth,
+          borderColor: c.border.subtle,
+          overflow: 'hidden',
+        }}
+      >
+        {data.map((sess, i) => (
+          <Pressable
+            key={sess.id}
+            onPress={() => router.push({ pathname: '/session/[id]', params: { id: sess.id } })}
+          >
+            {({ pressed }) => (
+              <View
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  paddingHorizontal: 14,
+                  paddingVertical: 12,
+                  borderBottomWidth: i === data.length - 1 ? 0 : StyleSheet.hairlineWidth,
+                  borderBottomColor: c.border.subtle,
+                  backgroundColor: pressed ? c.bg.subtle : 'transparent',
+                }}
+              >
+                <View
+                  style={{
+                    width: 36,
+                    height: 36,
+                    borderRadius: 10,
+                    backgroundColor: c.brand.primaryLight,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    marginRight: 12,
+                  }}
+                >
+                  <Feather name="calendar" size={14} color={c.brand.primaryDeep} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 13.5, fontWeight: '900', color: c.text.primary, letterSpacing: -0.2 }}>
+                    {formatSessionDateMemory(sess.session_date)}
+                  </Text>
+                  <Text style={{ fontSize: 11, fontWeight: '700', color: c.text.tertiary, marginTop: 2 }}>
+                    {sess.duration_min != null ? `${sess.duration_min}분` : '시간 미기록'}
+                    {sess.membership_id ? ' · 회원권 사용' : ''}
+                  </Text>
+                </View>
+                <Feather name="chevron-right" size={16} color={c.text.muted} />
+              </View>
+            )}
+          </Pressable>
+        ))}
+      </View>
+    </View>
+  );
+}
+
+function formatSessionDateMemory(iso: string): string {
+  const d = new Date(`${iso}T00:00:00`);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const diff = Math.floor((today.getTime() - d.getTime()) / (1000 * 60 * 60 * 24));
+  if (diff === 0) return '오늘';
+  if (diff === 1) return '어제';
+  if (diff < 7) return `${diff}일 전`;
+  const wd = ['일', '월', '화', '수', '목', '금', '토'][d.getDay()];
+  return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')} (${wd})`;
+}

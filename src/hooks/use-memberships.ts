@@ -41,6 +41,27 @@ export function useMemberships() {
   });
 }
 
+// 특정 암장의 사용 가능한(만료 안 된) 회원권. 세션 기록 시 picker 에 노출.
+export function useActiveMembershipsForGym(gymId: string | undefined) {
+  const { session: authSession } = useAuth();
+  const userId = authSession?.user.id;
+  return useQuery({
+    queryKey: ['memberships', 'active', userId, gymId] as const,
+    enabled: !!userId && !!gymId,
+    queryFn: async (): Promise<MembershipRow[]> => {
+      const { data, error } = await supabase
+        .from('memberships')
+        .select(SELECT_COLS)
+        .eq('user_id', userId!)
+        .eq('gym_id', gymId!)
+        .order('created_at', { ascending: false });
+      if (error) throw new Error(error.message);
+      const all = (data ?? []) as unknown as MembershipRow[];
+      return all.filter((m) => !isMembershipExpired(m));
+    },
+  });
+}
+
 export function useMembership(id: string | undefined) {
   return useQuery({
     queryKey: ['memberships', 'single', id] as const,

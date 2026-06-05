@@ -10,7 +10,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 
 import { GRID_COLORS, type GridColor } from '@/components/climb/color-grid';
@@ -21,8 +21,12 @@ import {
   type ColorCountsValue,
 } from '@/components/session/color-counts-table';
 import { GymPickerModal } from '@/components/session/gym-picker-modal';
+import { MembershipPicker } from '@/components/session/membership-picker';
 import { Chip } from '@/components/ui/chip';
+import { ScreenHeader } from '@/components/ui/screen-header';
 import { Section } from '@/components/ui/section';
+import { FormInput } from '@/components/ui/form';
+import { BottomCTA } from '@/components/ui/bottom-cta';
 import { useGyms } from '@/hooks/use-gyms';
 import { useGymRegisteredColors } from '@/hooks/use-gym-registered-colors';
 import { useRecentColorActivity } from '@/hooks/use-recent-color-activity';
@@ -124,6 +128,7 @@ function DisciplineBtn({
 export default function NewSessionScreen() {
 
   const c = useThemeColors();  const router = useRouter();
+  const insets = useSafeAreaInsets();
   const recordSession = useRecordSession();
   const params = useLocalSearchParams<{ gymId?: string }>();
 
@@ -133,6 +138,7 @@ export default function NewSessionScreen() {
   const [durationMin, setDurationMin] = useState<number | null>(null);
   const [condition, setCondition] = useState<number | null>(null);
   const [notes, setNotes] = useState('');
+  const [membershipId, setMembershipId] = useState<string | null>(null);
   const [discipline, setDiscipline] = useState<ClimbingDiscipline>('boulder');
   const [colorCounts, setColorCounts] = useState<ColorCountsValue>(emptyColorCounts);
   const [leadRoutes, setLeadRoutes] = useState<LeadRoute[]>([]);
@@ -198,6 +204,7 @@ export default function NewSessionScreen() {
         durationMin,
         condition,
         notes: notes.trim() ? notes.trim().slice(0, 100) : null,
+        membershipId,
         discipline,
         colors: discipline === 'boulder' ? Object.values(colorCounts) : undefined,
         leadRoutes: discipline === 'lead' ? leadRoutes : undefined,
@@ -209,18 +216,17 @@ export default function NewSessionScreen() {
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-background-primary" edges={['top', 'bottom']}>
-      <View className="flex-row items-center px-4 py-2 border-b border-border-subtle">
-        <Pressable onPress={() => router.back()} className="p-2 -ml-2 active:opacity-60" hitSlop={8}>
-          <Feather name="arrow-left" size={24} color={c.text.primary} />
-        </Pressable>
-        <Text className="flex-1 text-center text-text-primary text-base font-semibold mr-6">
-          오늘 운동 기록
-        </Text>
-      </View>
+    <SafeAreaView style={{ flex: 1, backgroundColor: c.bg.primary }} edges={['left', 'right']}>
+      <ScreenHeader title="오늘 운동 기록" onBack={() => router.back()} />
 
-      <ScrollView className="flex-1" contentContainerClassName="p-4 gap-6">
-        <Section title="종목" required>
+      <ScrollView
+        className="flex-1"
+        contentContainerClassName="p-4 gap-6"
+        contentContainerStyle={{ paddingBottom: insets.bottom + 12 }}
+        contentInsetAdjustmentBehavior="never"
+        automaticallyAdjustContentInsets={false}
+      >
+        <Section title="종목" required icon="activity">
           <View className="flex-row gap-2">
             <DisciplineBtn
               label="볼더링"
@@ -251,7 +257,7 @@ export default function NewSessionScreen() {
           </View>
         </Section>
 
-        <Section title="날짜" required>
+        <Section title="날짜" required icon="calendar">
           <View className="flex-row gap-2">
             {DATE_CHIPS.map(({ value, label }) => (
               <Chip
@@ -271,7 +277,7 @@ export default function NewSessionScreen() {
           </View>
         </Section>
 
-        <Section title="암장" required>
+        <Section title="암장" required icon="map-pin">
           <View className="flex-row flex-wrap gap-2">
             <Chip
               label="장소 검색"
@@ -284,7 +290,7 @@ export default function NewSessionScreen() {
                 key={g.id}
                 label={`${g.name}${g.branch ? ` ${g.branch}` : ''}`}
                 selected={gymId === g.id}
-                onPress={() => setGymId(g.id)}
+                onPress={() => { setGymId(g.id); setMembershipId(null); }}
               />
             ))}
           </View>
@@ -299,7 +305,17 @@ export default function NewSessionScreen() {
           )}
         </Section>
 
-        <Section title="운동 시간">
+        {gymId && (
+          <Section title="회원권" icon="credit-card">
+            <MembershipPicker
+              gymId={gymId}
+              selectedId={membershipId}
+              onSelect={setMembershipId}
+            />
+          </Section>
+        )}
+
+        <Section title="운동 시간" icon="clock">
           <View className="flex-row flex-wrap gap-2">
             {DURATION_CHIPS.map(({ value, label }) => (
               <Chip
@@ -312,7 +328,7 @@ export default function NewSessionScreen() {
           </View>
         </Section>
 
-        <Section title="컨디션">
+        <Section title="컨디션" icon="zap">
           <View className="flex-row gap-2 justify-between">
             {CONDITION_OPTIONS.map(({ value, icon, color, label }) => {
               const active = condition === value;
@@ -349,7 +365,7 @@ export default function NewSessionScreen() {
         </Section>
 
         {discipline === 'boulder' ? (
-          <Section title="색깔별 기록">
+          <Section title="색깔별 기록" icon="droplet">
             <Text className="text-text-tertiary text-xs mb-2">안 적어도 돼요 (옵션)</Text>
             <ColorCountsTable
               value={colorCounts}
@@ -359,44 +375,29 @@ export default function NewSessionScreen() {
             />
           </Section>
         ) : (
-          <Section title="루트 기록" required>
+          <Section title="루트 기록" required icon="trending-up">
             <LeadEntry value={leadRoutes} onChange={setLeadRoutes} />
           </Section>
         )}
 
-        <Section title="메모">
-          <TextInput
+        <Section title="메모" icon="message-square">
+          <FormInput
             placeholder="한 줄 메모 (최대 100자)"
-            placeholderTextColor="#9CA3AF"
             value={notes}
             onChangeText={(t) => setNotes(t.slice(0, 100))}
             maxLength={100}
-            className="border border-border-default rounded-md px-3 py-2.5 text-text-primary text-base"
+            multiline
           />
         </Section>
       </ScrollView>
 
-      <View className="px-4 pt-2 pb-2 border-t border-border-subtle">
-        <Pressable
-          onPress={handleSubmit}
-          disabled={!canSubmit || recordSession.isPending}
-          className={`rounded-md p-4 items-center ${
-            !canSubmit ? 'bg-background-tertiary' : 'bg-brand-primary'
-          }`}
-        >
-          {recordSession.isPending ? (
-            <ActivityIndicator color="white" />
-          ) : (
-            <Text
-              className={`font-semibold ${
-                !canSubmit ? 'text-text-muted' : 'text-background-primary'
-              }`}
-            >
-              기록
-            </Text>
-          )}
-        </Pressable>
-      </View>
+      <BottomCTA
+        label="기록"
+        icon="check"
+        onPress={handleSubmit}
+        loading={recordSession.isPending}
+        disabled={!canSubmit}
+      />
 
       <GymPickerModal
         visible={showGymModal}
@@ -404,6 +405,7 @@ export default function NewSessionScreen() {
         selectedId={gymId}
         onSelect={(id) => {
           setGymId(id);
+          setMembershipId(null);
           setShowGymModal(false);
         }}
         onClose={() => setShowGymModal(false)}

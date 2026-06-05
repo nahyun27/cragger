@@ -4,18 +4,15 @@ import * as ImagePicker from 'expo-image-picker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useMemo, useState } from 'react';
 import {
-  ActivityIndicator,
-  Alert,
   Image,
   KeyboardAvoidingView,
   Platform,
   Pressable,
   ScrollView,
   Text,
-  TextInput,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 
 import { GymPickerModal } from '@/components/session/gym-picker-modal';
@@ -24,7 +21,10 @@ import {
   PollComposer,
   type PollDraft,
 } from '@/components/community/poll-composer';
+import { BottomCTA } from '@/components/ui/bottom-cta';
 import { Chip } from '@/components/ui/chip';
+import { FormInput, FormPressable } from '@/components/ui/form';
+import { ScreenHeader } from '@/components/ui/screen-header';
 import { Section } from '@/components/ui/section';
 import {
   POST_TYPE_LABEL,
@@ -59,6 +59,7 @@ function formatMeetupAt(d: Date): string {
 export default function NewPostScreen() {
 
   const c = useThemeColors();  const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { crewId, type } = useLocalSearchParams<{ crewId?: string; type?: string }>();
   const createPost = useCreatePost();
   const createPoll = useCreatePoll();
@@ -190,15 +191,8 @@ export default function NewPostScreen() {
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-background-primary" edges={['top', 'bottom']}>
-      <View className="flex-row items-center px-4 py-2 border-b border-border-subtle">
-        <Pressable onPress={() => router.back()} className="p-2 -ml-2 active:opacity-60" hitSlop={8}>
-          <Feather name="arrow-left" size={24} color={c.text.primary} />
-        </Pressable>
-        <Text className="flex-1 text-center text-text-primary text-base font-semibold mr-6">
-          새 글 작성
-        </Text>
-      </View>
+    <SafeAreaView className="flex-1 bg-background-primary" edges={['left', 'right']}>
+      <ScreenHeader title="새 글 작성" onBack={() => router.back()} />
 
       <KeyboardAvoidingView
         className="flex-1"
@@ -208,6 +202,9 @@ export default function NewPostScreen() {
         <ScrollView
           className="flex-1"
           contentContainerClassName="p-4 gap-6"
+          contentContainerStyle={{ paddingBottom: insets.bottom + 12 }}
+          contentInsetAdjustmentBehavior="never"
+          automaticallyAdjustContentInsets={false}
           keyboardShouldPersistTaps="handled"
         >
           <Section title="종류" required>
@@ -225,35 +222,29 @@ export default function NewPostScreen() {
 
           {isMeetup && (
             <>
-              <Section title="모임 일시" required>
+              <Section title="모임 일시" required icon="calendar">
                 <View className="flex-row gap-2">
-                  <Pressable
-                    onPress={() => setDatePickerMode('date')}
-                    className="flex-1 flex-row items-center justify-between border border-border-default rounded-md px-3 py-2.5 active:opacity-70"
-                  >
-                    <View className="flex-row items-center gap-2">
-                      <Feather name="calendar" size={14} color={c.text.tertiary} />
-                      <Text className={`text-base ${meetupAt ? 'text-text-primary font-semibold' : 'text-text-muted'}`}>
-                        {meetupAt ? formatMeetupAt(meetupAt).slice(0, 16) : '날짜 선택'}
-                      </Text>
-                    </View>
-                    <Feather name="chevron-down" size={14} color={c.text.muted} />
-                  </Pressable>
-                  <Pressable
-                    onPress={() => setDatePickerMode('time')}
-                    disabled={!meetupAt}
-                    className={`flex-1 flex-row items-center justify-between border border-border-default rounded-md px-3 py-2.5 active:opacity-70 ${!meetupAt ? 'opacity-50' : ''}`}
-                  >
-                    <View className="flex-row items-center gap-2">
-                      <Feather name="clock" size={14} color={c.text.tertiary} />
-                      <Text className={`text-base ${meetupAt ? 'text-text-primary font-semibold' : 'text-text-muted'}`}>
-                        {meetupAt
+                  <View className="flex-1">
+                    <FormPressable
+                      onPress={() => setDatePickerMode('date')}
+                      leadingIcon="calendar"
+                      value={meetupAt ? formatMeetupAt(meetupAt).slice(0, 16) : null}
+                      placeholder="날짜 선택"
+                    />
+                  </View>
+                  <View className="flex-1">
+                    <FormPressable
+                      onPress={() => setDatePickerMode('time')}
+                      disabled={!meetupAt}
+                      leadingIcon="clock"
+                      value={
+                        meetupAt
                           ? `${String(meetupAt.getHours()).padStart(2, '0')}:${String(meetupAt.getMinutes()).padStart(2, '0')}`
-                          : '시간 선택'}
-                      </Text>
-                    </View>
-                    <Feather name="chevron-down" size={14} color={c.text.muted} />
-                  </Pressable>
+                          : null
+                      }
+                      placeholder="시간 선택"
+                    />
+                  </View>
                 </View>
                 {datePickerMode && (
                   <>
@@ -297,56 +288,52 @@ export default function NewPostScreen() {
                 )}
               </Section>
 
-              <Section title="자유 장소">
-                <TextInput
+              <Section
+                title="자유 장소"
+                icon="map-pin"
+                desc='암장 모임이면 아래 "관련 암장"에서 선택, 그 외면 여기에 자유 입력.'
+              >
+                <FormInput
+                  leadingIcon="map-pin"
                   placeholder={gymId ? '암장 선택됨 — 추가 안내 (선택)' : '예: 양재 시민의 숲, OO공원 입구 …'}
-                  placeholderTextColor="#9CA3AF"
                   value={meetupLocation}
                   onChangeText={(t) => setMeetupLocation(t.slice(0, LOCATION_MAX))}
                   maxLength={LOCATION_MAX}
-                  className="border border-border-default rounded-md px-3 py-2.5 text-text-primary text-base"
                 />
-                <Text className="text-text-tertiary text-xs">
-                  암장 모임이면 아래 "관련 암장"에서 선택, 그 외면 여기에 자유 입력.
-                </Text>
               </Section>
 
-              <Section title="정원 (선택)">
-                <TextInput
+              <Section title="정원 (선택)" icon="users">
+                <FormInput
+                  leadingIcon="users"
                   placeholder="비워두면 무제한"
-                  placeholderTextColor="#9CA3AF"
                   value={meetupCapacity}
                   onChangeText={(t) => setMeetupCapacity(t.replace(/[^\d]/g, '').slice(0, 3))}
                   keyboardType="number-pad"
-                  className="border border-border-default rounded-md px-3 py-2.5 text-text-primary text-base"
+                  trailingUnit="명"
                 />
               </Section>
             </>
           )}
 
-          <Section title="제목">
-            <TextInput
+          <Section title="제목" icon="type">
+            <FormInput
               placeholder="제목 (선택, 최대 60자)"
-              placeholderTextColor="#9CA3AF"
               value={title}
               onChangeText={(t) => setTitle(t.slice(0, TITLE_MAX))}
               maxLength={TITLE_MAX}
-              className="border border-border-default rounded-md px-3 py-2.5 text-text-primary text-base"
             />
           </Section>
 
-          <Section title="본문" required>
-            <TextInput
+          <Section title="본문" required icon="align-left">
+            <FormInput
               placeholder="자유롭게 써주세요 (최대 1000자)"
-              placeholderTextColor="#9CA3AF"
               value={body}
               onChangeText={(t) => setBody(t.slice(0, BODY_MAX))}
               maxLength={BODY_MAX}
               multiline
-              textAlignVertical="top"
-              className="border border-border-default rounded-md px-3 py-3 text-text-primary text-base min-h-[160px]"
+              inputStyle={{ minHeight: 160 }}
             />
-            <Text className="text-text-tertiary text-xs text-right">
+            <Text className="text-text-tertiary text-xs text-right mt-1">
               {body.length} / {BODY_MAX}
             </Text>
           </Section>
@@ -424,32 +411,13 @@ export default function NewPostScreen() {
           </Section>
         </ScrollView>
 
-        <View className="px-4 pt-2 pb-2 border-t border-border-subtle">
-          <Pressable
-            onPress={handleSubmit}
-            disabled={!canSubmit}
-            className={`rounded-md p-4 items-center ${
-              !canSubmit ? 'bg-background-tertiary' : 'bg-brand-primary'
-            }`}
-          >
-            {uploading || createPost.isPending ? (
-              <View className="flex-row items-center gap-2">
-                <ActivityIndicator color="white" />
-                <Text className="text-background-primary font-semibold">
-                  {uploading ? '업로드 중…' : '등록 중…'}
-                </Text>
-              </View>
-            ) : (
-              <Text
-                className={`font-semibold ${
-                  !canSubmit ? 'text-text-muted' : 'text-background-primary'
-                }`}
-              >
-                등록
-              </Text>
-            )}
-          </Pressable>
-        </View>
+        <BottomCTA
+          label={uploading ? '업로드 중…' : createPost.isPending ? '등록 중…' : '등록'}
+          icon="check"
+          onPress={handleSubmit}
+          loading={uploading || createPost.isPending}
+          disabled={!canSubmit}
+        />
       </KeyboardAvoidingView>
 
       <GymPickerModal

@@ -12,13 +12,16 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 
 import { GymPickerModal } from '@/components/session/gym-picker-modal';
+import { ScreenHeader } from '@/components/ui/screen-header';
+import { Section } from '@/components/ui/section';
+import { FormInput, FormPressable } from '@/components/ui/form';
+import { BottomCTA } from '@/components/ui/bottom-cta';
 import { useAuth } from '@/lib/auth-context';
 import {
   CREW_REGION_OPTIONS,
@@ -39,6 +42,7 @@ export default function EditCrewScreen() {
 
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { session: authSession } = useAuth();
   const { data: crew, isLoading } = useCrewDetail(id);
   const { data: allGyms } = useGyms();
@@ -85,13 +89,16 @@ export default function EditCrewScreen() {
       customAlert('권한 필요', '사진 라이브러리 접근 권한이 필요해요');
       return;
     }
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: 'images',
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.8,
-      base64: true,
-    });
+    let result: ImagePicker.ImagePickerResult;
+    try {
+      result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: 'images',
+        quality: 0.8,
+      });
+    } catch (e) {
+      customAlert('사진을 불러오지 못했어요', e instanceof Error ? e.message : '알 수 없는 오류');
+      return;
+    }
     if (result.canceled || !result.assets[0]) return;
     setUploading(true);
     try {
@@ -131,24 +138,19 @@ export default function EditCrewScreen() {
   }
 
   return (
-    <SafeAreaView style={s.container} edges={['top', 'bottom']}>
-      <View style={s.header}>
-        <Pressable onPress={() => router.back()} hitSlop={8}>
-          {({ pressed }) => (
-            <View style={[s.headerBtn, pressed && { opacity: 0.6 }]}>
-              <Feather name="arrow-left" size={22} color={c.text.primary} />
-            </View>
-          )}
-        </Pressable>
-        <Text style={s.headerTitle}>크루 정보 수정</Text>
-        <View style={{ width: 38 }} />
-      </View>
+    <SafeAreaView style={s.container} edges={['left', 'right']}>
+      <ScreenHeader title="크루 정보 수정" onBack={() => router.back()} />
 
       <KeyboardAvoidingView
         style={s.flex1}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <ScrollView contentContainerStyle={s.scrollContent} keyboardShouldPersistTaps="handled">
+        <ScrollView
+          contentContainerStyle={[s.scrollContent, { paddingBottom: insets.bottom + 12 }]}
+          contentInsetAdjustmentBehavior="never"
+          automaticallyAdjustContentInsets={false}
+          keyboardShouldPersistTaps="handled"
+        >
           {/* Logo picker */}
           <View style={s.logoBlock}>
             <Pressable onPress={handlePickImage} disabled={uploading}>
@@ -178,79 +180,71 @@ export default function EditCrewScreen() {
             )}
           </View>
 
-          <Text style={s.label}>
-            이름 <Text style={s.required}>*</Text>
-          </Text>
-          <TextInput
-            style={s.input}
-            value={name}
-            onChangeText={(t) => setName(t.slice(0, NAME_MAX))}
-            placeholder="크루 이름 (최대 30자)"
-            placeholderTextColor={c.text.muted}
-            maxLength={NAME_MAX}
-          />
+          <Section title="이름" required icon="users">
+            <FormInput
+              value={name}
+              onChangeText={(t) => setName(t.slice(0, NAME_MAX))}
+              placeholder="크루 이름 (최대 30자)"
+              maxLength={NAME_MAX}
+            />
+          </Section>
 
-          <Text style={[s.label, { marginTop: 18 }]}>소개</Text>
-          <TextInput
-            style={[s.input, s.textArea]}
-            value={description}
-            onChangeText={(t) => setDescription(t.slice(0, DESC_MAX))}
-            placeholder="크루 소개 (최대 200자)"
-            placeholderTextColor={c.text.muted}
-            multiline
-            textAlignVertical="top"
-            maxLength={DESC_MAX}
-          />
-          <Text style={s.charCount}>{description.length} / {DESC_MAX}</Text>
+          <Section title="소개" icon="align-left">
+            <FormInput
+              value={description}
+              onChangeText={(t) => setDescription(t.slice(0, DESC_MAX))}
+              placeholder="크루 소개 (최대 200자)"
+              multiline
+              maxLength={DESC_MAX}
+            />
+            <Text style={s.charCount}>{description.length} / {DESC_MAX}</Text>
+          </Section>
 
-          <Text style={[s.label, { marginTop: 18 }]}>주요 활동지역</Text>
-          <View style={s.regionGrid}>
-            {CREW_REGION_OPTIONS.map((r) => {
-              const active = region === r;
-              return (
-                <Pressable
-                  key={r}
-                  onPress={() => setRegion(active ? null : r)}
-                >
-                  {({ pressed }) => (
-                    <View
-                      style={[
-                        s.regionChip,
-                        active ? s.regionChipActive : s.regionChipInactive,
-                        pressed && { opacity: 0.8 },
-                      ]}
-                    >
-                      <Text
+          <Section title="주요 활동지역" icon="map">
+            <View style={s.regionGrid}>
+              {CREW_REGION_OPTIONS.map((r) => {
+                const active = region === r;
+                return (
+                  <Pressable
+                    key={r}
+                    onPress={() => setRegion(active ? null : r)}
+                  >
+                    {({ pressed }) => (
+                      <View
                         style={[
-                          s.regionChipText,
-                          active ? s.regionChipTextActive : s.regionChipTextInactive,
+                          s.regionChip,
+                          active ? s.regionChipActive : s.regionChipInactive,
+                          pressed && { opacity: 0.8 },
                         ]}
                       >
-                        {r}
-                      </Text>
-                    </View>
-                  )}
-                </Pressable>
-              );
-            })}
-          </View>
+                        <Text
+                          style={[
+                            s.regionChipText,
+                            active ? s.regionChipTextActive : s.regionChipTextInactive,
+                          ]}
+                        >
+                          {r}
+                        </Text>
+                      </View>
+                    )}
+                  </Pressable>
+                );
+              })}
+            </View>
+          </Section>
 
-          <Text style={[s.label, { marginTop: 18 }]}>주 활동 암장</Text>
-          <Pressable onPress={() => setShowGymModal(true)}>
-            {({ pressed }) => (
-              <View style={[s.gymBox, pressed && { opacity: 0.7 }]}>
-                <View style={s.gymBoxLeft}>
-                  <Feather name="search" size={16} color={c.text.tertiary} />
-                  <Text
-                    style={selectedGym ? s.gymBoxText : s.gymBoxPlaceholder}
-                    numberOfLines={1}
-                  >
-                    {selectedGym
-                      ? `${selectedGym.name}${selectedGym.branch ? ` ${selectedGym.branch}` : ''}`
-                      : '암장 선택 (선택)'}
-                  </Text>
-                </View>
-                {selectedGym && (
+          <Section title="주 활동 암장" icon="map-pin">
+            <FormPressable
+              onPress={() => setShowGymModal(true)}
+              leadingIcon="search"
+              placeholder="암장 선택 (선택)"
+              value={
+                selectedGym
+                  ? `${selectedGym.name}${selectedGym.branch ? ` ${selectedGym.branch}` : ''}`
+                  : null
+              }
+              trailingNode={
+                selectedGym ? (
                   <Pressable
                     onPress={(e) => {
                       e.stopPropagation();
@@ -260,54 +254,38 @@ export default function EditCrewScreen() {
                   >
                     <Feather name="x" size={16} color={c.text.muted} />
                   </Pressable>
-                )}
-              </View>
-            )}
-          </Pressable>
+                ) : undefined
+              }
+            />
+          </Section>
 
-          <Text style={[s.label, { marginTop: 18 }]}>공개 모집</Text>
-          <Pressable onPress={() => setIsRecruiting((v) => !v)}>
-            {({ pressed }) => (
-              <View style={[s.recruitToggle, pressed && { opacity: 0.85 }]}>
-                <View style={{ flex: 1, gap: 3 }}>
-                  <Text style={s.recruitToggleTitle}>
-                    {isRecruiting ? '공개 모집 중' : '공개 모집 안 함'}
-                  </Text>
-                  <Text style={s.recruitToggleSub}>
-                    켜면 커뮤니티 / 크루 탐색에 노출되고 누구나 가입 요청을 보낼 수 있어요.
-                  </Text>
+          <Section title="공개 모집" icon="radio">
+            <Pressable onPress={() => setIsRecruiting((v) => !v)}>
+              {({ pressed }) => (
+                <View style={[s.recruitToggle, pressed && { opacity: 0.85 }]}>
+                  <View style={{ flex: 1, gap: 3 }}>
+                    <Text style={s.recruitToggleTitle}>
+                      {isRecruiting ? '공개 모집 중' : '공개 모집 안 함'}
+                    </Text>
+                    <Text style={s.recruitToggleSub}>
+                      켜면 커뮤니티 / 크루 탐색에 노출되고 누구나 가입 요청을 보낼 수 있어요.
+                    </Text>
+                  </View>
+                  <View style={[s.toggleTrack, isRecruiting && s.toggleTrackOn]}>
+                    <View style={[s.toggleThumb, isRecruiting && s.toggleThumbOn]} />
+                  </View>
                 </View>
-                <View style={[s.toggleTrack, isRecruiting && s.toggleTrackOn]}>
-                  <View style={[s.toggleThumb, isRecruiting && s.toggleThumbOn]} />
-                </View>
-              </View>
-            )}
-          </Pressable>
+              )}
+            </Pressable>
+          </Section>
         </ScrollView>
 
-        <View style={s.footer}>
-          <Pressable onPress={handleSubmit} disabled={!canSubmit}>
-            {({ pressed }) => (
-              <View
-                style={[
-                  s.submitBtn,
-                  !canSubmit && s.submitBtnDisabled,
-                  pressed && { opacity: 0.85 },
-                ]}
-              >
-                {updateCrew.isPending ? (
-                  <ActivityIndicator color="white" />
-                ) : (
-                  <Text
-                    style={[s.submitBtnText, !canSubmit && s.submitBtnTextDisabled]}
-                  >
-                    저장
-                  </Text>
-                )}
-              </View>
-            )}
-          </Pressable>
-        </View>
+        <BottomCTA
+          label="저장"
+          onPress={handleSubmit}
+          loading={updateCrew.isPending}
+          disabled={!canSubmit}
+        />
       </KeyboardAvoidingView>
 
       <GymPickerModal
@@ -348,8 +326,8 @@ function makeStyles(c: ThemeColors) {
     backgroundColor: c.bg.subtle,
   },
   headerTitle: { fontSize: 17, fontWeight: '700', color: c.text.primary },
-  scrollContent: { padding: 20, paddingBottom: 40 },
-  logoBlock: { alignItems: 'center', gap: 8, marginBottom: 24 },
+  scrollContent: { padding: 18, paddingBottom: 40, gap: 16 },
+  logoBlock: { alignItems: 'center', gap: 8 },
   logoRing: {
     width: 96,
     height: 96,

@@ -3,18 +3,16 @@ import { useRouter } from 'expo-router';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   View,
   Image,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 
 import {
@@ -25,6 +23,11 @@ import {
   type FootWidth,
   type InstepHeight,
 } from '@/hooks/use-profile';
+import { BottomCTA } from '@/components/ui/bottom-cta';
+import { Chip } from '@/components/ui/chip';
+import { FormField, FormInput } from '@/components/ui/form';
+import { ScreenHeader } from '@/components/ui/screen-header';
+import { Section } from '@/components/ui/section';
 import { useThemeColors, type ThemeColors } from '@/lib/theme';
 
 const SHAPE_OPTIONS: Array<{
@@ -67,6 +70,7 @@ function parseMm(v: string): number | null {
 
 export default function FootProfileScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const c = useThemeColors();
   const s = useMemo(() => makeStyles(c), [c]);
   const { data: profile, isLoading } = useProfile();
@@ -121,18 +125,8 @@ export default function FootProfileScreen() {
   }
 
   return (
-    <SafeAreaView style={s.container} edges={['top', 'bottom']}>
-      <View style={s.header}>
-        <Pressable onPress={() => router.back()} hitSlop={8}>
-          {({ pressed }) => (
-            <View style={[s.headerBtn, pressed && { opacity: 0.6 }]}>
-              <Feather name="arrow-left" size={22} color={c.text.primary} />
-            </View>
-          )}
-        </Pressable>
-        <Text style={s.headerTitle}>내 발 프로필</Text>
-        <View style={{ width: 38 }} />
-      </View>
+    <SafeAreaView style={s.container} edges={['left', 'right']}>
+      <ScreenHeader title="내 발 프로필" onBack={() => router.back()} />
 
       <KeyboardAvoidingView
         style={s.flex1}
@@ -140,48 +134,50 @@ export default function FootProfileScreen() {
         keyboardVerticalOffset={Platform.OS === 'ios' ? 8 : 0}
       >
         <ScrollView
-          contentContainerStyle={s.scrollContent}
+          contentContainerStyle={[s.scrollContent, { paddingBottom: insets.bottom + 12 }]}
+          contentInsetAdjustmentBehavior="never"
+          automaticallyAdjustContentInsets={false}
           keyboardShouldPersistTaps="handled"
         >
-          <View style={s.helperBox}>
-            <Feather name="info" size={13} color={c.text.secondary} />
-            <Text style={s.helperText}>
-              나에게 맞는 암벽화를 추천받기 위한 정보예요. 모두 선택 사항이에요.
-            </Text>
+          {/* Hero 안내 */}
+          <View style={s.heroCard}>
+            <View style={s.heroIcon}>
+              <Feather name="info" size={16} color={c.brand.primaryDeep} />
+            </View>
+            <View style={{ flex: 1, gap: 3 }}>
+              <Text style={s.heroTitle}>나에게 맞는 암벽화를 추천받기 위한 정보예요</Text>
+              <Text style={s.heroDesc}>모두 선택 사항이라 채우는 만큼만 정확도가 올라가요.</Text>
+            </View>
           </View>
 
           {/* Length inputs */}
-          <View style={s.lengthRow}>
-            <View style={s.lengthCol}>
-              <Text style={s.label}>발 실측 길이 (mm)</Text>
-              <TextInput
-                style={[s.mmInput, lengthErr && s.inputError]}
-                value={footLength}
-                onChangeText={setFootLength}
-                placeholder="예: 265"
-                placeholderTextColor="#94a3b8"
-                keyboardType="number-pad"
-                maxLength={3}
-              />
-              {lengthErr && <Text style={s.errText}>{lengthErr}</Text>}
+          <Section title="발 길이" icon="maximize-2" desc="실측은 발 길이, 운동화 사이즈는 평소 신는 사이즈">
+            <View style={s.fieldGrid}>
+              <FormField label="발 실측 길이" error={lengthErr || undefined} flex>
+                <FormInput
+                  value={footLength}
+                  onChangeText={setFootLength}
+                  placeholder="예: 265"
+                  keyboardType="number-pad"
+                  maxLength={3}
+                  trailingUnit="mm"
+                />
+              </FormField>
+              <FormField label="운동화 사이즈" error={shoeErr || undefined} flex>
+                <FormInput
+                  value={shoeSize}
+                  onChangeText={setShoeSize}
+                  placeholder="예: 270"
+                  keyboardType="number-pad"
+                  maxLength={3}
+                  trailingUnit="mm"
+                />
+              </FormField>
             </View>
-            <View style={s.lengthCol}>
-              <Text style={s.label}>운동화 사이즈 (mm)</Text>
-              <TextInput
-                style={[s.mmInput, shoeErr && s.inputError]}
-                value={shoeSize}
-                onChangeText={setShoeSize}
-                placeholder="예: 270"
-                placeholderTextColor="#94a3b8"
-                keyboardType="number-pad"
-                maxLength={3}
-              />
-              {shoeErr && <Text style={s.errText}>{shoeErr}</Text>}
-            </View>
-          </View>
+          </Section>
 
           {/* Foot shape — 2x2 cards */}
-          <Text style={[s.label, s.sectionLabel]}>발 모양</Text>
+          <Section title="발 모양" icon="zap">
           <View style={s.shapeGrid}>
             {SHAPE_OPTIONS.map((opt) => {
               const active = shape === opt.value;
@@ -210,37 +206,24 @@ export default function FootProfileScreen() {
               );
             })}
           </View>
+          </Section>
 
           {/* Foot width — pills */}
-          <Text style={[s.label, s.sectionLabel]}>발 폭</Text>
-          <View style={s.pillRow}>
-            {WIDTH_OPTIONS.map((opt) => {
-              const active = width === opt.value;
-              return (
-                <Pressable
+          <Section title="발 폭" icon="move">
+            <View style={s.chipWrap}>
+              {WIDTH_OPTIONS.map((opt) => (
+                <Chip
                   key={opt.value}
-                  onPress={() => setWidth(active ? null : opt.value)}
-                >
-                  {({ pressed }) => (
-                    <View
-                      style={[
-                        s.pill,
-                        active && s.pillActive,
-                        pressed && { opacity: 0.85 },
-                      ]}
-                    >
-                      <Text style={[s.pillText, active && s.pillTextActive]}>
-                        {opt.label}
-                      </Text>
-                    </View>
-                  )}
-                </Pressable>
-              );
-            })}
-          </View>
+                  label={opt.label}
+                  selected={width === opt.value}
+                  onPress={() => setWidth(width === opt.value ? null : opt.value)}
+                />
+              ))}
+            </View>
+          </Section>
 
           {/* Instep height — 3 cards */}
-          <Text style={[s.label, s.sectionLabel]}>발등 높이</Text>
+          <Section title="발등 높이" icon="trending-up">
           <View style={s.threeRow}>
             {INSTEP_OPTIONS.map((opt) => {
               const active = instep === opt.value;
@@ -268,9 +251,10 @@ export default function FootProfileScreen() {
               );
             })}
           </View>
+          </Section>
 
           {/* Arch type — 3 cards */}
-          <Text style={[s.label, s.sectionLabel]}>아치 타입</Text>
+          <Section title="아치 타입" icon="activity">
           <View style={s.threeRow}>
             {ARCH_OPTIONS.map((opt) => {
               const active = arch === opt.value;
@@ -298,34 +282,16 @@ export default function FootProfileScreen() {
               );
             })}
           </View>
+          </Section>
         </ScrollView>
 
-        <View style={s.footer}>
-          <Pressable onPress={() => router.back()} style={s.footerCancel}>
-            {({ pressed }) => (
-              <View style={[s.cancelBtn, pressed && { opacity: 0.7 }]}>
-                <Text style={s.cancelBtnText}>취소</Text>
-              </View>
-            )}
-          </Pressable>
-          <Pressable onPress={handleSubmit} disabled={!canSubmit} style={s.footerSave}>
-            {({ pressed }) => (
-              <View
-                style={[
-                  s.saveBtn,
-                  !canSubmit && s.saveBtnDisabled,
-                  pressed && { opacity: 0.85 },
-                ]}
-              >
-                {update.isPending ? (
-                  <ActivityIndicator color="white" />
-                ) : (
-                  <Text style={s.saveBtnText}>저장</Text>
-                )}
-              </View>
-            )}
-          </Pressable>
-        </View>
+        <BottomCTA
+          label="저장"
+          icon="check"
+          onPress={handleSubmit}
+          disabled={!canSubmit}
+          loading={update.isPending}
+        />
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -336,50 +302,35 @@ function makeStyles(c: ThemeColors) {
     container: { flex: 1, backgroundColor: c.bg.primary },
     flex1: { flex: 1 },
     center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: c.bg.primary },
-    header: {
+    scrollContent: { padding: 18, paddingBottom: 100, gap: 16 },
+
+    heroCard: {
       flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      paddingHorizontal: 16,
-      paddingVertical: 8,
+      gap: 12,
+      padding: 14,
+      borderRadius: 14,
+      backgroundColor: c.brand.primaryLight,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: c.brand.primary + '33',
     },
-    headerBtn: {
-      width: 38,
-      height: 38,
+    heroIcon: {
+      width: 32,
+      height: 32,
       borderRadius: 10,
       alignItems: 'center',
       justifyContent: 'center',
-      backgroundColor: c.bg.subtle,
+      backgroundColor: c.bg.card,
     },
-    headerTitle: { fontSize: 17, fontWeight: '700', color: c.text.primary },
-    scrollContent: { padding: 16, paddingBottom: 32 },
-    helperBox: {
-      flexDirection: 'row',
-      alignItems: 'flex-start',
-      gap: 8,
-      backgroundColor: c.bg.accent,
-      borderRadius: 10,
-      padding: 12,
-      marginBottom: 16,
+    heroTitle: {
+      fontSize: 13.5,
+      fontWeight: '900',
+      color: c.brand.primaryDeep,
+      letterSpacing: -0.2,
     },
-    helperText: { flex: 1, fontSize: 12, color: c.text.secondary, lineHeight: 17 },
-    label: { fontSize: 12, fontWeight: '700', color: c.text.secondary, marginBottom: 8 },
-    sectionLabel: { marginTop: 20 },
-    lengthRow: { flexDirection: 'row', gap: 12 },
-    lengthCol: { flex: 1 },
-    mmInput: {
-      backgroundColor: c.bg.subtle,
-      borderWidth: 1,
-      borderColor: c.border.subtle,
-      borderRadius: 16,
-      paddingHorizontal: 16,
-      paddingVertical: 14,
-      fontSize: 16,
-      color: c.text.primary,
-      fontWeight: '600',
-    },
-    inputError: { borderColor: c.status.danger, backgroundColor: c.status.dangerBg },
-    errText: { fontSize: 11, color: c.status.danger, marginTop: 4, marginLeft: 4 },
+    heroDesc: { fontSize: 11.5, color: c.text.secondary, fontWeight: '600', lineHeight: 16 },
+
+    fieldGrid: { flexDirection: 'row', gap: 10 },
+    chipWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
     shapeGrid: {
       flexDirection: 'row',
       flexWrap: 'wrap',
@@ -412,21 +363,6 @@ function makeStyles(c: ThemeColors) {
     shapeLabel: { fontSize: 14, fontWeight: '800', color: c.text.primary, marginBottom: 4 },
     shapeLabelActive: { color: c.text.primary },
     shapeSub: { fontSize: 11, color: c.text.tertiary, lineHeight: 15 },
-    pillRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-    pill: {
-      paddingHorizontal: 16,
-      paddingVertical: 10,
-      borderRadius: 999,
-      backgroundColor: c.bg.subtle,
-      borderWidth: 1,
-      borderColor: c.border.subtle,
-    },
-    pillActive: {
-      backgroundColor: c.brand.primary,
-      borderColor: c.brand.primary,
-    },
-    pillText: { fontSize: 14, fontWeight: '700', color: c.text.tertiary },
-    pillTextActive: { color: c.brand.onPrimary },
     threeRow: { flexDirection: 'row', gap: 8 },
     threeCol: { flex: 1 },
     threeCard: {
@@ -452,36 +388,5 @@ function makeStyles(c: ThemeColors) {
     threeLabel: { fontSize: 14, fontWeight: '800', color: c.text.primary, marginBottom: 3 },
     threeLabelActive: { color: c.text.primary },
     threeSub: { fontSize: 10, color: c.text.tertiary, textAlign: 'center', lineHeight: 14 },
-    footer: {
-      flexDirection: 'row',
-      gap: 10,
-      paddingHorizontal: 16,
-      paddingTop: 8,
-      paddingBottom: 8,
-      borderTopWidth: 1,
-      borderTopColor: c.border.subtle,
-      backgroundColor: c.bg.card,
-    },
-    footerCancel: { flex: 1 },
-    footerSave: { flex: 2 },
-    cancelBtn: {
-      height: 48,
-      borderRadius: 12,
-      alignItems: 'center',
-      justifyContent: 'center',
-      backgroundColor: c.bg.subtle,
-      borderWidth: 1,
-      borderColor: c.border.subtle,
-    },
-    cancelBtnText: { fontSize: 14, fontWeight: '700', color: c.text.secondary },
-    saveBtn: {
-      height: 48,
-      borderRadius: 12,
-      alignItems: 'center',
-      justifyContent: 'center',
-      backgroundColor: c.brand.primary,
-    },
-    saveBtnDisabled: { backgroundColor: c.border.strong },
-    saveBtnText: { fontSize: 14, fontWeight: '800', color: c.brand.onPrimary },
   });
 }

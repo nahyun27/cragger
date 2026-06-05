@@ -16,6 +16,8 @@ import { Feather } from '@expo/vector-icons';
 
 import { EMPTY_SHOE_FORM, ShoeForm, type ShoeFormValue } from '@/components/shoes/shoe-form';
 import { ShoeSizeGuide } from '@/components/shoes/shoe-size-guide';
+import { ScreenHeader } from '@/components/ui/screen-header';
+import { BottomCTA } from '@/components/ui/bottom-cta';
 import { useCreateShoe } from '@/hooks/use-shoes';
 import { useThemeColors, type ThemeColors } from '@/lib/theme';
 
@@ -66,19 +68,8 @@ export default function NewShoeScreen() {
   }
 
   return (
-    <SafeAreaView style={s.safeContainer} edges={['top', 'bottom']}>
-      {/* Header */}
-      <View style={s.headerRow}>
-        <Pressable onPress={() => router.back()} hitSlop={8}>
-          {({ pressed }) => (
-            <View style={[s.headerIconBtn, pressed && s.btnPressed]}>
-              <Feather name="arrow-left" size={22} color={c.text.primary} />
-            </View>
-          )}
-        </Pressable>
-        <Text style={s.headerTitle}>새 신발 등록</Text>
-        <View style={{ width: 36 }} />
-      </View>
+    <SafeAreaView style={s.safeContainer} edges={['left', 'right']}>
+      <ScreenHeader title="새 신발 등록" onBack={() => router.back()} />
 
       <KeyboardAvoidingView
         style={s.flex1}
@@ -101,29 +92,12 @@ export default function NewShoeScreen() {
 
         <ShoeForm value={form} onChange={setForm} />
 
-        {/* Footer sticky button */}
-        <View style={s.footer}>
-          <Pressable
-            onPress={handleSubmit}
-            disabled={!canSubmit}
-          >
-            {({ pressed }) => (
-              <View style={[
-                s.submitBtn,
-                !canSubmit && s.submitBtnDisabled,
-                pressed && s.btnPressed
-              ]}>
-                {createShoe.isPending ? (
-                  <ActivityIndicator color="white" />
-                ) : (
-                  <Text style={[s.submitBtnText, !canSubmit && s.submitBtnTextDisabled]}>
-                    등록 완료
-                  </Text>
-                )}
-              </View>
-            )}
-          </Pressable>
-        </View>
+        <BottomCTA
+          label="등록 완료"
+          onPress={handleSubmit}
+          loading={createShoe.isPending}
+          disabled={!canSubmit}
+        />
       </KeyboardAvoidingView>
 
       <ShoeSizeGuide visible={guideOpen} onClose={() => setGuideOpen(false)} />

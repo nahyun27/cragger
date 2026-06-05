@@ -14,10 +14,12 @@ import {
   View,
   useColorScheme,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { GymPickerModal } from '@/components/session/gym-picker-modal';
 import { Section } from '@/components/ui/section';
+import { FormInput } from '@/components/ui/form';
+import { BottomCTA } from '@/components/ui/bottom-cta';
 import { useGyms } from '@/hooks/use-gyms';
 import { useThemeColors } from '@/lib/theme';
 import {
@@ -39,6 +41,7 @@ export default function EditMembershipScreen() {
 
   const c = useThemeColors();  const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { data, isLoading, error } = useMembership(id);
   const updateMembership = useUpdateMembership();
   const deleteMembership = useDeleteMembership();
@@ -177,7 +180,7 @@ export default function EditMembershipScreen() {
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-background-primary" edges={['top', 'bottom']}>
+    <SafeAreaView className="flex-1 bg-background-primary" edges={['top']}>
       {/* Header */}
       <View className="flex-row items-center px-4 py-3 border-b border-border-subtle bg-background-primary justify-between">
         <Pressable
@@ -208,9 +211,14 @@ export default function EditMembershipScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         className="flex-1"
       >
-        <ScrollView contentContainerClassName="p-5 gap-6">
+        <ScrollView
+          contentContainerClassName="p-5 gap-6"
+          contentContainerStyle={{ paddingBottom: insets.bottom + 12 }}
+          contentInsetAdjustmentBehavior="never"
+          automaticallyAdjustContentInsets={false}
+        >
           {/* Gym Section */}
-          <Section title="암장" required>
+          <Section title="암장" required icon="map-pin">
             <Pressable
               onPress={() => setShowGymModal(true)}
               className="flex-row items-center justify-between border border-border-subtle bg-background-secondary rounded-xl py-3 px-4 active:bg-background-tertiary"
@@ -232,7 +240,7 @@ export default function EditMembershipScreen() {
           </Section>
 
           {/* Start Date Section (Read-Only Card) */}
-          <Section title="시작일">
+          <Section title="시작일" icon="calendar">
             <View className="px-4 py-3.5 rounded-xl bg-background-secondary border border-border-subtle flex-row items-center gap-2">
               <Feather name="calendar" size={16} color={c.text.tertiary} />
               <Text className="text-text-primary text-base font-semibold">{data.start_date}</Text>
@@ -243,7 +251,7 @@ export default function EditMembershipScreen() {
           </Section>
 
           {/* Membership Type Section */}
-          <Section title="종류" required>
+          <Section title="종류" required icon="tag">
             <View className="flex-row gap-3">
               {/* Period (기간권) */}
               <Pressable
@@ -319,7 +327,7 @@ export default function EditMembershipScreen() {
 
           {/* Duration Section */}
           {type === 'period' && (
-            <Section title="기간" required>
+            <Section title="기간" required icon="clock">
               <View className="flex-row gap-2">
                 {DURATION_CHIPS.map(({ months, label }) => {
                   const isSelected = durationMonths === months;
@@ -358,38 +366,24 @@ export default function EditMembershipScreen() {
           {type === 'passes' && (
             <View className="flex-row gap-4">
               <View className="flex-1">
-                <Section title="총 횟수" required>
-                  <TextInput
+                <Section title="총 횟수" required icon="hash">
+                  <FormInput
                     placeholder="10"
-                    placeholderTextColor={c.text.muted}
                     value={totalPasses}
                     onChangeText={(t) => setTotalPasses(t.replace(/[^\d]/g, '').slice(0, 4))}
                     keyboardType="number-pad"
-                    onFocus={() => setIsTotalFocused(true)}
-                    onBlur={() => setIsTotalFocused(false)}
-                    className={`border rounded-xl px-3.5 py-2.5 text-text-primary text-base ${
-                      isTotalFocused
-                        ? 'border-brand-primary bg-background-primary'
-                        : 'border-border-subtle bg-background-secondary'
-                    }`}
+                    trailingUnit="회"
                   />
                 </Section>
               </View>
               <View className="flex-1">
-                <Section title="사용한 횟수">
-                  <TextInput
+                <Section title="사용한 횟수" icon="check">
+                  <FormInput
                     placeholder="0"
-                    placeholderTextColor={c.text.muted}
                     value={usedPasses}
                     onChangeText={(t) => setUsedPasses(t.replace(/[^\d]/g, '').slice(0, 4))}
                     keyboardType="number-pad"
-                    onFocus={() => setIsUsedFocused(true)}
-                    onBlur={() => setIsUsedFocused(false)}
-                    className={`border rounded-xl px-3.5 py-2.5 text-text-primary text-base ${
-                      isUsedFocused
-                        ? 'border-brand-primary bg-background-primary'
-                        : 'border-border-subtle bg-background-secondary'
-                    }`}
+                    trailingUnit="회"
                   />
                 </Section>
               </View>
@@ -397,91 +391,38 @@ export default function EditMembershipScreen() {
           )}
 
           {/* Price Section */}
-          <Section title="가격 (원)">
-            <View
-              className={`flex-row items-center border rounded-xl px-3.5 py-1.5 ${
-                isPriceFocused
-                  ? 'border-brand-primary bg-background-primary'
-                  : 'border-border-subtle bg-background-secondary'
-              }`}
-            >
-              <Text className="text-text-muted text-base mr-1.5">₩</Text>
-              <TextInput
-                placeholder="선택 사항"
-                placeholderTextColor={c.text.muted}
-                value={price}
-                onChangeText={(t) => setPrice(t.replace(/[^\d]/g, '').slice(0, 8))}
-                keyboardType="number-pad"
-                onFocus={() => setIsPriceFocused(true)}
-                onBlur={() => setIsPriceFocused(false)}
-                className="flex-1 text-text-primary text-base py-1 outline-none"
-              />
-            </View>
+          <Section title="가격" icon="dollar-sign">
+            <FormInput
+              leadingText="₩"
+              placeholder="선택 사항"
+              value={price}
+              onChangeText={(t) => setPrice(t.replace(/[^\d]/g, '').slice(0, 8))}
+              keyboardType="number-pad"
+            />
           </Section>
 
           {/* Notes Section */}
-          <Section title="메모">
-            <View
-              className={`border rounded-xl px-3.5 py-2.5 min-h-[80px] relative ${
-                isNotesFocused
-                  ? 'border-brand-primary bg-background-primary'
-                  : 'border-border-subtle bg-background-secondary'
-              }`}
-            >
-              <TextInput
-                placeholder="메모를 입력해 주세요 (선택 사항)"
-                placeholderTextColor={c.text.muted}
-                value={notes}
-                onChangeText={(t) => setNotes(t.slice(0, 200))}
-                maxLength={200}
-                multiline
-                onFocus={() => setIsNotesFocused(true)}
-                onBlur={() => setIsNotesFocused(false)}
-                className="text-text-primary text-base outline-none w-full"
-                style={{ textAlignVertical: 'top', height: 60 }}
-              />
-              <Text className="absolute right-3.5 bottom-2.5 text-text-muted text-[10px] font-semibold">
-                {notes.length} / 200
-              </Text>
-            </View>
+          <Section title="메모" icon="message-square">
+            <FormInput
+              placeholder="메모를 입력해 주세요 (선택 사항)"
+              value={notes}
+              onChangeText={(t) => setNotes(t.slice(0, 200))}
+              maxLength={200}
+              multiline
+            />
+            <Text className="text-text-muted text-[10px] font-semibold text-right">
+              {notes.length} / 200
+            </Text>
           </Section>
         </ScrollView>
 
-        {/* Save Button */}
-        <View className="px-5 pt-3 pb-6 border-t border-border-subtle bg-background-primary">
-          <Pressable
-            onPress={handleSave}
-            disabled={!canSubmit || updateMembership.isPending}
-            style={({ pressed }) => [
-              {
-                transform: [{ scale: pressed && canSubmit ? 0.98 : 1 }],
-                opacity: pressed && canSubmit ? 0.9 : 1,
-              },
-            ]}
-            className={`rounded-xl p-4 items-center justify-center flex-row gap-2 elevation-sm ${
-              !canSubmit ? 'bg-background-tertiary' : 'bg-brand-primary'
-            }`}
-          >
-            {updateMembership.isPending ? (
-              <ActivityIndicator color="white" />
-            ) : (
-              <>
-                <Feather
-                  name="check-circle"
-                  size={18}
-                  color={!canSubmit ? '#94a3b8' : '#ffffff'}
-                />
-                <Text
-                  className={`font-bold text-base ${
-                    !canSubmit ? 'text-text-muted' : 'text-background-primary'
-                  }`}
-                >
-                  저장하기
-                </Text>
-              </>
-            )}
-          </Pressable>
-        </View>
+        <BottomCTA
+          label="저장하기"
+          icon="check-circle"
+          onPress={handleSave}
+          loading={updateMembership.isPending}
+          disabled={!canSubmit}
+        />
       </KeyboardAvoidingView>
 
     <GymPickerModal

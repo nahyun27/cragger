@@ -1,9 +1,10 @@
-import { Feather, Ionicons } from '@expo/vector-icons';
+import { Feather, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
+  RefreshControl,
   Modal,
   Pressable,
   ScrollView,
@@ -13,12 +14,12 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { BlurView } from 'expo-blur';
 
 import { GymThumbnail } from '@/components/gym/gym-thumbnail';
+import { EmptyState } from '@/components/ui/empty-state';
 import { useFavoriteGymIds, useToggleFavorite } from '@/hooks/use-favorites';
-import { useGyms, type GymListItem } from '@/hooks/use-gyms';
-import { useThemeColors, useEffectiveScheme, type ThemeColors } from '@/lib/theme';
+import { compareGymName, useGyms, type GymListItem } from '@/hooks/use-gyms';
+import { useThemeColors, type ThemeColors } from '@/lib/theme';
 
 // City → coarse region mapping for the filter chips.
 // The gyms.city column was populated inconsistently — sometimes "서울",
@@ -87,7 +88,7 @@ export default function GymsScreen() {
   const router = useRouter();
   const c = useThemeColors();
   const s = useMemo(() => makeStyles(c), [c]);
-  const { data, isLoading, error } = useGyms();
+  const { data, isLoading, error, refetch, isRefetching } = useGyms();
   const { data: favoriteIds } = useFavoriteGymIds();
   const [query, setQuery] = useState('');
   const [isFocused, setIsFocused] = useState(false);
@@ -95,6 +96,13 @@ export default function GymsScreen() {
   const [selectedFacilities, setSelectedFacilities] = useState<string[]>([]);
   const [favoritesOnly, setFavoritesOnly] = useState(false);
   const [regionModalOpen, setRegionModalOpen] = useState(false);
+  const [sortMode, setSortMode] = useState<'name' | 'popular'>('name');
+  const [sortModalOpen, setSortModalOpen] = useState(false);
+
+  const SORT_LABEL: Record<'name' | 'popular', string> = {
+    name: '가나다순',
+    popular: '인기순',
+  };
 
   const regions = [
     '전체',
@@ -153,14 +161,19 @@ export default function GymsScreen() {
       );
     }
 
-    // 4. Sort: favorites first, then by name
+    // 4. Sort: favorites first, then selected mode
     return [...filteredList].sort((a, b) => {
       const aFav = favoriteIds?.has(a.id) ?? false;
       const bFav = favoriteIds?.has(b.id) ?? false;
       if (aFav !== bFav) return aFav ? -1 : 1;
-      return a.name.localeCompare(b.name);
+      if (sortMode === 'popular') {
+        const fc = (b.favorite_count ?? 0) - (a.favorite_count ?? 0);
+        if (fc !== 0) return fc;
+        // 동률은 이름순으로 tiebreak
+      }
+      return compareGymName(a, b);
     });
-  }, [data, query, selectedRegion, selectedFacilities, favoritesOnly, favoriteIds]);
+  }, [data, query, selectedRegion, selectedFacilities, favoritesOnly, favoriteIds, sortMode]);
 
   const toggleFacility = (fac: string) => {
     setSelectedFacilities((prev) =>
@@ -169,17 +182,17 @@ export default function GymsScreen() {
   };
 
   const insets = useSafeAreaInsets();
-  const scheme = useEffectiveScheme();
 
   return (
     <View style={s.container}>
-      {/* Header with Glassmorphism */}
-      <View className="z-20 border-b border-border-subtle absolute top-0 left-0 right-0" style={{ paddingTop: Math.max(insets.top, 20) }}>
-        <BlurView
-          tint={scheme === 'dark' ? 'dark' : 'light'}
-          intensity={80}
-          style={StyleSheet.absoluteFill}
-        />
+      {/* Header */}
+      <View
+        className="z-20 border-b border-border-subtle absolute top-0 left-0 right-0"
+        style={{
+          paddingTop: Math.max(insets.top, 20),
+          backgroundColor: c.bg.card,
+        }}
+      >
         <View style={s.header}>
         <View style={s.headerTitleRow}>
           <Text style={s.headerTitle}>암장</Text>
@@ -259,6 +272,19 @@ export default function GymsScreen() {
           </Pressable>
 
           <Pressable
+            onPress={() => setSortModalOpen(true)}
+            style={({ pressed }) => [{ opacity: pressed ? 0.8 : 1 }]}
+          >
+            <View style={[s.favOnlyChip, s.favOnlyChipInactive]}>
+              <Feather name="bar-chart-2" size={14} color={c.text.secondary} />
+              <Text style={[s.favOnlyText, s.favOnlyTextInactive]}>
+                {SORT_LABEL[sortMode]}
+              </Text>
+              <Feather name="chevron-down" size={12} color={c.text.tertiary} />
+            </View>
+          </Pressable>
+
+          <Pressable
             onPress={() => setFavoritesOnly((v) => !v)}
             style={({ pressed }) => [{ opacity: pressed ? 0.8 : 1 }]}
           >
@@ -268,9 +294,9 @@ export default function GymsScreen() {
                 favoritesOnly ? s.favOnlyChipActive : s.favOnlyChipInactive,
               ]}
             >
-              <Ionicons
-                name={favoritesOnly ? "star" : "star-outline"}
-                size={12}
+              <MaterialCommunityIcons
+                name={favoritesOnly ? 'star' : 'star-outline'}
+                size={14}
                 color={favoritesOnly ? c.brand.primary : c.text.tertiary}
               />
               <Text
@@ -349,35 +375,48 @@ export default function GymsScreen() {
                 isFavorite={favoriteIds?.has(item.id) ?? false}
               />
             )}
+            ItemSeparatorComponent={() => <View style={{ height: 10 }} />}
             contentContainerStyle={s.listContent}
+            contentInsetAdjustmentBehavior="never"
+            automaticallyAdjustContentInsets={false}
+            refreshControl={
+              <RefreshControl
+                refreshing={isRefetching}
+                onRefresh={refetch}
+                tintColor={c.brand.primary}
+                colors={[c.brand.primary]}
+              />
+            }
             ListEmptyComponent={
               data && !isLoading ? (
-                <View style={s.emptyWrap}>
-                  <View style={s.emptyIconWrap}>
-                    <Feather name="map-pin" size={32} color={c.text.muted} />
-                  </View>
-                  <Text style={s.emptyTitle}>검색 결과가 없어요</Text>
-                  <Text style={s.emptySubtitle}>필터를 변경하거나 다른 검색어를 입력해 보세요.</Text>
-                  <Pressable
-                    onPress={() => router.push('/gyms/suggest-new' as never)}
-                    style={({ pressed }) => [s.requestBtn, pressed && { opacity: 0.8 }]}
-                  >
-                    <Text style={s.requestBtnText}>
-                      + 찾는 암장 추가 요청
-                    </Text>
-                  </Pressable>
-                </View>
+                <EmptyState
+                  icon="map-pin"
+                  tone="muted"
+                  title="검색 결과가 없어요"
+                  description="필터를 변경하거나 다른 검색어를 입력해 보세요."
+                  action={{
+                    label: '찾는 암장 추가 요청',
+                    icon: 'plus',
+                    onPress: () => router.push('/gyms/suggest-new' as never),
+                  }}
+                />
               ) : null
             }
             ListFooterComponent={
               data && filtered.length > 0 ? (
-                <Pressable
-                  onPress={() => router.push('/gyms/suggest-new' as never)}
-                  style={({ pressed }) => [s.footerBtn, pressed && { opacity: 0.8 }]}
-                >
-                  <Text style={s.footerBtnText}>
-                    + 찾는 암장이 없으면 추가 요청
-                  </Text>
+                <Pressable onPress={() => router.push('/gyms/suggest-new' as never)}>
+                  {({ pressed }) => (
+                    <View style={[s.footerBtn, pressed && { opacity: 0.85 }]}>
+                      <View style={s.footerIconBox}>
+                        <Feather name="plus" size={14} color={c.brand.primaryDeep} />
+                      </View>
+                      <View style={s.footerTextCol}>
+                        <Text style={s.footerBtnTitle}>찾는 암장이 없나요?</Text>
+                        <Text style={s.footerBtnDesc}>제보해주시면 검토 후 추가해드려요</Text>
+                      </View>
+                      <Feather name="chevron-right" size={16} color={c.text.muted} />
+                    </View>
+                  )}
                 </Pressable>
               ) : null
             }
@@ -437,6 +476,50 @@ export default function GymsScreen() {
           </Pressable>
         </Pressable>
       </Modal>
+
+      {/* Sort mode modal */}
+      <Modal
+        visible={sortModalOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setSortModalOpen(false)}
+      >
+        <Pressable style={s.modalBackdrop} onPress={() => setSortModalOpen(false)}>
+          <Pressable style={s.modalSheet} onPress={(e) => e.stopPropagation()}>
+            <View style={s.modalHeader}>
+              <Text style={s.modalTitle}>정렬</Text>
+              <Text style={s.modalSubtitle}>리스트 정렬 기준을 선택해 주세요</Text>
+            </View>
+            {(['name', 'popular'] as const).map((opt) => {
+              const active = sortMode === opt;
+              return (
+                <Pressable
+                  key={opt}
+                  onPress={() => {
+                    setSortMode(opt);
+                    setSortModalOpen(false);
+                  }}
+                >
+                  {({ pressed }) => (
+                    <View
+                      style={[
+                        s.modalRow,
+                        active && s.modalRowActive,
+                        pressed && { backgroundColor: c.bg.subtle },
+                      ]}
+                    >
+                      <Text style={[s.modalRowText, active && s.modalRowTextActive]}>
+                        {SORT_LABEL[opt]}
+                      </Text>
+                      {active && <Feather name="check" size={18} color={c.brand.primary} />}
+                    </View>
+                  )}
+                </Pressable>
+              );
+            })}
+          </Pressable>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
@@ -457,7 +540,13 @@ function GymCard({ gym, isFavorite }: { gym: GymListItem; isFavorite: boolean })
     >
       <View style={s.gymCard}>
         {/* Photo placeholder — 사진 도입 전까지 해시 기반 색 + 이니셜 */}
-        <GymThumbnail name={gym.name} branch={gym.branch} size={56} />
+        <GymThumbnail
+          name={gym.name}
+          branch={gym.branch}
+          size={56}
+          logoUrl={gym.logo_url}
+          logoBgHex={gym.logo_bg_hex}
+        />
 
         <View style={s.gymCardInfo}>
           {/* Name and Branch */}
@@ -538,9 +627,9 @@ function GymCard({ gym, isFavorite }: { gym: GymListItem; isFavorite: boolean })
           >
             {({ pressed }) => (
               <View style={[{ opacity: pressed ? 0.6 : 1 }, s.favoriteBtn]}>
-                <Ionicons
-                  name={isFavorite ? "star" : "star-outline"}
-                  size={20}
+                <MaterialCommunityIcons
+                  name={isFavorite ? 'star' : 'star-outline'}
+                  size={22}
                   color={isFavorite ? c.status.warning : c.border.strong}
                 />
               </View>
@@ -555,7 +644,7 @@ function GymCard({ gym, isFavorite }: { gym: GymListItem; isFavorite: boolean })
 
 function makeStyles(c: ThemeColors) {
   return StyleSheet.create({
-    container: { flex: 1, backgroundColor: c.bg.card },
+    container: { flex: 1, backgroundColor: c.bg.subtle },
     header: {
       paddingHorizontal: 20,
       paddingTop: 4,
@@ -590,6 +679,7 @@ function makeStyles(c: ThemeColors) {
     searchContainer: {
       paddingHorizontal: 20,
       paddingBottom: 8,
+      backgroundColor: c.bg.card,
     },
     searchBar: {
       flexDirection: 'row',
@@ -617,6 +707,7 @@ function makeStyles(c: ThemeColors) {
       borderBottomWidth: 1,
       borderColor: c.border.subtle,
       paddingBottom: 8,
+      backgroundColor: c.bg.card,
     },
     scrollFilterWrap: { paddingBottom: 4 },
     scrollFilterContent: { paddingHorizontal: 20, gap: 8, flexDirection: 'row' },
@@ -767,16 +858,42 @@ function makeStyles(c: ThemeColors) {
     requestBtnText: { color: c.text.secondary, fontSize: 13, fontWeight: '700' },
 
     footerBtn: {
-      marginTop: 12,
-      borderWidth: 1,
-      borderStyle: 'dashed',
-      borderColor: c.border.strong,
-      borderRadius: 12,
-      paddingVertical: 14,
+      marginTop: 14,
+      flexDirection: 'row',
       alignItems: 'center',
+      gap: 12,
+      borderWidth: 1.5,
+      borderStyle: 'dashed',
+      borderColor: c.brand.primary,
+      borderRadius: 14,
+      paddingHorizontal: 14,
+      paddingVertical: 14,
       backgroundColor: c.bg.card,
     },
-    footerBtnText: { color: c.text.tertiary, fontSize: 13, fontWeight: '600' },
+    footerIconBox: {
+      width: 34,
+      height: 34,
+      borderRadius: 11,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: c.brand.primaryLight,
+    },
+    footerTextCol: {
+      flex: 1,
+      flexDirection: 'column',
+    },
+    footerBtnTitle: {
+      fontSize: 13.5,
+      fontWeight: '900',
+      color: c.text.primary,
+      letterSpacing: -0.2,
+    },
+    footerBtnDesc: {
+      fontSize: 11.5,
+      fontWeight: '700',
+      color: c.text.tertiary,
+      marginTop: 2,
+    },
 
     gymCard: {
       flexDirection: 'row',
@@ -786,7 +903,6 @@ function makeStyles(c: ThemeColors) {
       borderColor: c.border.subtle,
       borderRadius: 20,
       padding: 14,
-      marginBottom: 12,
       shadowColor: c.shadow.color,
       shadowOpacity: c.shadow.opacity,
       shadowRadius: 8,

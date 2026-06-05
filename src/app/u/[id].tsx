@@ -1,5 +1,7 @@
 import { customAlert } from '@/components/ui/custom-alert';
 import { BadgeIcon } from '@/components/ui/badge-icon';
+import { EmptyState } from '@/components/ui/empty-state';
+import { ScreenHeader } from '@/components/ui/screen-header';
 import { FeaturedBadgeChip } from '@/components/ui/featured-badge-chip';
 import { InstagramIcon } from '@/components/ui/instagram-icon';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -17,7 +19,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 
 import { useAuth } from '@/lib/auth-context';
@@ -48,8 +50,6 @@ import { useUserStats } from '@/hooks/use-user-stats';
 import {
   BADGES,
   BADGES_BY_KEY,
-  BADGE_CATEGORY_LABEL,
-  type BadgeCategory,
   type BadgeDef,
 } from '@/constants/badges';
 import {
@@ -65,8 +65,21 @@ import { supabase } from '@/lib/supabase';
 import { useThemeColors, useThemePref, useEffectiveScheme, type ThemeColors, type ThemePref } from '@/lib/theme';
 
 export default function PublicProfileScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, returnTo } = useLocalSearchParams<{ id: string; returnTo?: string }>();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
+
+  // 탭 안에서 router.push 한 경우 router.back() 이 탭 인덱스를 리셋해 홈으로 가버리는
+  // 케이스가 있어서, push 한 쪽에서 returnTo 를 넘겨주면 그 경로로 명시적으로 복귀.
+  const handleBack = React.useCallback(() => {
+    if (returnTo) {
+      router.replace(returnTo as never);
+    } else if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace('/(tabs)');
+    }
+  }, [returnTo, router]);
   const { session: authSession } = useAuth();
   const c = useThemeColors();
   const s = React.useMemo(() => makeStyles(c), [c]);
@@ -88,7 +101,14 @@ export default function PublicProfileScreen() {
   // 본인 프로필이면 마이페이지로 redirect — setTimeout 으로 render cycle 밖에서 실행
   React.useEffect(() => {
     if (!isMe) return;
-    const t = setTimeout(() => router.replace('/(tabs)/profile'), 0);
+    const t = setTimeout(
+      () =>
+        router.replace({
+          pathname: '/(tabs)/profile',
+          params: { back: '1' },
+        } as never),
+      0,
+    );
     return () => clearTimeout(t);
   }, [isMe, router]);
   if (isMe) return null;
@@ -110,21 +130,15 @@ export default function PublicProfileScreen() {
   }
 
   return (
-    <SafeAreaView style={s.container} edges={['top']}>
-      {/* Header bar */}
-      <View style={s.header}>
-        <Pressable onPress={() => router.back()} hitSlop={8}>
-          {({ pressed }) => (
-            <View style={[s.headerBtn, pressed && { opacity: 0.6 }]}>
-              <Feather name="arrow-left" size={22} color={c.text.primary} />
-            </View>
-          )}
-        </Pressable>
-        <Text style={s.headerTitle}>프로필</Text>
-        <View style={{ width: 38 }} />
-      </View>
+    <SafeAreaView style={s.container} edges={['left', 'right']}>
+      <ScreenHeader title="프로필" onBack={handleBack} />
 
-      <ScrollView style={{ flex: 1, backgroundColor: c.bg.primary }} contentContainerStyle={s.scrollContent}>
+      <ScrollView
+        style={{ flex: 1, backgroundColor: c.bg.primary }}
+        contentContainerStyle={[s.scrollContent, { paddingBottom: insets.bottom + 12 }]}
+        contentInsetAdjustmentBehavior="never"
+        automaticallyAdjustContentInsets={false}
+      >
         {/* Profile card — 가로 레이아웃 (사진 좌 / 정보 우) */}
         <View style={s.profileCardH}>
           <View style={s.avatarContainerH}>
@@ -139,7 +153,7 @@ export default function PublicProfileScreen() {
           <View style={s.profileInfoH}>
             <View style={s.profileNameRowH}>
               <Text style={s.profileNameH} numberOfLines={1}>{username}</Text>
-              <FeaturedBadgeChip badgeKey={profile?.featured_badge_key} size={15} />
+              <FeaturedBadgeChip badgeKey={profile?.featured_badge_key} size={13} />
               {isPrivate && (
                 <View style={s.privateChip}>
                   <Feather name="lock" size={10} color={c.text.secondary} />
@@ -260,8 +274,16 @@ export default function PublicProfileScreen() {
           )}
 
           {stats && (
-            <>
-              {/* Summary card: 3 metrics */}
+            stats.totalSessions === 0 && stats.totalSends === 0 && stats.activityDays === 0 ? (
+              <View style={s.summaryCard}>
+                <EmptyState
+                  compact
+                  icon="activity"
+                  tone="muted"
+                  title="이 달은 운동 기록이 없어요"
+                />
+              </View>
+            ) : (
               <View style={s.summaryCard}>
                 <View style={s.summaryMetricsRow}>
                   <SummaryMetric
@@ -283,16 +305,7 @@ export default function PublicProfileScreen() {
                   />
                 </View>
               </View>
-
-              {/* 암장별 통계는 전체 통계 화면(/stats)에서만. 마이페이지는
-                  요약 카드까지만 — 본인 빠른 확인용. 빈 상태만 안내. */}
-              {stats.gyms.length === 0 && (
-                <View style={s.emptyStatsCard}>
-                  <Feather name="activity" size={24} color={c.text.muted} />
-                  <Text style={s.emptyStatsTitle}>이 달은 운동 기록이 없어요</Text>
-                </View>
-              )}
-            </>
+            )
           )}
         </View>
 
@@ -356,7 +369,7 @@ function FootProfileCard({
   return (
     <View style={s.footCard}>
           <View style={s.footCardLeft}>
-            <Text style={s.footEmoji}>🦶</Text>
+            <MaterialCommunityIcons name="foot-print" size={22} color={c.brand.primaryDeep} />
           </View>
           <View style={s.footCardBody}>
             <View style={s.footCardHeaderRow}>
@@ -532,39 +545,32 @@ function BodyMetricPill({
 function BadgesSection({ userId }: { userId: string }) {
   const c = useThemeColors();
   const s = React.useMemo(() => makeStyles(c), [c]);
-  const { data: rows = [], isLoading } = useUserBadges(userId);
+  const router = useRouter();
+  const { data: rows = [] } = useUserBadges(userId);
+  const { data: profile } = usePublicProfile(userId);
 
-  // earned_at 매핑
-  const earnedMap = React.useMemo(() => {
-    const m = new Map<string, string>();
-    for (const r of rows) m.set(r.badge_key, r.earned_at);
-    return m;
-  }, [rows]);
+  const earnedBadges = React.useMemo(() => {
+    const defs = rows
+      .map((r) => BADGES_BY_KEY[r.badge_key])
+      .filter((b): b is BadgeDef => !!b);
+    // 대표 뱃지 맨 앞으로
+    const featuredKey = profile?.featured_badge_key;
+    if (!featuredKey) return defs;
+    const idx = defs.findIndex((b) => b.key === featuredKey);
+    if (idx <= 0) return defs;
+    return [defs[idx], ...defs.slice(0, idx), ...defs.slice(idx + 1)];
+  }, [rows, profile?.featured_badge_key]);
 
-  // 획득한 뱃지만 — 카테고리별 그룹
-  const groupedByCategory = React.useMemo(() => {
-    const order: BadgeCategory[] = ['record', 'grade', 'streak', 'social'];
-    const groups = new Map<BadgeCategory, BadgeDef[]>();
-    for (const cat of order) groups.set(cat, []);
-    for (const b of BADGES) {
-      if (earnedMap.has(b.key)) {
-        groups.get(b.category)!.push(b);
-      }
-    }
-    return order
-      .map((cat) => ({ cat, list: groups.get(cat)! }))
-      .filter((g) => g.list.length > 0);
-  }, [earnedMap]);
-
-  const earnedCount = rows.length;
+  const earnedCount = earnedBadges.length;
+  const totalCount = BADGES.length;
+  const featuredKey = profile?.featured_badge_key;
 
   function handleBadgePress(badge: BadgeDef) {
-    const earnedAt = earnedMap.get(badge.key);
-    if (!earnedAt) return;
-    const dateStr = new Date(earnedAt).toLocaleDateString('ko-KR');
+    const earnedAt = rows.find((r) => r.badge_key === badge.key)?.earned_at;
+    const dateStr = earnedAt ? new Date(earnedAt).toLocaleDateString('ko-KR') : '';
     customAlert(
       badge.name,
-      `달성일: ${dateStr}\n\n${badge.hint}`,
+      `${dateStr ? `달성일: ${dateStr}\n\n` : ''}${badge.hint}`,
       [{ text: '닫기', style: 'cancel' }],
       undefined,
       <BadgeIcon icon={badge.icon} color={badge.color} size={36} />,
@@ -575,66 +581,68 @@ function BadgesSection({ userId }: { userId: string }) {
     <View style={s.sectionContainer}>
       <View style={s.sectionHeaderRow}>
         <Text style={s.sectionTitle}>배지 진열장</Text>
+        <Pressable
+          onPress={() => router.push({ pathname: '/u/[id]/badges', params: { id: userId } } as never)}
+          hitSlop={6}
+          style={({ pressed }) => [{ opacity: pressed ? 0.6 : 1 }]}
+        >
+          <View style={s.badgeStripMoreBtn}>
+            <Text style={s.badgeStripMoreText}>
+              전체 {earnedCount}<Text style={{ color: c.text.muted }}>/{totalCount}</Text>
+            </Text>
+            <Feather name="chevron-right" size={14} color={c.text.tertiary} />
+          </View>
+        </Pressable>
       </View>
 
-      <View style={s.collectionCard}>
-        <View style={s.collectionHeaderRow}>
-          <Text style={s.collectionLabel}>획득한 배지</Text>
-          <Text style={s.collectionCount}>
-            <Text style={s.collectionCountStrong}>{earnedCount}</Text>
-            <Text style={s.collectionCountMuted}>개</Text>
-          </Text>
+      {earnedBadges.length === 0 ? (
+        <View style={s.badgeStripEmpty}>
+          <Feather name="award" size={20} color={c.text.muted} />
+          <Text style={s.badgeStripEmptyText}>아직 획득한 뱃지가 없어요</Text>
         </View>
-
-        {isLoading && (
-          <View style={s.loaderWrap}>
-            <ActivityIndicator color={c.brand.primary} />
-          </View>
-        )}
-
-        {!isLoading && earnedCount === 0 && (
-          <View style={s.badgesEmptyState}>
-            <Feather name="award" size={28} color={c.text.muted} />
-            <Text style={s.badgesEmptyText}>아직 획득한 배지가 없어요</Text>
-          </View>
-        )}
-
-        {groupedByCategory.map(({ cat, list }, idx) => (
-          <View key={cat} style={[s.groupSection, idx > 0 && s.groupSectionDivider]}>
-            <View style={s.groupHeader}>
-              <View style={[s.groupDot, { backgroundColor: list[0].color }]} />
-              <Text style={s.groupTitle}>{BADGE_CATEGORY_LABEL[cat]}</Text>
-              <Text style={s.groupCount}>{list.length}</Text>
-            </View>
-            <View style={s.badgesGrid}>
-              {list.map((badge) => (
+      ) : (
+        <View style={s.badgeStripCard}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={s.badgeStripScrollContent}
+          >
+            {earnedBadges.map((badge) => {
+              const isFeatured = featuredKey === badge.key;
+              return (
                 <Pressable
                   key={badge.key}
-                  style={s.badgeItem}
                   onPress={() => handleBadgePress(badge)}
+                  style={({ pressed }) => [s.badgeStripItem, pressed && { opacity: 0.6 }]}
                 >
-                  {({ pressed }) => (
-                    <View style={[s.badgeItemInner, pressed && { opacity: 0.6 }]}>
-                      <View style={[s.badgeIconWrap, {
+                  <View
+                    style={[
+                      s.badgeStripIconWrap,
+                      {
                         shadowColor: badge.color,
                         shadowOpacity: 0.45,
                         shadowRadius: 10,
                         shadowOffset: { width: 0, height: 5 },
                         elevation: 6,
-                      }]}>
-                        <BadgeIcon icon={badge.icon} color={badge.color} size={22} />
+                      },
+                    ]}
+                  >
+                    <BadgeIcon icon={badge.icon} color={badge.color} size={26} />
+                    {isFeatured && (
+                      <View style={s.badgeSelectedPin}>
+                        <Text style={s.badgeSelectedPinText}>★</Text>
                       </View>
-                      <Text style={s.badgeTitle} numberOfLines={2}>
-                        {badge.name}
-                      </Text>
-                    </View>
-                  )}
+                    )}
+                  </View>
+                  <Text style={s.badgeStripTitle} numberOfLines={1}>
+                    {badge.name}
+                  </Text>
                 </Pressable>
-              ))}
-            </View>
-          </View>
-        ))}
-      </View>
+              );
+            })}
+          </ScrollView>
+        </View>
+      )}
     </View>
   );
 }
@@ -664,10 +672,7 @@ function CrewsSection({ userId }: { userId: string }) {
       )}
 
       {data && data.length === 0 && (
-        <View style={s.emptyStatsCard}>
-          <Feather name="users" size={24} color={c.text.muted} />
-          <Text style={s.emptyStatsTitle}>참여 중인 크루가 없어요</Text>
-        </View>
+        <EmptyState compact icon="users" tone="muted" title="참여 중인 크루가 없어요" />
       )}
 
       {data && data.length > 0 && (
@@ -798,13 +803,13 @@ function MembershipsSection() {
       )}
 
       {data && active.length === 0 && expired.length === 0 && (
-        <View style={s.emptyMembershipCard}>
-          <Feather name="credit-card" size={24} color={c.text.muted} />
-          <Text style={s.emptyMembershipTitle}>등록된 회원권이 없어요</Text>
-          <Text style={s.emptyMembershipSubtitle}>
-            우측 상단 + 추가 버튼으로 등록하세요
-          </Text>
-        </View>
+        <EmptyState
+          compact
+          icon="credit-card"
+          tone="muted"
+          title="등록된 회원권이 없어요"
+          description="우측 상단 + 추가 버튼으로 등록하세요"
+        />
       )}
 
       {active.length > 0 && (
@@ -1090,12 +1095,7 @@ function ShoesSection({ userId }: { userId: string }) {
       )}
 
       {data && data.length === 0 && (
-        <View style={s.shoeRackContainer}>
-          <View style={s.emptyShelfSlot}>
-            <Feather name="package" size={28} color={c.border.strong} />
-            <Text style={s.emptyShelfText}>아직 등록한 암벽화가 없어요</Text>
-          </View>
-        </View>
+        <EmptyState compact icon="package" tone="muted" title="아직 등록한 암벽화가 없어요" />
       )}
 
       {data && data.length > 0 && (
@@ -1389,7 +1389,7 @@ function makeStyles(c: ThemeColors) {
   return StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: c.bg.card,
+    backgroundColor: c.bg.primary,
   },
   header: {
     flexDirection: 'row',
@@ -1452,9 +1452,9 @@ function makeStyles(c: ThemeColors) {
     flexDirection: 'row',
     gap: 12,
     padding: 14,
-    backgroundColor: c.bg.subtle,
+    backgroundColor: c.bg.card,
     borderRadius: 14,
-    borderWidth: 1,
+    borderWidth: StyleSheet.hairlineWidth,
     borderColor: c.border.subtle,
     marginBottom: 12,
   },
@@ -1462,13 +1462,10 @@ function makeStyles(c: ThemeColors) {
     width: 44,
     height: 44,
     borderRadius: 12,
-    backgroundColor: c.bg.card,
-    borderWidth: 1,
-    borderColor: c.border.subtle,
+    backgroundColor: c.brand.primaryLight,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  footEmoji: { fontSize: 22 },
   footCardBody: { flex: 1, gap: 6 },
   footCardHeaderRow: {
     flexDirection: 'row',
@@ -2636,7 +2633,7 @@ function makeStyles(c: ThemeColors) {
     backgroundColor: c.bg.subtle,
     overflow: 'hidden',
   },
-  miniBarFill: { height: '100%', backgroundColor: c.status.success, borderRadius: 3 },
+  miniBarFill: { height: '100%', backgroundColor: c.brand.primary, borderRadius: 3 },
   miniBarValue: { fontSize: 9, fontWeight: '800', color: c.text.primary, minWidth: 10, textAlign: 'right' },
   shoeIcon: {
     width: 40,
@@ -2790,6 +2787,92 @@ function makeStyles(c: ThemeColors) {
     fontSize: 11,
     fontWeight: '700',
     color: c.text.tertiary,
-  }
+  },
+
+  // Badge strip (grid wrap)
+  badgeStripMoreBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 999,
+    backgroundColor: c.bg.subtle,
+  },
+  badgeStripMoreText: {
+    fontSize: 11.5,
+    fontWeight: '800',
+    color: c.text.secondary,
+    letterSpacing: -0.1,
+  },
+  badgeStripCard: {
+    backgroundColor: c.bg.card,
+    borderRadius: 16,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: c.border.subtle,
+  },
+  badgeStripScrollContent: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 16,
+    gap: 14,
+  },
+  badgeStripItem: {
+    width: 56,
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+  },
+  badgeStripIconWrap: {
+    height: 42,
+    marginBottom: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+  },
+  badgeStripTitle: {
+    fontSize: 10,
+    lineHeight: 12,
+    height: 12,
+    fontWeight: '800',
+    color: c.text.secondary,
+    textAlign: 'center',
+    letterSpacing: -0.1,
+    width: '100%',
+  },
+  badgeStripEmpty: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 18,
+    borderRadius: 14,
+    backgroundColor: c.bg.subtle,
+  },
+  badgeStripEmptyText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: c.text.tertiary,
+  },
+  badgeSelectedPin: {
+    position: 'absolute',
+    top: -3,
+    right: -3,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: c.brand.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1.5,
+    borderColor: c.bg.card,
+  },
+  badgeSelectedPinText: {
+    color: c.bg.card,
+    fontSize: 9,
+    fontWeight: '900',
+    lineHeight: 10,
+  },
   });
 }

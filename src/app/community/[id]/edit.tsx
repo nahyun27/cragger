@@ -15,7 +15,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 
 import { GymPickerModal } from '@/components/session/gym-picker-modal';
@@ -53,6 +53,7 @@ export default function EditPostScreen() {
 
   const c = useThemeColors();  const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const postQ = usePost(id);
   const updatePost = useUpdatePost();
   const { data: allGyms } = useGyms();
@@ -202,7 +203,7 @@ export default function EditPostScreen() {
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-background-primary" edges={['top', 'bottom']}>
+    <SafeAreaView className="flex-1 bg-background-primary" edges={['top']}>
       <View className="flex-row items-center px-4 py-2 border-b border-border-subtle">
         <Pressable onPress={() => router.back()} className="p-2 -ml-2 active:opacity-60" hitSlop={8}>
           <Feather name="arrow-left" size={24} color={c.text.primary} />
@@ -219,6 +220,9 @@ export default function EditPostScreen() {
         <ScrollView
           className="flex-1"
           contentContainerClassName="p-4 gap-6"
+          contentContainerStyle={{ paddingBottom: insets.bottom + 12 }}
+          contentInsetAdjustmentBehavior="never"
+          automaticallyAdjustContentInsets={false}
           keyboardShouldPersistTaps="handled"
         >
           <Section title="종류" required>

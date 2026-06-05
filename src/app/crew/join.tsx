@@ -12,7 +12,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 
 import { Section } from '@/components/ui/section';
@@ -23,6 +23,7 @@ import { useThemeColors } from '@/lib/theme';
 export default function JoinCrewScreen() {
 
   const c = useThemeColors();  const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [code, setCode] = useState('');
   const [message, setMessage] = useState('');
   const requestJoin = useRequestJoinCrew();
@@ -49,7 +50,7 @@ export default function JoinCrewScreen() {
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-background-primary" edges={['top', 'bottom']}>
+    <SafeAreaView className="flex-1 bg-background-primary" edges={['top']}>
       <View className="flex-row items-center px-4 py-2 border-b border-border-subtle">
         <Pressable onPress={() => router.back()} className="p-2 -ml-2 active:opacity-60" hitSlop={8}>
           <Feather name="arrow-left" size={24} color={c.text.primary} />
@@ -63,7 +64,12 @@ export default function JoinCrewScreen() {
         className="flex-1"
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <ScrollView contentContainerClassName="p-5 gap-6 pb-8">
+        <ScrollView
+          contentContainerClassName="p-5 gap-6"
+          contentContainerStyle={{ paddingBottom: insets.bottom + 12 }}
+          contentInsetAdjustmentBehavior="never"
+          automaticallyAdjustContentInsets={false}
+        >
           <Section title="초대코드" required>
             <View className="flex-row items-center bg-background-secondary border border-border-subtle rounded-xl px-3.5">
               <Feather name="key" size={16} color={c.text.tertiary} />

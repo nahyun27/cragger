@@ -11,6 +11,10 @@ type Props = {
   name: string;
   branch?: string | null;
   size?: number;
+  /** DB 의 gyms.logo_url — 있으면 정적 매핑보다 우선. */
+  logoUrl?: string | null;
+  /** DB 의 gyms.logo_bg_hex — 있으면 정적 매핑보다 우선. */
+  logoBgHex?: string | null;
 };
 
 function hashSeed(s: string): number {
@@ -34,20 +38,26 @@ function hslToHex(h: number, s: number, l: number): string {
   return `#${toHex(f(0))}${toHex(f(8))}${toHex(f(4))}`;
 }
 
-export function GymThumbnail({ name, branch, size = 56 }: Props) {
-  const { logo, bg } = useMemo(() => matchGymStyle(name, branch), [name, branch]);
+export function GymThumbnail({ name, branch, size = 56, logoUrl, logoBgHex }: Props) {
+  const { logo: staticLogo, bg: staticBg } = useMemo(
+    () => matchGymStyle(name, branch),
+    [name, branch],
+  );
   const fallback = useMemo(() => {
     const trimmed = name.trim();
     const hue = hashSeed(trimmed || '?');
-    // 산뜻 + 흰 글자 가독성 균형 — 채도/명도 중간 톤.
     return {
       bg: hslToHex(hue, 58, 55),
       initial: (trimmed.charAt(0) || '?').toUpperCase(),
     };
   }, [name]);
 
-  if (logo) {
-    // 지점별 배경색이 있으면 컬러 카드 + 흰 로고, 없으면 흰 카드 + 컬러 로고.
+  // DB 우선 → 없으면 정적 매핑.
+  const remoteSource = logoUrl ? { uri: logoUrl } : null;
+  const logoSource = remoteSource ?? staticLogo;
+  const bg = logoBgHex ?? staticBg;
+
+  if (logoSource) {
     const hasBg = bg != null;
     return (
       <View
@@ -61,11 +71,11 @@ export function GymThumbnail({ name, branch, size = 56 }: Props) {
           borderColor: '#e2e8f0',
           alignItems: 'center',
           justifyContent: 'center',
-          padding: size * 0.18,
+          padding: size * 0.1,
         }}
       >
         <Image
-          source={logo}
+          source={logoSource}
           style={{ width: '100%', height: '100%' }}
           resizeMode="contain"
         />

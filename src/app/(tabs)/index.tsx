@@ -11,8 +11,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Feather, Ionicons } from '@expo/vector-icons';
-import { BlurView } from 'expo-blur';
+import { Feather, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 
 import { useCommunityFeed, type PostRow, POST_TYPE_LABEL, type PostType } from '@/hooks/use-community';
 import { useFavoriteGyms } from '@/hooks/use-favorites';
@@ -21,6 +20,7 @@ import { useProfile } from '@/hooks/use-profile';
 import { useRecentSessions } from '@/hooks/use-recent-sessions';
 import { useUserStats } from '@/hooks/use-user-stats';
 import { SessionRow } from '@/components/session/session-row';
+import { EmptyState } from '@/components/ui/empty-state';
 import { useThemeColors, useEffectiveScheme, type ThemeColors } from '@/lib/theme';
 
 const KO_WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
@@ -96,54 +96,50 @@ export default function HomeScreen() {
   }
 
   const insets = useSafeAreaInsets();
-  const scheme = useEffectiveScheme();
 
   return (
     <View style={s.container}>
-      {/* Header & Greeting Section */}
-      <View className="z-20 border-b border-border-subtle absolute top-0 left-0 right-0" style={{ paddingTop: Math.max(insets.top, 20) }}>
-        <BlurView
-          tint={scheme === 'dark' ? 'dark' : 'light'}
-          intensity={80}
-          style={StyleSheet.absoluteFill}
-        />
+      {/* Header & Greeting — normal flex flow, no absolute positioning */}
+      <View style={[s.headerWrap, { paddingTop: Math.max(insets.top, 12) + 8 }]}>
         <View style={s.header}>
-        <View style={s.greetingTextContainer}>
-          <Text style={s.greetingTitle} numberOfLines={1}>
-            안녕하세요, {username}님
-          </Text>
-          <View style={s.dateBadgeRow}>
-            <Feather name="calendar" size={12} color={c.brand.primary} />
-            <Text style={s.dateText}>{formatTodayLong()}</Text>
+          <View style={s.greetingTextContainer}>
+            <Text style={s.greetingTitle} numberOfLines={1}>
+              안녕하세요, {username}님
+            </Text>
+            <View style={s.dateBadgeRow}>
+              <Feather name="calendar" size={12} color={c.brand.primary} />
+              <Text style={s.dateText}>{formatTodayLong()}</Text>
+            </View>
           </View>
+          <Pressable
+            onPress={() => router.push('/(tabs)/profile')}
+            hitSlop={8}
+            style={({ pressed }) => [{ opacity: pressed ? 0.8 : 1 }]}
+          >
+            <View style={s.avatarWrapper}>
+              {profileQ.data?.avatar_url ? (
+                <Image
+                  source={{ uri: profileQ.data.avatar_url }}
+                  style={s.avatarImage}
+                  resizeMode="cover"
+                />
+              ) : (
+                <View style={s.avatarFallback}>
+                  <Text style={s.avatarFallbackText}>
+                    {(username[0] ?? '?').toUpperCase()}
+                  </Text>
+                </View>
+              )}
+            </View>
+          </Pressable>
         </View>
-        <Pressable
-          onPress={() => router.push('/(tabs)/profile')}
-          hitSlop={8}
-          style={({ pressed }) => [{ opacity: pressed ? 0.8 : 1 }]}
-        >
-          <View style={s.avatarWrapper}>
-            {profileQ.data?.avatar_url ? (
-              <Image
-                source={{ uri: profileQ.data.avatar_url }}
-                style={s.avatarImage}
-                resizeMode="cover"
-              />
-            ) : (
-              <View style={s.avatarFallback}>
-                <Text style={s.avatarFallbackText}>
-                  {(username[0] ?? '?').toUpperCase()}
-                </Text>
-              </View>
-            )}
-          </View>
-        </Pressable>
-      </View>
       </View>
 
       <ScrollView
         style={{ flex: 1, backgroundColor: c.bg.primary }}
-        contentContainerStyle={[s.scrollContent, { paddingTop: Math.max(insets.top, 20) + 70 }]}
+        contentContainerStyle={s.scrollContent}
+        contentInsetAdjustmentBehavior="never"
+        automaticallyAdjustContentInsets={false}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={refetchAll} tintColor={c.brand.primary} />
         }
@@ -220,16 +216,17 @@ export default function HomeScreen() {
               </View>
             </View>
           ) : (
-            <View style={s.dashboardEmpty}>
-              <Feather name="target" size={24} color={c.text.muted} />
-              <Text style={s.dashboardEmptyText}>이번 주에 아직 등반 기록이 없습니다.</Text>
-              <Pressable
-                onPress={() => router.push('/session/new')}
-                style={({ pressed }) => [s.dashboardEmptyBtn, pressed && { opacity: 0.8 }]}
-              >
-                <Text style={s.dashboardEmptyBtnText}>첫 등반 등록하기</Text>
-              </Pressable>
-            </View>
+            <EmptyState
+              compact
+              icon="target"
+              tone="muted"
+              title="이번 주에 아직 등반 기록이 없습니다"
+              action={{
+                label: '첫 등반 등록하기',
+                icon: 'edit-3',
+                onPress: () => router.push('/session/new'),
+              }}
+            />
           )}
         </View>
 
@@ -247,10 +244,12 @@ export default function HomeScreen() {
             <ActivityIndicator color={c.brand.primary} />
           </View>
         ) : recent.length === 0 ? (
-          <View style={s.emptyCard}>
-            <Feather name="activity" size={20} color={c.text.muted} />
-            <Text style={s.emptyCardText}>아직 기록된 등반 세션이 없습니다</Text>
-          </View>
+          <EmptyState
+            compact
+            icon="activity"
+            tone="muted"
+            title="아직 기록된 등반 세션이 없습니다"
+          />
         ) : (
           <View style={s.sessionList}>
             {recent.map((sess) => (
@@ -438,7 +437,7 @@ function FavoriteGymsSection() {
                     <Text style={s.favGymLocation} numberOfLines={1}>
                       {gym.city} {gym.district ?? ''}
                     </Text>
-                    <Ionicons name="star" size={14} color={c.status.warning} />
+                    <MaterialCommunityIcons name="star" size={15} color={c.status.warning} />
                   </View>
 
                   <Text style={s.favGymName} numberOfLines={1}>
@@ -511,7 +510,7 @@ function makeStyles(c: ThemeColors, isDark: boolean) {
   return StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: c.bg.card,
+    backgroundColor: c.bg.primary,
   },
   scrollContent: {
     paddingHorizontal: 16,
@@ -521,13 +520,18 @@ function makeStyles(c: ThemeColors, isDark: boolean) {
   },
 
   // Header & Greeting Section
+  headerWrap: {
+    backgroundColor: c.bg.card,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: c.border.subtle,
+  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 16,
+    paddingTop: 6,
+    paddingBottom: 12,
   },
   greetingTextContainer: {
     flex: 1,
@@ -1108,7 +1112,7 @@ function makeStyles(c: ThemeColors, isDark: boolean) {
   favScrollContent: {
     paddingHorizontal: 4,
     paddingBottom: 8,
-    gap: 12,
+    gap: 10,
   },
   favGymCard: {
     width: 155,

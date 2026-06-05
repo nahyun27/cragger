@@ -1,4 +1,5 @@
 import { useRouter } from 'expo-router';
+import { LinearGradient } from 'expo-linear-gradient';
 import React, { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
@@ -11,8 +12,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Feather } from '@expo/vector-icons';
-import { BlurView } from 'expo-blur';
+import { Feather, Ionicons } from '@expo/vector-icons';
 
 import {
   POST_TYPE_LABEL,
@@ -24,7 +24,8 @@ import {
 } from '@/hooks/use-community';
 import { useDiscoverCrews, type CrewSummary } from '@/hooks/use-crews';
 import { FeaturedBadgeChip } from '@/components/ui/featured-badge-chip';
-import { useThemeColors, useEffectiveScheme, type ThemeColors } from '@/lib/theme';
+import { EmptyState } from '@/components/ui/empty-state';
+import { useThemeColors, type ThemeColors } from '@/lib/theme';
 
 type FilterKey = 'all' | PostType;
 
@@ -125,15 +126,37 @@ function RecruitingCrewsStrip() {
   const { data } = useDiscoverCrews(10);
   if (!data || data.length === 0) return null;
   const hasAnyRecruiting = data.some((d) => d.is_recruiting);
+  const recruitingCount = data.filter((d) => d.is_recruiting).length;
   return (
     <View style={s.recruitStrip}>
+      {/* 위 → 아래로 흰색 → 페이지 배경(gray) 로 자연스럽게 fade */}
+      <LinearGradient
+        colors={[c.bg.card, c.bg.primary]}
+        locations={[0.7, 1]}
+        style={StyleSheet.absoluteFill}
+      />
       <View style={s.recruitStripHeader}>
-        <Text style={s.recruitStripTitle}>
-          {hasAnyRecruiting ? '모집 중 · 새로 생긴 크루' : '새로 생긴 크루'}
-        </Text>
+        <View style={s.recruitStripTitleRow}>
+          <View style={s.recruitStripIcon}>
+            <Feather name="users" size={13} color={c.brand.primaryDeep} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={s.recruitStripTitle}>
+              {hasAnyRecruiting ? '모집 중 크루' : '새로 생긴 크루'}
+            </Text>
+            <Text style={s.recruitStripSub}>
+              {hasAnyRecruiting
+                ? `지금 ${recruitingCount}개 크루가 가입 받고 있어요`
+                : '최근 등록된 크루들을 살펴보세요'}
+            </Text>
+          </View>
+        </View>
         <Pressable onPress={() => router.push('/crews/explore' as never)} hitSlop={6}>
           {({ pressed }) => (
-            <Text style={[s.recruitStripMore, pressed && { opacity: 0.6 }]}>전체 보기</Text>
+            <View style={[s.recruitStripMore, pressed && { opacity: 0.6 }]}>
+              <Text style={s.recruitStripMoreText}>전체</Text>
+              <Feather name="chevron-right" size={12} color={c.brand.primary} />
+            </View>
           )}
         </Pressable>
       </View>
@@ -214,34 +237,23 @@ export default function CommunityScreen() {
   const posts = useMemo<PostRow[]>(() => feed.data?.pages.flat() ?? [], [feed.data]);
 
   const insets = useSafeAreaInsets();
-  const scheme = useEffectiveScheme();
 
   return (
     <View style={s.container}>
-      {/* Header with Glassmorphism */}
-      <View className="z-20 border-b border-border-subtle absolute top-0 left-0 right-0" style={{ paddingTop: Math.max(insets.top, 20) }}>
-        <BlurView
-          tint={scheme === 'dark' ? 'dark' : 'light'}
-          intensity={80}
-          style={StyleSheet.absoluteFill}
-        />
+      {/* Header — normal flex flow, status bar 까지 채움 */}
+      <View style={[s.headerWrap, { paddingTop: Math.max(insets.top, 12) + 6 }]}>
         <View style={s.header}>
-          <View>
-            <Text style={s.headerTitle}>커뮤니티</Text>
-            <Text style={s.headerSubtitle}>클라이머들의 소통과 정보 공유</Text>
-          </View>
+          <Text style={s.headerTitle}>커뮤니티</Text>
           <Pressable
             onPress={() => router.push('/community/search')}
             style={({ pressed }) => [s.headerBtn, { opacity: pressed ? 0.6 : 1 }]}
             hitSlop={6}
           >
-            <Feather name="search" size={18} color={c.text.tertiary} />
-          </Pressable>
+            <Feather name="search" size={20} color={c.text.primary} />
           </Pressable>
         </View>
 
-        {/* Filter Pills */}
-        <View style={s.filterWrapper}>
+        {/* Filter Pills — text-only segmented */}
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -250,23 +262,15 @@ export default function CommunityScreen() {
           {FILTER_TABS.map((t) => {
             const active = filter === t.key;
             return (
-              <Pressable
-                key={t.key}
-                onPress={() => setFilter(t.key)}
-              >
+              <Pressable key={t.key} onPress={() => setFilter(t.key)} hitSlop={4}>
                 {({ pressed }) => (
                   <View
                     style={[
                       s.chip,
                       active ? s.chipActive : s.chipInactive,
-                      pressed && { opacity: 0.8 }
+                      pressed && { opacity: 0.8 },
                     ]}
                   >
-                    <Feather
-                      name={t.icon}
-                      size={13}
-                      color={active ? c.brand.primary : c.text.tertiary}
-                    />
                     <Text
                       style={[
                         s.chipText,
@@ -281,7 +285,6 @@ export default function CommunityScreen() {
             );
           })}
         </ScrollView>
-      </View>
       </View>
 
       {/* List States */}
@@ -302,7 +305,9 @@ export default function CommunityScreen() {
         className="flex-1"
           data={posts}
           keyExtractor={(p) => p.id}
-          contentContainerStyle={[s.listContent, { paddingTop: Math.max(insets.top, 20) + 110, paddingBottom: 100 }]}
+          contentContainerStyle={[s.listContent, { paddingTop: 16, paddingBottom: 100 }]}
+          contentInsetAdjustmentBehavior="never"
+          automaticallyAdjustContentInsets={false}
           onEndReached={() => {
             if (feed.hasNextPage && !feed.isFetchingNextPage) feed.fetchNextPage();
           }}
@@ -314,20 +319,31 @@ export default function CommunityScreen() {
           }
           ListEmptyComponent={
             !feed.isLoading && !feed.error && posts.length === 0 ? (
-              <View style={[s.emptyContainer, filter !== 'all' && { paddingTop: Math.max(insets.top, 20) + 40 }]}>
-                <View style={s.emptyIconWrapper}>
-                  <Feather name="message-square" size={28} color={c.text.muted} />
-                </View>
-                <Text style={s.emptyTitle}>게시글이 비어있어요</Text>
-                <Text style={s.emptySubtitle}>
-                  원하는 주제의 글을 남기고 다른 클라이머들과 대화를 시작해보세요!
-                </Text>
-                <Pressable
-                  onPress={() => router.push('/community/new')}
-                  style={({ pressed }) => [s.emptyBtn, { opacity: pressed ? 0.9 : 1 }]}
-                >
-                  <Text style={s.emptyBtnText}>첫 글 등록하기</Text>
-                </Pressable>
+              <View style={filter !== 'all' ? { paddingTop: Math.max(insets.top, 20) + 60 } : undefined}>
+                <EmptyState
+                  icon={(FILTER_TABS.find((t) => t.key === filter)?.icon) ?? 'message-square'}
+                  tone="muted"
+                  title={
+                    filter === 'all'
+                      ? '게시글이 비어있어요'
+                      : `'${POST_TYPE_LABEL[filter as PostType]}' 글이 없어요`
+                  }
+                  description={
+                    filter === 'all'
+                      ? '원하는 주제의 글을 남기고 다른 클라이머들과 대화를 시작해보세요!'
+                      : '이 카테고리의 첫 글을 남겨보세요'
+                  }
+                  action={{
+                    label: filter === 'all' ? '첫 글 등록하기' : `${POST_TYPE_LABEL[filter as PostType]} 글 쓰기`,
+                    icon: 'edit-3',
+                    onPress: () =>
+                      router.push(
+                        filter === 'all'
+                          ? '/community/new'
+                          : { pathname: '/community/new', params: { type: filter } },
+                      ),
+                  }}
+                />
               </View>
             ) : null
           }
@@ -378,6 +394,7 @@ function PostCard({
 }) {
   const c = useThemeColors();
   const s = useMemo(() => makeStyles(c), [c]);
+  const router = useRouter();
   const toggle = useToggleLike();
   const authorName = post.author?.display_name ?? post.author?.username ?? '익명';
   const firstChar = authorName.length > 0 ? authorName.charAt(0).toUpperCase() : '?';
@@ -388,130 +405,138 @@ function PostCard({
   const label = POST_TYPE_LABEL[post.post_type];
   const firstImage = post.image_urls[0];
   const meetup = post.post_type === 'meetup' ? describeMeetup(post) : null;
+  const authorId = post.author_id;
+  const goToProfile = () => {
+    if (authorId) router.push({
+      pathname: '/u/[id]',
+      params: { id: authorId, returnTo: '/(tabs)/community' },
+    } as never);
+  };
+  const time = formatRelativeTime(post.created_at);
+  const gymName = post.gym
+    ? `${post.gym.name}${post.gym.branch ? ` ${post.gym.branch}` : ''}`
+    : null;
+  const showMetrics = post.like_count > 0 || post.comment_count > 0;
 
   return (
-    <Pressable
-      onPress={onPress}
-      style={({ pressed }) => [
-        s.card,
-        {
-          backgroundColor: c.bg.card,
-          opacity: pressed ? 0.97 : 1,
-          shadowColor: c.shadow.color,
-          shadowOpacity: c.shadow.opacity,
-          shadowRadius: 12,
-          shadowOffset: { width: 0, height: 4 },
-          elevation: 1,
-        },
-      ]}
-    >
-      {/* Header Info */}
-      <View style={s.cardHeader}>
-        <View style={s.userInfo}>
-          <View style={[s.avatar, { backgroundColor: avatarBg }]}>
-            {avatarUrl ? (
-              <Image source={{ uri: avatarUrl }} style={s.avatarImage} resizeMode="cover" />
-            ) : (
-              <Text style={[s.avatarTextVal, { color: avatarText }]}>{firstChar}</Text>
-            )}
-          </View>
-          <View style={s.userText}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-              <Text style={s.userName} numberOfLines={1}>{authorName}</Text>
-              <FeaturedBadgeChip badgeKey={post.author?.featured_badge_key} size={12} />
+    <Pressable onPress={onPress}>
+      {({ pressed }) => (
+        <View style={[s.card, pressed && { backgroundColor: c.bg.subtle }]}>
+          {/* Top: avatar + name + meta — type pill right.
+              프로필 진입 가능한 영역은 아바타와 이름 텍스트만 (메타 라인은 카드 탭) */}
+          <View style={s.cardHeader}>
+            <View style={s.userInfo}>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <Pressable onPress={goToProfile} hitSlop={6}>
+                  {({ pressed: p2 }) => (
+                    <View style={[s.avatar, { backgroundColor: avatarBg, opacity: p2 ? 0.7 : 1 }]}>
+                      {avatarUrl ? (
+                        <Image source={{ uri: avatarUrl }} style={s.avatarImage} resizeMode="cover" />
+                      ) : (
+                        <Text style={[s.avatarTextVal, { color: avatarText }]}>{firstChar}</Text>
+                      )}
+                    </View>
+                  )}
+                </Pressable>
+                <View style={s.userText}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <Pressable onPress={goToProfile} hitSlop={6} style={{ flexShrink: 1 }}>
+                      {({ pressed: p2 }) => (
+                        <Text
+                          style={[s.userName, { opacity: p2 ? 0.7 : 1 }]}
+                          numberOfLines={1}
+                        >
+                          {authorName}
+                        </Text>
+                      )}
+                    </Pressable>
+                    <View style={{ marginLeft: 5 }}>
+                      <FeaturedBadgeChip badgeKey={post.author?.featured_badge_key} size={10} />
+                    </View>
+                  </View>
+                  <Text style={s.timeText} numberOfLines={1}>
+                    {gymName ? `${gymName} · ${time}` : time}
+                  </Text>
+                </View>
+              </View>
             </View>
-            <Text style={s.timeText}>{formatRelativeTime(post.created_at)}</Text>
+            <View style={[s.badge, { backgroundColor: badge.bg, borderColor: badge.border }]}>
+              <Text style={[s.badgeText, { color: badge.text }]} numberOfLines={1}>{label}</Text>
+            </View>
           </View>
-        </View>
 
-        {/* Type Badge */}
-        <View style={[s.badge, { backgroundColor: badge.bg, borderColor: badge.border }]}>
-          <Text style={[s.badgeText, { color: badge.text }]}>{label}</Text>
-        </View>
-      </View>
+          {/* Title + body */}
+          {!!post.title && (
+            <Text style={s.cardTitle} numberOfLines={2}>{post.title}</Text>
+          )}
+          {!!post.body && (
+            <Text style={s.cardBody} numberOfLines={meetup ? 2 : 3}>{post.body}</Text>
+          )}
 
-      {/* Location Badge (above title) */}
-      {post.gym && (
-        <View style={s.locationBadge}>
-          <Feather name="map-pin" size={11} color={c.text.tertiary} />
-          <Text style={s.locationText} numberOfLines={1}>
-            {post.gym.name}
-            {post.gym.branch ? ` ${post.gym.branch}` : ''}
-          </Text>
-        </View>
-      )}
-
-      {/* Meetup info block */}
-      {meetup && (
-        <View style={s.meetupInfoBox}>
-          <View style={s.meetupInfoRow}>
-            <Feather name="calendar" size={12} color={c.status.warning} />
-            <Text style={s.meetupInfoText} numberOfLines={1}>{meetup.when}</Text>
-          </View>
-          {meetup.where && (
-            <View style={s.meetupInfoRow}>
-              <Feather name="map-pin" size={12} color={c.status.warning} />
-              <Text style={s.meetupInfoText} numberOfLines={1}>{meetup.where}</Text>
+          {/* Thumbnail */}
+          {!!firstImage && (
+            <View style={s.cardImageWrapper}>
+              <Image source={{ uri: firstImage }} style={s.cardImage} resizeMode="cover" />
             </View>
           )}
-          <View style={s.meetupInfoRow}>
-            <Feather name="users" size={12} color={c.status.warning} />
-            <Text style={s.meetupInfoText} numberOfLines={1}>{meetup.capacity}</Text>
-            {meetup.statusLabel && (
-              <View style={[s.meetupStatusPill, meetup.statusColor]}>
-                <Text style={[s.meetupStatusText, meetup.statusTextColor]}>{meetup.statusLabel}</Text>
+
+          {/* Meetup info card (brand-tinted) */}
+          {meetup && (
+            <View style={s.meetupInfoBox}>
+              <View style={s.meetupInfoRow}>
+                <Feather name="calendar" size={13} color={c.brand.primaryDeep} />
+                <Text style={s.meetupInfoText} numberOfLines={1}>{meetup.when}</Text>
+                {meetup.statusLabel && (
+                  <View style={[s.meetupStatusPill, meetup.statusColor]}>
+                    <Text style={[s.meetupStatusText, meetup.statusTextColor]}>{meetup.statusLabel}</Text>
+                  </View>
+                )}
               </View>
-            )}
-          </View>
-        </View>
-      )}
-
-      {/* Content */}
-      {post.title && (
-        <Text style={s.cardTitle} numberOfLines={1}>
-          {post.title}
-        </Text>
-      )}
-      <Text style={s.cardBody} numberOfLines={3}>
-        {post.body}
-      </Text>
-
-      {/* Post Image */}
-      {firstImage && (
-        <View style={s.cardImageWrapper}>
-          <Image source={{ uri: firstImage }} style={s.cardImage} resizeMode="cover" />
-        </View>
-      )}
-
-      {/* Footer Metrics */}
-      <View style={s.cardFooter}>
-        <View style={s.metricsRow}>
-          <Pressable
-            onPress={(e) => {
-              e.stopPropagation();
-              if (toggle.isPending) return;
-              toggle.mutate({ postId: post.id, currentlyLiked: liked });
-            }}
-            hitSlop={8}
-            style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
-          >
-            <View style={s.metricBtn}>
-              <Feather name="heart" size={16} color={liked ? c.status.danger : c.text.muted} />
-              <Text
-                style={[s.metricCountText, liked && s.metricCountTextLiked]}
-                numberOfLines={1}
-              >{post.like_count}</Text>
+              {meetup.where && (
+                <View style={s.meetupInfoRow}>
+                  <Feather name="map-pin" size={13} color={c.brand.primaryDeep} />
+                  <Text style={s.meetupInfoText} numberOfLines={1}>{meetup.where}</Text>
+                </View>
+              )}
+              <View style={s.meetupInfoRow}>
+                <Feather name="users" size={13} color={c.brand.primaryDeep} />
+                <Text style={s.meetupInfoText} numberOfLines={1}>{meetup.capacity}</Text>
+              </View>
             </View>
-          </Pressable>
+          )}
 
-          <View style={s.metricBtn}>
-            <Feather name="message-circle" size={16} color={c.text.muted} />
-            <Text style={s.metricCountText} numberOfLines={1}>{post.comment_count}</Text>
-          </View>
+          {/* Metrics — only if any > 0 */}
+          {showMetrics && (
+            <View style={s.cardFooter}>
+              {post.like_count > 0 && (
+                <Pressable
+                  onPress={(e) => {
+                    e.stopPropagation();
+                    if (toggle.isPending) return;
+                    toggle.mutate({ postId: post.id, currentlyLiked: liked });
+                  }}
+                  hitSlop={8}
+                >
+                  {({ pressed: p3 }) => (
+                    <View style={[s.metricBtn, { opacity: p3 ? 0.6 : 1 }]}>
+                      <Ionicons name={liked ? 'heart' : 'heart-outline'} size={15} color={liked ? c.status.danger : c.text.muted} />
+                      <Text style={[s.metricCountText, liked && s.metricCountTextLiked]}>
+                        {post.like_count}
+                      </Text>
+                    </View>
+                  )}
+                </Pressable>
+              )}
+              {post.comment_count > 0 && (
+                <View style={s.metricBtn}>
+                  <Feather name="message-circle" size={14} color={c.text.muted} />
+                  <Text style={s.metricCountText}>{post.comment_count}</Text>
+                </View>
+              )}
+            </View>
+          )}
         </View>
-
-        <Feather name="chevron-right" size={16} color={c.border.strong} />
-      </View>
+      )}
     </Pressable>
   );
 }
@@ -520,123 +545,180 @@ function makeStyles(c: ThemeColors) {
   return StyleSheet.create({
     container: {
       flex: 1,
-      backgroundColor: c.bg.card,
+      backgroundColor: c.bg.primary,
     },
     recruitStrip: {
+      // 흰색 영역 안쪽 패딩 (그라데이션이 깔린 상태에서 콘텐츠가 숨 쉴 공간)
       paddingTop: 14,
-      paddingBottom: 10,
-      paddingBottom: 10,
+      paddingBottom: 18,
+      // FlatList listContent 의 paddingHorizontal(16) 을 음수 마진으로 상쇄해 page 끝까지 깔리도록
+      marginHorizontal: -16,
+      // FlatList listContent 의 paddingTop(16) 도 상쇄해서 헤더 바로 아래에 붙음
+      marginTop: -16,
+      // 본문 카드들과 시각적 분리 (가로 스크롤이라 다르단 걸 보여줌)
+      marginBottom: 4,
+      // 그라데이션이 깔리도록 배경은 LinearGradient 가 채움 → 별도 backgroundColor 없음
+      overflow: 'hidden',
     },
     recruitStripHeader: {
       flexDirection: 'row',
-      alignItems: 'baseline',
+      alignItems: 'center',
       justifyContent: 'space-between',
+      gap: 10,
       paddingHorizontal: 20,
-      marginBottom: 10,
+      marginBottom: 12,
+    },
+    recruitStripTitleRow: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+    },
+    recruitStripIcon: {
+      width: 30,
+      height: 30,
+      borderRadius: 10,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: c.brand.primaryLight,
     },
     recruitStripTitle: {
       fontSize: 14,
-      fontWeight: '800',
+      fontWeight: '900',
       color: c.text.primary,
-      letterSpacing: -0.2,
+      letterSpacing: -0.3,
+    },
+    recruitStripSub: {
+      fontSize: 11,
+      fontWeight: '700',
+      color: c.text.tertiary,
+      marginTop: 1,
     },
     recruitStripMore: {
-      fontSize: 12,
-      fontWeight: '700',
-      color: c.brand.primary,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 2,
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+      borderRadius: 999,
+      backgroundColor: c.brand.primaryLight,
+    },
+    recruitStripMoreText: {
+      fontSize: 11.5,
+      fontWeight: '900',
+      color: c.brand.primaryDeep,
+      letterSpacing: -0.2,
     },
     recruitScroll: {
       paddingHorizontal: 20,
       gap: 10,
     },
     recruitCard: {
-      width: 120,
-      backgroundColor: c.bg.subtle,
-      borderRadius: 14,
-      padding: 12,
+      width: 128,
+      backgroundColor: c.bg.card,
+      borderRadius: 16,
+      paddingVertical: 16,
+      paddingHorizontal: 10,
       alignItems: 'center',
       gap: 6,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: c.border.subtle,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.05,
+      shadowRadius: 10,
+      elevation: 2,
     },
     recruitCardAvatar: {
-      width: 44,
-      height: 44,
-      borderRadius: 22,
-      backgroundColor: c.bg.card,
+      width: 52,
+      height: 52,
+      borderRadius: 26,
+      backgroundColor: c.brand.primaryLight,
       alignItems: 'center',
       justifyContent: 'center',
       position: 'relative',
+      borderWidth: 2,
+      borderColor: c.bg.card,
     },
     newBadge: {
       position: 'absolute',
       top: -4,
-      right: -6,
-      backgroundColor: c.status.danger,
-      paddingHorizontal: 5,
-      paddingVertical: 1,
-      borderRadius: 5,
-      borderWidth: 1.5,
+      right: -4,
+      backgroundColor: c.brand.primary,
+      paddingHorizontal: 6,
+      paddingVertical: 3,
+      borderRadius: 8,
+      borderWidth: 2,
       borderColor: c.bg.card,
+      shadowColor: c.brand.primary,
+      shadowOpacity: 0.3,
+      shadowRadius: 4,
+      shadowOffset: { width: 0, height: 2 },
+      elevation: 3,
     },
     newBadgeText: {
       color: '#ffffff',
-      fontSize: 8,
+      fontSize: 8.5,
       fontWeight: '900',
-      letterSpacing: 0.3,
+      letterSpacing: 0.4,
     },
     recruitingChip: {
       backgroundColor: c.status.successBg,
-      paddingHorizontal: 6,
-      paddingVertical: 2,
-      borderRadius: 5,
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      borderRadius: 8,
       marginTop: 2,
     },
     recruitingChipText: {
       color: c.status.success,
-      fontSize: 9,
+      fontSize: 10,
       fontWeight: '900',
     },
     recruitCardAvatarImg: { width: '100%', height: '100%' },
     recruitCardAvatarText: {
-      fontSize: 16,
+      fontSize: 19,
       fontWeight: '900',
-      color: c.text.secondary,
+      color: c.brand.primaryDeep,
+      letterSpacing: -0.5,
     },
     recruitCardName: {
-      fontSize: 12,
-      fontWeight: '800',
+      fontSize: 13,
+      fontWeight: '900',
       color: c.text.primary,
       textAlign: 'center',
       width: '100%',
+      letterSpacing: -0.3,
+      marginTop: 2,
     },
     recruitCardMeta: {
-      fontSize: 10,
+      fontSize: 11,
       fontWeight: '700',
       color: c.text.tertiary,
       textAlign: 'center',
+    },
+    headerWrap: {
+      backgroundColor: c.bg.card,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: c.border.subtle,
     },
     header: {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
-      paddingHorizontal: 24,
-      paddingTop: 16,
-      paddingBottom: 14,
+      paddingHorizontal: 20,
+      paddingTop: 6,
+      paddingBottom: 8,
     },
     headerTitle: {
-      fontSize: 26,
-      fontWeight: '800',
+      fontSize: 24,
+      fontWeight: '900',
       color: c.text.primary,
       letterSpacing: -0.6,
     },
-    headerSubtitle: {
-      fontSize: 13,
-      color: c.text.tertiary,
-      marginTop: 2,
-    },
     headerBtn: {
-      width: 38,
-      height: 38,
-      borderRadius: 10,
+      width: 40,
+      height: 40,
+      borderRadius: 20,
       alignItems: 'center',
       justifyContent: 'center',
     },
@@ -660,43 +742,34 @@ function makeStyles(c: ThemeColors) {
       shadowOffset: { width: 0, height: 6 },
       elevation: 6,
     },
-    filterWrapper: {
-    },
     filterScroll: {
       paddingHorizontal: 16,
-      paddingVertical: 12,
-      gap: 8,
+      paddingBottom: 12,
+      gap: 6,
       flexDirection: 'row',
     },
     chip: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 6,
       paddingHorizontal: 14,
       paddingVertical: 8,
-      borderRadius: 10,
-      borderWidth: 1,
+      borderRadius: 999,
     },
     chipActive: {
-      backgroundColor: c.bg.accent,
-      borderColor: c.brand.primary,
+      backgroundColor: c.brand.primary,
     },
     chipInactive: {
       backgroundColor: c.bg.subtle,
-      borderColor: c.border.subtle,
     },
     chipText: {
-      fontSize: 14,
-      fontWeight: '700',
+      fontSize: 13,
       letterSpacing: -0.2,
     },
     chipTextActive: {
-      color: c.brand.primaryDeep,
-      fontWeight: '800',
+      color: c.brand.onPrimary,
+      fontWeight: '900',
     },
     chipTextInactive: {
       color: c.text.secondary,
-      fontWeight: '600',
+      fontWeight: '700',
     },
     loadingContainer: {
       flex: 1,
@@ -766,125 +839,115 @@ function makeStyles(c: ThemeColors) {
     },
 
     card: {
-      borderWidth: 1,
+      borderWidth: StyleSheet.hairlineWidth,
       borderColor: c.border.subtle,
-      borderRadius: 20,
-      padding: 18,
+      borderRadius: 18,
+      padding: 16,
+      backgroundColor: c.bg.card,
+      shadowColor: c.shadow.color,
+      shadowOpacity: c.shadow.opacity,
+      shadowRadius: 10,
+      shadowOffset: { width: 0, height: 3 },
+      elevation: 1,
+      overflow: 'hidden',
     },
-    cardSeparator: {
-      height: 1,
-      backgroundColor: c.border.subtle,
-      marginVertical: 12,
-      marginHorizontal: 4,
-    },
+    cardSeparator: { height: 10 },
     cardHeader: {
       flexDirection: 'row',
-      alignItems: 'center',
+      alignItems: 'flex-start',
       justifyContent: 'space-between',
-      marginBottom: 12,
+      marginBottom: 10,
+      gap: 8,
     },
     userInfo: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 10,
+      flex: 1,
+      minWidth: 0,
     },
     avatar: {
-      width: 36,
-      height: 36,
-      borderRadius: 18,
+      width: 34,
+      height: 34,
+      borderRadius: 17,
       alignItems: 'center',
       justifyContent: 'center',
       overflow: 'hidden',
+      marginRight: 10,
     },
     avatarImage: { width: '100%', height: '100%' },
     avatarTextVal: {
-      fontWeight: '800',
-      fontSize: 15,
+      fontWeight: '900',
+      fontSize: 14,
     },
     userText: {
+      flex: 1,
+      minWidth: 0,
       justifyContent: 'center',
     },
     userName: {
-      fontSize: 15,
-      fontWeight: '700',
+      fontSize: 14,
+      fontWeight: '900',
       color: c.text.primary,
+      letterSpacing: -0.2,
     },
     timeText: {
-      fontSize: 11,
-      color: c.text.muted,
-      marginTop: 2,
+      fontSize: 11.5,
+      color: c.text.tertiary,
+      fontWeight: '700',
+      marginTop: 1,
     },
     badge: {
-      borderWidth: 1,
-      paddingHorizontal: 8,
-      paddingVertical: 3,
-      borderRadius: 10,
+      borderWidth: StyleSheet.hairlineWidth,
+      paddingHorizontal: 9,
+      paddingVertical: 3.5,
+      borderRadius: 999,
     },
     badgeText: {
-      fontSize: 11,
-      fontWeight: '800',
-      letterSpacing: 0.2,
+      fontSize: 10.5,
+      fontWeight: '900',
+      letterSpacing: 0.3,
     },
     cardTitle: {
-      fontSize: 17,
-      fontWeight: '800',
+      fontSize: 16.5,
+      fontWeight: '900',
       color: c.text.primary,
-      lineHeight: 24,
-      marginBottom: 6,
+      lineHeight: 23,
+      letterSpacing: -0.3,
+      marginBottom: 4,
     },
     cardBody: {
-      fontSize: 15,
+      fontSize: 14,
       color: c.text.secondary,
-      lineHeight: 22,
-      marginBottom: 12,
+      lineHeight: 20,
+      fontWeight: '500',
+      marginBottom: 10,
     },
     cardImageWrapper: {
-      borderRadius: 14,
+      borderRadius: 12,
       overflow: 'hidden',
-      borderWidth: 1,
+      borderWidth: StyleSheet.hairlineWidth,
       borderColor: c.border.subtle,
-      marginBottom: 12,
+      marginBottom: 10,
     },
     cardImage: {
       width: '100%',
       height: 180,
     },
-    locationBadge: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 4,
-      alignSelf: 'flex-start',
-      backgroundColor: c.bg.subtle,
-      paddingHorizontal: 8,
-      paddingVertical: 4,
-      borderRadius: 8,
-      marginBottom: 8,
-    },
-    locationText: {
-      fontSize: 12,
-      fontWeight: '700',
-      color: c.text.secondary,
-    },
     cardFooter: {
       flexDirection: 'row',
       alignItems: 'center',
-      justifyContent: 'space-between',
-      marginTop: 4,
-    },
-    metricsRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 20,
+      gap: 18,
+      paddingTop: 8,
+      borderTopWidth: StyleSheet.hairlineWidth,
+      borderTopColor: c.border.subtle,
     },
     metricBtn: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 6,
+      gap: 5,
       flexShrink: 0,
     },
     metricCountText: {
-      fontSize: 13,
-      fontWeight: '700',
+      fontSize: 12.5,
+      fontWeight: '800',
       color: c.text.tertiary,
     },
     metricCountTextLiked: {
@@ -892,9 +955,7 @@ function makeStyles(c: ThemeColors) {
     },
 
     meetupInfoBox: {
-      backgroundColor: c.status.warningBg,
-      borderWidth: 1,
-      borderColor: c.status.warning,
+      backgroundColor: c.brand.primaryLight,
       borderRadius: 12,
       paddingHorizontal: 12,
       paddingVertical: 10,
@@ -904,22 +965,23 @@ function makeStyles(c: ThemeColors) {
     meetupInfoRow: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 6,
+      gap: 7,
     },
     meetupInfoText: {
       flex: 1,
       fontSize: 13,
-      fontWeight: '700',
-      color: c.status.warning,
+      fontWeight: '800',
+      color: c.brand.primaryDeep,
     },
     meetupStatusPill: {
-      paddingHorizontal: 6,
-      paddingVertical: 2,
-      borderRadius: 6,
+      paddingHorizontal: 7,
+      paddingVertical: 2.5,
+      borderRadius: 999,
     },
     meetupStatusText: {
-      fontSize: 11,
-      fontWeight: '800',
+      fontSize: 10.5,
+      fontWeight: '900',
+      letterSpacing: 0.2,
     },
   });
 }

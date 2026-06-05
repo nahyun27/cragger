@@ -14,6 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 
 import { EMPTY_SHOE_FORM, ShoeForm, type ShoeFormValue } from '@/components/shoes/shoe-form';
+import { BottomCTA } from '@/components/ui/bottom-cta';
 import { useThemeColors } from '@/lib/theme';
 import {
   useDeleteShoe,
@@ -155,7 +156,7 @@ export default function EditShoeScreen() {
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-background-primary" edges={['top', 'bottom']}>
+    <SafeAreaView className="flex-1 bg-background-primary" edges={['top']}>
       <View className="flex-row items-center px-4 py-2 border-b border-border-subtle">
         <Pressable onPress={() => router.back()} className="p-2 -ml-2 active:opacity-60" hitSlop={8}>
           <Feather name="arrow-left" size={24} color={c.text.primary} />
@@ -183,27 +184,12 @@ export default function EditShoeScreen() {
       >
         <ShoeForm value={form} onChange={setForm} />
 
-        <View className="px-4 pt-2 pb-2 border-t border-border-subtle">
-          <Pressable
-            onPress={handleSubmit}
-            disabled={!canSubmit}
-            className={`rounded-md p-4 items-center ${
-              !canSubmit ? 'bg-background-tertiary' : 'bg-brand-primary'
-            }`}
-          >
-            {updateShoe.isPending ? (
-              <ActivityIndicator color="white" />
-            ) : (
-              <Text
-                className={`font-semibold ${
-                  !canSubmit ? 'text-text-muted' : 'text-background-primary'
-                }`}
-              >
-                저장
-              </Text>
-            )}
-          </Pressable>
-        </View>
+        <BottomCTA
+          label="저장"
+          onPress={handleSubmit}
+          loading={updateShoe.isPending}
+          disabled={!canSubmit}
+        />
       </KeyboardAvoidingView>
     </SafeAreaView>
   );

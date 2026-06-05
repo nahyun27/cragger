@@ -7,12 +7,12 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import {
   ActivityIndicator,
-  Alert,
   Image,
   KeyboardAvoidingView,
   Platform,
   Pressable,
   ScrollView,
+  StyleSheet,
   Text,
   TextInput,
   View,
@@ -21,11 +21,19 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { z } from 'zod';
 
-import { Section } from '@/components/ui/section';
+import { ScreenHeader } from '@/components/ui/screen-header';
+import { BottomCTA } from '@/components/ui/bottom-cta';
+import {
+  FormCard,
+  FormClearBtn,
+  FormField,
+  FormInput,
+  FormPressable,
+} from '@/components/ui/form';
 import { useCheckUsername, useProfile, useUpdateProfile } from '@/hooks/use-profile';
 import { useAuth } from '@/lib/auth-context';
 import { deleteAvatarByUrl, uploadAvatarImage } from '@/lib/upload-image';
-import { useThemeColors } from '@/lib/theme';
+import { useThemeColors, type ThemeColors } from '@/lib/theme';
 
 const schema = z.object({
   username: z
@@ -278,339 +286,313 @@ export default function ProfileEditScreen() {
 
   const startDateValue = parseYMD(climbingStartDate);
 
+  const s = makeStyles(c);
+
   return (
-    <SafeAreaView className="flex-1 bg-background-primary" edges={['top', 'bottom']}>
-      <View className="flex-row items-center px-2 py-2 border-b border-border-subtle">
-        <Pressable onPress={() => router.back()} className="p-2" hitSlop={8}>
-          <Feather name="arrow-left" size={22} color={c.text.primary} />
-        </Pressable>
-        <Text className="flex-1 text-center text-text-primary text-base font-semibold">
-          프로필 편집
-        </Text>
-        <View className="w-10" />
-      </View>
+    <SafeAreaView style={{ flex: 1, backgroundColor: c.bg.primary }} edges={['left', 'right']}>
+      <ScreenHeader title="프로필 편집" onBack={() => router.back()} />
 
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        className="flex-1"
+        style={{ flex: 1 }}
       >
-        <ScrollView contentContainerClassName="p-5 gap-6 pb-8" keyboardShouldPersistTaps="handled">
-          {/* Avatar — 중앙 정렬, 마이페이지와 동일한 인스타 스타일 */}
-          <View className="items-center gap-3 pt-1">
-            <AvatarPreview
-              uri={avatarPreviewUri}
-              fallbackChar={(profile.username[0] ?? '?').toUpperCase()}
-              uploading={uploadingAvatar}
-            />
-            <View className="flex-row gap-2">
-              <Pressable
-                onPress={handlePickAvatar}
-                disabled={uploadingAvatar}
-                className="flex-row items-center gap-1.5 px-4 py-2 rounded-full bg-background-secondary border border-border-subtle active:opacity-70"
-              >
-                <Feather name="image" size={13} color={c.brand.primary} />
-                <Text className="text-text-primary text-xs font-semibold">
-                  {avatarPreviewUri ? '사진 변경' : '사진 선택'}
-                </Text>
-              </Pressable>
-              {avatarPreviewUri && (
-                <Pressable
-                  onPress={handleRemoveAvatar}
-                  disabled={uploadingAvatar}
-                  className="flex-row items-center gap-1.5 px-4 py-2 rounded-full bg-background-secondary border border-border-subtle active:opacity-70"
-                >
-                  <Feather name="trash-2" size={13} color={c.status.danger} />
-                  <Text className="text-status-danger text-xs font-semibold">삭제</Text>
-                </Pressable>
+        <ScrollView
+          contentContainerStyle={{ padding: 18, gap: 18, paddingBottom: 16 }}
+          contentInsetAdjustmentBehavior="never"
+          automaticallyAdjustContentInsets={false}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
+          {/* Avatar block — center, big with camera overlay */}
+          <View style={{ alignItems: 'center', paddingVertical: 8, gap: 12 }}>
+            <Pressable onPress={handlePickAvatar} disabled={uploadingAvatar} hitSlop={4}>
+              {({ pressed }) => (
+                <View style={[s.avatarWrap, pressed && { opacity: 0.85 }]}>
+                  <AvatarBig
+                    uri={avatarPreviewUri}
+                    fallbackChar={(profile.username[0] ?? '?').toUpperCase()}
+                    uploading={uploadingAvatar}
+                    c={c}
+                  />
+                  <View style={s.cameraBtn}>
+                    <Feather name="camera" size={15} color={c.brand.onPrimary} />
+                  </View>
+                </View>
               )}
-            </View>
+            </Pressable>
+            {avatarPreviewUri ? (
+              <Pressable
+                onPress={handleRemoveAvatar}
+                disabled={uploadingAvatar}
+                hitSlop={6}
+              >
+                {({ pressed }) => (
+                  <View style={[s.avatarRemoveBtn, pressed && { opacity: 0.6 }]}>
+                    <Feather name="trash-2" size={14} color={c.status.danger} />
+                    <Text style={{ color: c.status.danger, fontSize: 13, fontWeight: '800', letterSpacing: -0.2 }}>
+                      사진 제거
+                    </Text>
+                  </View>
+                )}
+              </Pressable>
+            ) : (
+              <Text style={{ fontSize: 12, color: c.text.tertiary, fontWeight: '600' }}>
+                탭해서 프로필 사진을 추가하세요
+              </Text>
+            )}
           </View>
 
-          <Section title="닉네임" required>
+          {/* Card: 닉네임 / 인스타 */}
+          <FormCard title="기본 정보" icon="user">
             <Controller
               control={control}
               name="username"
               render={({ field: { onChange, value } }) => (
-                <View>
-                  <View className="flex-row items-center bg-background-secondary border border-border-subtle rounded-xl px-3.5">
-                    <TextInput
-                      placeholder="2~30자, 영문·숫자·_·.·한글"
-                      placeholderTextColor="#9CA3AF"
-                      value={value}
-                      onChangeText={onChange}
-                      autoCapitalize="none"
-                      autoCorrect={false}
-                      maxLength={30}
-                      className="flex-1 py-3 text-text-primary text-base"
-                    />
-                    <UsernameStatusIcon status={usernameStatus} />
-                  </View>
-                  {errors.username ? (
-                    <Text className="text-status-danger text-xs mt-1">
-                      {errors.username.message}
-                    </Text>
-                  ) : (
-                    <UsernameStatusText status={usernameStatus} />
-                  )}
-                </View>
+                <FormField label="닉네임" error={errors.username?.message} required>
+                  <FormInput
+                    placeholder="2~30자, 영문·숫자·_·.·한글"
+                    value={value}
+                    onChangeText={onChange}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    maxLength={30}
+                    trailingNode={<UsernameStatusIcon status={usernameStatus} />}
+                  />
+                  {!errors.username && <UsernameStatusText status={usernameStatus} />}
+                </FormField>
               )}
             />
-          </Section>
-
-          <Section title="키">
-            <Controller
-              control={control}
-              name="heightCm"
-              render={({ field: { onChange, value } }) => (
-                <View>
-                  <View className="flex-row items-center bg-background-secondary border border-border-subtle rounded-xl px-3.5">
-                    <TextInput
-                      placeholder="예: 170"
-                      placeholderTextColor="#9CA3AF"
-                      value={value}
-                      onChangeText={onChange}
-                      keyboardType="number-pad"
-                      maxLength={3}
-                      className="flex-1 py-3 text-text-primary text-base"
-                    />
-                    <Text className="text-text-tertiary text-sm">cm</Text>
-                  </View>
-                  {errors.heightCm && (
-                    <Text className="text-status-danger text-xs mt-1">
-                      {errors.heightCm.message}
-                    </Text>
-                  )}
-                </View>
-              )}
-            />
-          </Section>
-
-          <Section title="리치">
-            <Controller
-              control={control}
-              name="reachCm"
-              render={({ field: { onChange, value } }) => (
-                <View>
-                  <View className="flex-row items-center bg-background-secondary border border-border-subtle rounded-xl px-3.5">
-                    <TextInput
-                      placeholder="양팔 벌렸을 때 손끝~손끝"
-                      placeholderTextColor="#9CA3AF"
-                      value={value}
-                      onChangeText={onChange}
-                      keyboardType="number-pad"
-                      maxLength={3}
-                      className="flex-1 py-3 text-text-primary text-base"
-                    />
-                    <Text className="text-text-tertiary text-sm">cm</Text>
-                  </View>
-                  {errors.reachCm && (
-                    <Text className="text-status-danger text-xs mt-1">
-                      {errors.reachCm.message}
-                    </Text>
-                  )}
-                </View>
-              )}
-            />
-          </Section>
-
-          <Section title="몸무게">
-            <Controller
-              control={control}
-              name="weightKg"
-              render={({ field: { onChange, value } }) => (
-                <View>
-                  <View className="flex-row items-center bg-background-secondary border border-border-subtle rounded-xl px-3.5">
-                    <TextInput
-                      placeholder="예: 60"
-                      placeholderTextColor="#9CA3AF"
-                      value={value}
-                      onChangeText={onChange}
-                      keyboardType="number-pad"
-                      maxLength={3}
-                      className="flex-1 py-3 text-text-primary text-base"
-                    />
-                    <Text className="text-text-tertiary text-sm">kg</Text>
-                  </View>
-                  {errors.weightKg && (
-                    <Text className="text-status-danger text-xs mt-1">
-                      {errors.weightKg.message}
-                    </Text>
-                  )}
-                  <Pressable
-                    onPress={() => setWeightVisible((v) => !v)}
-                    className="mt-2 flex-row items-center gap-2 active:opacity-70"
-                    hitSlop={6}
-                  >
-                    <View
-                      className={`w-5 h-5 rounded border items-center justify-center ${
-                        !weightVisible
-                          ? 'bg-brand-primary border-brand-primary'
-                          : 'bg-background-primary border-border-default'
-                      }`}
-                    >
-                      {!weightVisible && <Feather name="check" size={12} color="white" />}
-                    </View>
-                    <Text className="text-text-secondary text-sm">
-                      몸무게 숨기기
-                    </Text>
-                  </Pressable>
-                  <Text className="text-text-tertiary text-xs mt-1">
-                    체크하면 마이페이지에도 표시되지 않아요
-                  </Text>
-                </View>
-              )}
-            />
-          </Section>
-
-          <Section title="클라이밍 시작일">
-            <View className="flex-row gap-2 items-center">
-              <Pressable
-                onPress={() => setShowPicker(true)}
-                className="flex-1 flex-row items-center justify-between border border-border-default rounded-md px-3 py-2.5 active:opacity-80"
-              >
-                <Text
-                  className={
-                    climbingStartDate ? 'text-text-primary text-base' : 'text-text-tertiary text-base'
-                  }
-                >
-                  {formatLongDate(climbingStartDate)}
-                </Text>
-                <Feather name="calendar" size={16} color={c.text.tertiary} />
-              </Pressable>
-              {climbingStartDate && (
-                <Pressable
-                  onPress={() => {
-                    setClimbingStartDate(null);
-                    setStartDateDirty(true);
-                  }}
-                  className="px-3 py-2.5 border border-border-default rounded-md active:opacity-80"
-                  hitSlop={6}
-                >
-                  <Text className="text-text-tertiary text-sm">지우기</Text>
-                </Pressable>
-              )}
-            </View>
-            {showPicker && (
-              <DateTimePicker
-                value={startDateValue ?? new Date()}
-                mode="date"
-                display={Platform.OS === 'ios' ? 'inline' : 'default'}
-                maximumDate={new Date()}
-                onChange={(event, picked) => {
-                  if (Platform.OS !== 'ios') setShowPicker(false);
-                  if (event.type === 'dismissed') return;
-                  if (picked) {
-                    setClimbingStartDate(formatYMD(picked));
-                    setStartDateDirty(true);
-                  }
-                }}
-              />
-            )}
-            {Platform.OS === 'ios' && showPicker && (
-              <Pressable
-                onPress={() => setShowPicker(false)}
-                className="self-end px-3 py-1.5 mt-1 active:opacity-60"
-              >
-                <Text className="text-brand-primary text-sm font-semibold">완료</Text>
-              </Pressable>
-            )}
-          </Section>
-
-          <Section title="Instagram">
             <Controller
               control={control}
               name="instagramHandle"
               render={({ field: { onChange, value } }) => (
-                <View>
-                  <View className="flex-row items-center bg-background-secondary border border-border-subtle rounded-xl px-3.5">
-                    <Text className="text-text-tertiary text-base">@</Text>
-                    <TextInput
-                      placeholder="your_handle"
-                      placeholderTextColor="#9CA3AF"
-                      value={value ?? ''}
-                      onChangeText={(t) => onChange(t.replace(/^@+/, ''))}
-                      autoCapitalize="none"
-                      autoCorrect={false}
-                      maxLength={30}
-                      className="flex-1 py-3 text-text-primary text-base"
-                    />
-                  </View>
-                  {errors.instagramHandle && (
-                    <Text className="text-status-danger text-xs mt-1">
-                      {errors.instagramHandle.message}
-                    </Text>
-                  )}
-                </View>
+                <FormField label="Instagram" error={errors.instagramHandle?.message}>
+                  <FormInput
+                    leadingText="@"
+                    placeholder="your_handle"
+                    value={value ?? ''}
+                    onChangeText={(t) => onChange(t.replace(/^@+/, ''))}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    maxLength={30}
+                  />
+                </FormField>
               )}
             />
-          </Section>
+          </FormCard>
+
+          {/* Card: 신체 정보 */}
+          <FormCard title="신체 정보" icon="activity" desc="공개 안 함도 OK — 선택 항목">
+            <View style={{ flexDirection: 'row', gap: 10 }}>
+              <Controller
+                control={control}
+                name="heightCm"
+                render={({ field: { onChange, value } }) => (
+                  <FormField label="키" error={errors.heightCm?.message} flex>
+                    <FormInput
+                      placeholder="170"
+                      value={value}
+                      onChangeText={onChange}
+                      keyboardType="number-pad"
+                      maxLength={3}
+                      trailingUnit="cm"
+                    />
+                  </FormField>
+                )}
+              />
+              <Controller
+                control={control}
+                name="reachCm"
+                render={({ field: { onChange, value } }) => (
+                  <FormField label="리치" error={errors.reachCm?.message} flex>
+                    <FormInput
+                      placeholder="175"
+                      value={value}
+                      onChangeText={onChange}
+                      keyboardType="number-pad"
+                      maxLength={3}
+                      trailingUnit="cm"
+                    />
+                  </FormField>
+                )}
+              />
+            </View>
+            <Controller
+              control={control}
+              name="weightKg"
+              render={({ field: { onChange, value } }) => (
+                <FormField label="몸무게" error={errors.weightKg?.message}>
+                  <FormInput
+                    placeholder="60"
+                    value={value}
+                    onChangeText={onChange}
+                    keyboardType="number-pad"
+                    maxLength={3}
+                    trailingUnit="kg"
+                  />
+                  <View style={s.toggleRow}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={s.toggleLabel}>마이페이지에서 숨기기</Text>
+                      <Text style={s.toggleDesc}>몸무게는 다른 사람에게 보이지 않아요</Text>
+                    </View>
+                    <Pressable
+                      onPress={() => setWeightVisible((v) => !v)}
+                      hitSlop={6}
+                      style={({ pressed }) => [
+                        s.switchTrack,
+                        !weightVisible && { backgroundColor: c.brand.primary },
+                        pressed && { opacity: 0.85 },
+                      ]}
+                    >
+                      <View
+                        style={[
+                          s.switchThumb,
+                          !weightVisible && { alignSelf: 'flex-end' },
+                        ]}
+                      />
+                    </Pressable>
+                  </View>
+                </FormField>
+              )}
+            />
+          </FormCard>
+
+          {/* Card: 활동 */}
+          <FormCard title="활동" icon="calendar">
+            <FormField label="클라이밍 시작일">
+              <View style={{ flexDirection: 'row', gap: 8 }}>
+                <View style={{ flex: 1 }}>
+                  <FormPressable
+                    onPress={() => setShowPicker(true)}
+                    leadingIcon="calendar"
+                    placeholder="날짜를 선택하세요"
+                    value={climbingStartDate ? formatLongDate(climbingStartDate) : null}
+                  />
+                </View>
+                {climbingStartDate && (
+                  <FormClearBtn
+                    onPress={() => { setClimbingStartDate(null); setStartDateDirty(true); }}
+                  />
+                )}
+              </View>
+              {showPicker && (
+                <DateTimePicker
+                  value={startDateValue ?? new Date()}
+                  mode="date"
+                  display={Platform.OS === 'ios' ? 'inline' : 'default'}
+                  maximumDate={new Date()}
+                  onChange={(event, picked) => {
+                    if (Platform.OS !== 'ios') setShowPicker(false);
+                    if (event.type === 'dismissed') return;
+                    if (picked) {
+                      setClimbingStartDate(formatYMD(picked));
+                      setStartDateDirty(true);
+                    }
+                  }}
+                />
+              )}
+              {Platform.OS === 'ios' && showPicker && (
+                <Pressable
+                  onPress={() => setShowPicker(false)}
+                  style={({ pressed }) => [{ alignSelf: 'flex-end', padding: 6 }, pressed && { opacity: 0.6 }]}
+                >
+                  <Text style={{ color: c.brand.primary, fontSize: 13, fontWeight: '800' }}>완료</Text>
+                </Pressable>
+              )}
+            </FormField>
+          </FormCard>
         </ScrollView>
 
-        <View className="px-5 pt-3 pb-5 border-t border-border-subtle bg-background-primary">
-          <Pressable
-            onPress={handleSubmit(onSubmit)}
-            disabled={!canSubmit}
-            className={`rounded-xl py-4 items-center ${
-              !canSubmit ? 'bg-background-tertiary' : 'bg-brand-primary'
-            }`}
-            style={canSubmit ? {
-              shadowColor: '#06b6d4',
-              shadowOpacity: 0.25,
-              shadowRadius: 10,
-              shadowOffset: { width: 0, height: 4 },
-              elevation: 3,
-            } : undefined}
-          >
-            {updateProfile.isPending ? (
-              <ActivityIndicator color="white" />
-            ) : (
-              <Text
-                className={`font-bold text-base ${
-                  !canSubmit ? 'text-text-muted' : 'text-background-primary'
-                }`}
-              >
-                저장
-              </Text>
-            )}
-          </Pressable>
-        </View>
+        <BottomCTA
+          label="저장하기"
+          onPress={handleSubmit(onSubmit)}
+          loading={updateProfile.isPending}
+          disabled={!canSubmit}
+        />
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
 
-function AvatarPreview({
-  uri,
-  fallbackChar,
-  uploading,
+function AvatarBig({
+  uri, fallbackChar, uploading, c,
 }: {
   uri: string | null;
   fallbackChar: string;
   uploading: boolean;
+  c: ThemeColors;
 }) {
   return (
     <View
-      className="w-28 h-28 rounded-full bg-brand-primary/5 border-[2.5px] border-brand-primary items-center justify-center overflow-hidden"
       style={{
-        shadowColor: '#06b6d4',
-        shadowOpacity: 0.18,
-        shadowRadius: 12,
-        shadowOffset: { width: 0, height: 6 },
-        elevation: 4,
+        width: 110, height: 110, borderRadius: 55,
+        backgroundColor: c.brand.primaryLight,
+        borderWidth: 3, borderColor: c.brand.primary,
+        alignItems: 'center', justifyContent: 'center',
+        overflow: 'hidden',
+        shadowColor: c.brand.primary,
+        shadowOpacity: 0.25, shadowRadius: 14, shadowOffset: { width: 0, height: 6 },
+        elevation: 5,
       }}
     >
       {uri ? (
-        <Image source={{ uri }} className="w-full h-full" resizeMode="cover" />
+        <Image source={{ uri }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
       ) : (
-        <Text className="text-brand-primary text-4xl font-extrabold">{fallbackChar}</Text>
+        <Text style={{ fontSize: 40, fontWeight: '900', color: c.brand.primaryDeep }}>
+          {fallbackChar}
+        </Text>
       )}
-      {uploading && (
-        <View className="absolute inset-0 items-center justify-center bg-black/30">
+      {uploading ? (
+        <View style={[StyleSheet.absoluteFillObject, { backgroundColor: 'rgba(0,0,0,0.4)', alignItems: 'center', justifyContent: 'center' }]}>
           <ActivityIndicator color="white" />
         </View>
-      )}
+      ) : null}
     </View>
   );
+}
+
+function makeStyles(c: ThemeColors) {
+  return StyleSheet.create({
+    avatarWrap: { position: 'relative' },
+    cameraBtn: {
+      position: 'absolute',
+      bottom: 0, right: 0,
+      width: 34, height: 34, borderRadius: 17,
+      backgroundColor: c.brand.primary,
+      alignItems: 'center', justifyContent: 'center',
+      borderWidth: 3, borderColor: c.bg.primary,
+      shadowColor: c.brand.primary,
+      shadowOpacity: 0.4, shadowRadius: 8, shadowOffset: { width: 0, height: 3 },
+      elevation: 4,
+    },
+    avatarRemoveBtn: {
+      flexDirection: 'row', alignItems: 'center', gap: 6,
+      paddingHorizontal: 14, paddingVertical: 8, borderRadius: 999,
+      backgroundColor: c.status.dangerBg,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: c.status.danger + '33',
+    },
+    toggleRow: {
+      flexDirection: 'row', alignItems: 'center', gap: 12,
+      marginTop: 8,
+      paddingTop: 10,
+      borderTopWidth: StyleSheet.hairlineWidth,
+      borderTopColor: c.border.subtle,
+    },
+    toggleLabel: { fontSize: 12.5, fontWeight: '800', color: c.text.primary },
+    toggleDesc: { fontSize: 11, color: c.text.tertiary, fontWeight: '600', marginTop: 1 },
+    switchTrack: {
+      width: 42, height: 24, borderRadius: 999,
+      backgroundColor: c.border.strong,
+      padding: 2,
+      justifyContent: 'center',
+    },
+    switchThumb: {
+      width: 20, height: 20, borderRadius: 10,
+      backgroundColor: c.bg.card,
+      shadowColor: '#000', shadowOpacity: 0.15, shadowRadius: 2, shadowOffset: { width: 0, height: 1 },
+    },
+  });
 }
 
 function UsernameStatusIcon({

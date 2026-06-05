@@ -10,7 +10,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 
 import { GRID_COLORS, type GridColor } from '@/components/climb/color-grid';
@@ -21,8 +21,11 @@ import {
   type ColorCountsValue,
 } from '@/components/session/color-counts-table';
 import { GymPickerModal } from '@/components/session/gym-picker-modal';
+import { MembershipPicker } from '@/components/session/membership-picker';
 import { Chip } from '@/components/ui/chip';
 import { Section } from '@/components/ui/section';
+import { FormInput } from '@/components/ui/form';
+import { BottomCTA } from '@/components/ui/bottom-cta';
 import { useGyms } from '@/hooks/use-gyms';
 import { useGymRegisteredColors } from '@/hooks/use-gym-registered-colors';
 import { useRecentColorActivity } from '@/hooks/use-recent-color-activity';
@@ -62,6 +65,7 @@ export default function EditSessionScreen() {
 
   const c = useThemeColors();  const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { data, isLoading, error } = useSessionDetail(id);
   const updateSession = useUpdateSession();
   const { data: recentGyms } = useRecentGyms();
@@ -74,6 +78,7 @@ export default function EditSessionScreen() {
   const [notes, setNotes] = useState('');
   const [colorCounts, setColorCounts] = useState<ColorCountsValue>(emptyColorCounts);
   const [leadRoutes, setLeadRoutes] = useState<LeadRoute[]>([]);
+  const [membershipId, setMembershipId] = useState<string | null>(null);
   const [prefilled, setPrefilled] = useState(false);
 
   const { data: recentColors } = useRecentColorActivity(gymId);
@@ -118,6 +123,7 @@ export default function EditSessionScreen() {
     setDurationMin(data.duration_min);
     setCondition(data.condition);
     setNotes(data.notes ?? '');
+    setMembershipId(data.membership_id);
     // boulder 색깔 prefill
     const next = emptyColorCounts();
     for (const s of data.color_summary) {
@@ -164,6 +170,7 @@ export default function EditSessionScreen() {
         durationMin,
         condition,
         notes: notes.trim() ? notes.trim().slice(0, 100) : null,
+        membershipId,
         ...(isLeadSession
           ? { leadRoutes }
           : { colors: Object.values(colorCounts) }),
@@ -205,7 +212,7 @@ export default function EditSessionScreen() {
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-background-primary" edges={['top', 'bottom']}>
+    <SafeAreaView className="flex-1 bg-background-primary" edges={['top']}>
       <View className="flex-row items-center px-4 py-2 border-b border-border-subtle">
         <Pressable onPress={() => router.back()} className="p-2 -ml-2 active:opacity-60" hitSlop={8}>
           <Feather name="arrow-left" size={24} color={c.text.primary} />
@@ -215,7 +222,13 @@ export default function EditSessionScreen() {
         </Text>
       </View>
 
-      <ScrollView className="flex-1" contentContainerClassName="p-4 gap-6">
+      <ScrollView
+        className="flex-1"
+        contentContainerClassName="p-4 gap-6"
+        contentContainerStyle={{ paddingBottom: insets.bottom + 12 }}
+        contentInsetAdjustmentBehavior="never"
+        automaticallyAdjustContentInsets={false}
+      >
         {/* 날짜는 readonly — date picker는 v1.1 */}
         <Section title="날짜">
           <View className="px-3 py-2 rounded-md bg-background-secondary">
@@ -239,7 +252,7 @@ export default function EditSessionScreen() {
                 key={g.id}
                 label={`${g.name}${g.branch ? ` ${g.branch}` : ''}`}
                 selected={gymId === g.id}
-                onPress={() => setGymId(g.id)}
+                onPress={() => { setGymId(g.id); setMembershipId(null); }}
               />
             ))}
           </View>
@@ -253,6 +266,16 @@ export default function EditSessionScreen() {
             </View>
           )}
         </Section>
+
+        {gymId && (
+          <Section title="회원권">
+            <MembershipPicker
+              gymId={gymId}
+              selectedId={membershipId}
+              onSelect={setMembershipId}
+            />
+          </Section>
+        )}
 
         <Section title="운동 시간">
           <View className="flex-row flex-wrap gap-2">
@@ -318,39 +341,23 @@ export default function EditSessionScreen() {
           </Section>
         )}
 
-        <Section title="메모">
-          <TextInput
+        <Section title="메모" icon="message-square">
+          <FormInput
             placeholder="한 줄 메모 (최대 100자)"
-            placeholderTextColor="#9CA3AF"
             value={notes}
             onChangeText={(t) => setNotes(t.slice(0, 100))}
             maxLength={100}
-            className="border border-border-default rounded-md px-3 py-2.5 text-text-primary text-base"
+            multiline
           />
         </Section>
       </ScrollView>
 
-      <View className="px-4 pt-2 pb-2 border-t border-border-subtle">
-        <Pressable
-          onPress={handleSubmit}
-          disabled={!canSubmit || updateSession.isPending}
-          className={`rounded-md p-4 items-center ${
-            !canSubmit ? 'bg-background-tertiary' : 'bg-brand-primary'
-          }`}
-        >
-          {updateSession.isPending ? (
-            <ActivityIndicator color="white" />
-          ) : (
-            <Text
-              className={`font-semibold ${
-                !canSubmit ? 'text-text-muted' : 'text-background-primary'
-              }`}
-            >
-              저장
-            </Text>
-          )}
-        </Pressable>
-      </View>
+      <BottomCTA
+        label="저장"
+        onPress={handleSubmit}
+        loading={updateSession.isPending}
+        disabled={!canSubmit}
+      />
 
       <GymPickerModal
         visible={showGymModal}
@@ -358,6 +365,7 @@ export default function EditSessionScreen() {
         selectedId={gymId}
         onSelect={(pickedId) => {
           setGymId(pickedId);
+          setMembershipId(null);
           setShowGymModal(false);
         }}
         onClose={() => setShowGymModal(false)}

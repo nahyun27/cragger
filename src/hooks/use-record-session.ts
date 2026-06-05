@@ -23,6 +23,7 @@ export type RecordSessionArgs = {
   durationMin: number | null;
   condition: number | null; // 1..5 or null
   notes: string | null;
+  membershipId?: string | null;
   discipline: ClimbingDiscipline;
   colors?: ColorCount[];     // boulder 일 때
   leadRoutes?: LeadRoute[];  // lead 일 때
@@ -64,6 +65,7 @@ export function useRecordSession() {
           duration_min: args.durationMin,
           notes: args.notes,
           condition: args.condition,
+          membership_id: args.membershipId ?? null,
           completed_at: new Date().toISOString(),
         })
         .select('id')

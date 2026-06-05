@@ -29,6 +29,7 @@ export type GymRow = {
   has_locker: boolean;
   has_parking: boolean;
   logo_url: string | null;
+  logo_bg_hex: string | null;
   facilities: string[];
 };
 

@@ -8,9 +8,11 @@ import {
   Text,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 
+import { ScreenHeader } from '@/components/ui/screen-header';
+import { EmptyState } from '@/components/ui/empty-state';
 import {
   useMyGymSubmissions,
   type GymSubmission,
@@ -18,15 +20,20 @@ import {
 } from '@/hooks/use-gym-submissions';
 import { useThemeColors, type ThemeColors } from '@/lib/theme';
 
-const STATUS_META: Record<SubmissionStatus, {
-  label: string; icon: 'clock' | 'check-circle' | 'x-circle';
-  fg: (c: ThemeColors) => string; bg: (c: ThemeColors) => string;
-}> = {
+type IconName = 'clock' | 'check-circle' | 'x-circle';
+type StatusMeta = {
+  label: string;
+  icon: IconName;
+  fg: (c: ThemeColors) => string;
+  bg: (c: ThemeColors) => string;
+};
+
+const STATUS_META: Record<SubmissionStatus, StatusMeta> = {
   pending: {
     label: '승인 대기',
     icon: 'clock',
-    fg: (c) => c.text.tertiary,
-    bg: (c) => c.bg.subtle,
+    fg: (c) => c.status.warning,
+    bg: (c) => c.status.warningBg,
   },
   approved: {
     label: '반영됨',
@@ -51,16 +58,34 @@ const FIELD_LABEL: Record<string, string> = {
   has_speed: '스피드', has_auto_belay: '오토빌레이',
   has_moonboard: '문보드', has_kilter: '킬터', has_tension: '텐션',
   has_shower: '샤워실', has_locker: '락커', has_parking: '주차장',
-  logo_url: '로고',
+  logo_url: '로고', add_colors: '색깔 추가', remove_colors: '색깔 제거',
+  color_order: '색깔 순서',
 };
+
+function relativeDate(iso: string): string {
+  const t = new Date(iso).getTime();
+  const diff = (Date.now() - t) / 1000;
+  if (diff < 60) return '방금';
+  if (diff < 3600) return `${Math.floor(diff / 60)}분 전`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)}시간 전`;
+  if (diff < 86400 * 7) return `${Math.floor(diff / 86400)}일 전`;
+  const d = new Date(iso);
+  return `${d.getFullYear().toString().slice(2)}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`;
+}
 
 export default function MySubmissionsScreen() {
   const c = useThemeColors();
   const s = useMemo(() => makeStyles(c), [c]);
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { data, isLoading, error } = useMyGymSubmissions();
 
-  // 상태별 그룹
+  const counts = useMemo(() => {
+    const out: Record<SubmissionStatus, number> = { pending: 0, approved: 0, rejected: 0 };
+    for (const r of data ?? []) out[r.status]++;
+    return out;
+  }, [data]);
+
   const grouped = useMemo(() => {
     const order: SubmissionStatus[] = ['pending', 'approved', 'rejected'];
     const map = new Map<SubmissionStatus, GymSubmission[]>();
@@ -69,47 +94,62 @@ export default function MySubmissionsScreen() {
     return order.map((st) => ({ status: st, list: map.get(st)! }));
   }, [data]);
 
-  return (
-    <SafeAreaView style={s.container} edges={['top']}>
-      <View style={s.header}>
-        <Pressable onPress={() => router.back()} hitSlop={8}>
-          {({ pressed }) => (
-            <View style={[s.headerBtn, pressed && { opacity: 0.6 }]}>
-              <Feather name="arrow-left" size={22} color={c.text.primary} />
-            </View>
-          )}
-        </Pressable>
-        <Text style={s.headerTitle}>내 제보 내역</Text>
-        <View style={{ width: 40 }} />
-      </View>
+  const total = data?.length ?? 0;
+  const approveRate = total > 0 ? Math.round((counts.approved / total) * 100) : 0;
 
-      <ScrollView contentContainerStyle={s.list}>
+  return (
+    <SafeAreaView style={s.container} edges={['left', 'right']}>
+      <ScreenHeader title="내 제보 내역" onBack={() => router.back()} count={total} />
+
+      <ScrollView
+        contentContainerStyle={[s.list, { paddingBottom: insets.bottom + 12 }]}
+        contentInsetAdjustmentBehavior="never"
+        automaticallyAdjustContentInsets={false}
+        showsVerticalScrollIndicator={false}
+      >
         {isLoading && <ActivityIndicator color={c.brand.primary} style={{ marginTop: 32 }} />}
         {error && <Text style={s.error}>{error.message}</Text>}
-        {data && data.length === 0 && (
-          <View style={s.emptyBox}>
-            <Feather name="edit-3" size={28} color={c.text.muted} />
-            <Text style={s.emptyTitle}>아직 보낸 제보가 없어요</Text>
-            <Text style={s.emptySub}>암장 상세에서 ✏️ 아이콘으로 정보를 제보할 수 있어요</Text>
+
+        {total > 0 && (
+          <View style={s.heroCard}>
+            <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 8 }}>
+              <Text style={s.heroNumber}>{total}</Text>
+              <Text style={s.heroLabel}>건 제보</Text>
+              {counts.approved > 0 && (
+                <Text style={s.heroSubLabel}>· 반영률 {approveRate}%</Text>
+              )}
+            </View>
+            <View style={s.statRow}>
+              <StatPill meta={STATUS_META.pending} count={counts.pending} c={c} />
+              <StatPill meta={STATUS_META.approved} count={counts.approved} c={c} />
+              <StatPill meta={STATUS_META.rejected} count={counts.rejected} c={c} />
+            </View>
           </View>
+        )}
+
+        {data && data.length === 0 && !isLoading && (
+          <EmptyState
+            icon="edit-3"
+            title="아직 보낸 제보가 없어요"
+            description={'암장 상세에서 정보 제보 버튼을 누르면\n바꾸고 싶은 항목만 골라 보낼 수 있어요'}
+          />
         )}
 
         {grouped.map(({ status, list }) =>
           list.length === 0 ? null : (
             <View key={status} style={s.section}>
               <View style={s.sectionHeader}>
-                <Feather
-                  name={STATUS_META[status].icon}
-                  size={13}
-                  color={STATUS_META[status].fg(c)}
-                />
+                <View style={[s.sectionDot, { backgroundColor: STATUS_META[status].fg(c) }]} />
                 <Text style={[s.sectionTitle, { color: STATUS_META[status].fg(c) }]}>
-                  {STATUS_META[status].label} <Text style={s.sectionCount}>{list.length}</Text>
+                  {STATUS_META[status].label}
                 </Text>
+                <Text style={s.sectionCount}>{list.length}</Text>
               </View>
-              {list.map((sub) => (
-                <SubmissionRow key={sub.id} sub={sub} />
-              ))}
+              <View style={s.rowGroup}>
+                {list.map((sub, i) => (
+                  <SubmissionRow key={sub.id} sub={sub} isLast={i === list.length - 1} />
+                ))}
+              </View>
             </View>
           ),
         )}
@@ -118,7 +158,30 @@ export default function MySubmissionsScreen() {
   );
 }
 
-function SubmissionRow({ sub }: { sub: GymSubmission }) {
+function StatPill({ meta, count, c }: { meta: StatusMeta; count: number; c: ThemeColors }) {
+  return (
+    <View style={{
+      flex: 1,
+      backgroundColor: meta.bg(c),
+      borderRadius: 12,
+      paddingVertical: 10,
+      paddingHorizontal: 10,
+      gap: 4,
+    }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+        <Feather name={meta.icon} size={11} color={meta.fg(c)} />
+        <Text style={{ fontSize: 10.5, fontWeight: '900', color: meta.fg(c), letterSpacing: 0.2 }}>
+          {meta.label}
+        </Text>
+      </View>
+      <Text style={{ fontSize: 22, fontWeight: '900', color: meta.fg(c), letterSpacing: -0.5 }}>
+        {count}
+      </Text>
+    </View>
+  );
+}
+
+function SubmissionRow({ sub, isLast }: { sub: GymSubmission; isLast: boolean }) {
   const c = useThemeColors();
   const s = useMemo(() => makeStyles(c), [c]);
   const router = useRouter();
@@ -126,34 +189,57 @@ function SubmissionRow({ sub }: { sub: GymSubmission }) {
     ? `${sub.gym.name}${sub.gym.branch ? ` ${sub.gym.branch}` : ''}`
     : '신규 암장';
   const changedKeys = Object.keys(sub.changes ?? {});
-  const summary =
-    changedKeys.length > 0
-      ? changedKeys.map((k) => FIELD_LABEL[k] ?? k).join(', ')
-      : '메모만';
-  const date = new Date(sub.created_at).toLocaleDateString('ko-KR');
-  const meta = STATUS_META[sub.status];
+  const time = relativeDate(sub.created_at);
 
   return (
     <Pressable
-      onPress={() => {
-        if (sub.gym_id) {
-          router.push({ pathname: '/gym/[id]', params: { id: sub.gym_id } } as never);
-        }
-      }}
-      style={({ pressed }) => [s.row, pressed && { opacity: 0.85 }]}
+      onPress={() => router.push({ pathname: '/profile/submissions/[id]', params: { id: sub.id } } as never)}
     >
-      <View style={[s.statusDot, { backgroundColor: meta.fg(c) }]} />
-      <View style={{ flex: 1, gap: 4 }}>
-        <Text style={s.rowTitle} numberOfLines={1}>{gymName}</Text>
-        <Text style={s.rowFields} numberOfLines={1}>{summary}</Text>
-        {sub.admin_notes && (
-          <Text style={s.rowAdminNote} numberOfLines={2}>
-            관리자: {sub.admin_notes}
-          </Text>
-        )}
-        <Text style={s.rowDate}>{date}</Text>
-      </View>
-      {sub.gym_id && <Feather name="chevron-right" size={16} color={c.text.muted} />}
+      {({ pressed }) => (
+        <View
+          style={[
+            s.row,
+            !isLast && s.rowDivider,
+            pressed && { backgroundColor: c.bg.subtle },
+          ]}
+        >
+          <View style={{ flex: 1, gap: 6 }}>
+            <View style={s.rowTitleRow}>
+              <Text style={s.rowTitle} numberOfLines={1}>{gymName}</Text>
+              {sub.gym_id == null && (
+                <View style={s.newBadge}>
+                  <Text style={s.newBadgeText}>NEW</Text>
+                </View>
+              )}
+            </View>
+            {changedKeys.length > 0 ? (
+              <View style={s.chipWrap}>
+                {changedKeys.slice(0, 5).map((k) => (
+                  <View key={k} style={s.fieldChip}>
+                    <Text style={s.fieldChipText}>{FIELD_LABEL[k] ?? k}</Text>
+                  </View>
+                ))}
+                {changedKeys.length > 5 && (
+                  <Text style={s.fieldChipMore}>+{changedKeys.length - 5}</Text>
+                )}
+              </View>
+            ) : (
+              <Text style={s.rowFields}>메모만</Text>
+            )}
+            {sub.admin_notes && (
+              <View style={s.adminNoteBox}>
+                <Feather name="message-square" size={11} color={c.text.tertiary} />
+                <Text style={s.adminNoteText} numberOfLines={2}>{sub.admin_notes}</Text>
+              </View>
+            )}
+            <View style={s.metaRow}>
+              <Feather name="clock" size={10} color={c.text.muted} />
+              <Text style={s.rowDate}>{time}</Text>
+            </View>
+          </View>
+          <Feather name="chevron-right" size={16} color={c.text.muted} />
+        </View>
+      )}
     </Pressable>
   );
 }
@@ -161,50 +247,126 @@ function SubmissionRow({ sub }: { sub: GymSubmission }) {
 function makeStyles(c: ThemeColors) {
   return StyleSheet.create({
     container: { flex: 1, backgroundColor: c.bg.primary },
-    header: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      paddingHorizontal: 16,
-      paddingVertical: 12,
-      borderBottomWidth: StyleSheet.hairlineWidth,
-      borderBottomColor: c.border.subtle,
-      backgroundColor: c.bg.card,
-    },
-    headerBtn: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-    headerTitle: { color: c.text.primary, fontSize: 16, fontWeight: '900', letterSpacing: -0.3 },
-    list: { padding: 20, gap: 22 },
-    section: { gap: 10 },
-    sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-    sectionTitle: { fontSize: 12, fontWeight: '800', letterSpacing: 0.2, textTransform: 'uppercase' },
-    sectionCount: { color: c.text.muted, fontWeight: '700' },
+    list: { padding: 18, gap: 18, paddingBottom: 12 },
     error: { color: c.status.danger, textAlign: 'center', marginTop: 16 },
-    emptyBox: { alignItems: 'center', paddingVertical: 48, gap: 8 },
-    emptyTitle: { fontSize: 14, fontWeight: '800', color: c.text.secondary },
-    emptySub: { fontSize: 12, color: c.text.muted, fontWeight: '600', textAlign: 'center' },
+
+    // hero (요약 카드)
+    heroCard: {
+      backgroundColor: c.bg.card,
+      borderRadius: 18,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: c.border.subtle,
+      padding: 16,
+      gap: 12,
+    },
+    heroNumber: {
+      fontSize: 28,
+      fontWeight: '900',
+      color: c.text.primary,
+      letterSpacing: -1,
+    },
+    heroLabel: {
+      fontSize: 14,
+      fontWeight: '800',
+      color: c.text.secondary,
+    },
+    heroSubLabel: {
+      fontSize: 12,
+      fontWeight: '700',
+      color: c.text.tertiary,
+    },
+    statRow: { flexDirection: 'row', gap: 8 },
+
+    // sections
+    section: { gap: 8 },
+    sectionHeader: {
+      flexDirection: 'row', alignItems: 'center', gap: 7,
+      paddingHorizontal: 4,
+    },
+    sectionDot: {
+      width: 8, height: 8, borderRadius: 4,
+    },
+    sectionTitle: {
+      fontSize: 12, fontWeight: '900',
+      letterSpacing: 0.3, textTransform: 'uppercase',
+    },
+    sectionCount: {
+      color: c.text.muted, fontWeight: '800', fontSize: 11,
+      backgroundColor: c.bg.subtle,
+      paddingHorizontal: 7, paddingVertical: 1.5, borderRadius: 999,
+      minWidth: 22, textAlign: 'center',
+    },
+
+    rowGroup: {
+      backgroundColor: c.bg.card,
+      borderRadius: 14,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: c.border.subtle,
+      overflow: 'hidden',
+    },
+
+    // empty state
+    emptyBox: {
+      alignItems: 'center', paddingVertical: 56, gap: 10,
+      paddingHorizontal: 24,
+    },
+    emptyIcon: {
+      width: 64, height: 64, borderRadius: 32,
+      backgroundColor: c.brand.primaryLight,
+      alignItems: 'center', justifyContent: 'center',
+    },
+    emptyTitle: {
+      fontSize: 16, fontWeight: '900', color: c.text.primary,
+      letterSpacing: -0.3,
+    },
+    emptySub: {
+      fontSize: 12.5, color: c.text.tertiary, fontWeight: '600',
+      textAlign: 'center', lineHeight: 19,
+    },
+
+    // row
     row: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 12,
-      backgroundColor: c.bg.card,
-      borderWidth: StyleSheet.hairlineWidth,
-      borderColor: c.border.subtle,
-      borderRadius: 14,
-      padding: 14,
+      gap: 10,
+      paddingHorizontal: 14,
+      paddingVertical: 14,
     },
-    statusDot: { width: 8, height: 8, borderRadius: 4 },
-    rowTitle: { fontSize: 14, fontWeight: '800', color: c.text.primary },
-    rowFields: { fontSize: 12, fontWeight: '600', color: c.text.tertiary },
-    rowAdminNote: {
-      fontSize: 12,
-      fontWeight: '600',
-      color: c.text.secondary,
+    rowDivider: {
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: c.border.subtle,
+    },
+    rowTitleRow: {
+      flexDirection: 'row', alignItems: 'center', gap: 6,
+    },
+    rowTitle: {
+      fontSize: 14.5, fontWeight: '900', color: c.text.primary,
+      letterSpacing: -0.2, flexShrink: 1,
+    },
+    newBadge: {
+      paddingHorizontal: 6, paddingVertical: 1.5, borderRadius: 5,
+      backgroundColor: c.brand.primary,
+    },
+    newBadgeText: {
+      fontSize: 9, fontWeight: '900', color: c.brand.onPrimary, letterSpacing: 0.5,
+    },
+    chipWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 4, alignItems: 'center' },
+    fieldChip: {
       backgroundColor: c.bg.subtle,
-      paddingHorizontal: 8,
-      paddingVertical: 5,
-      borderRadius: 6,
-      marginTop: 2,
+      paddingHorizontal: 7, paddingVertical: 2.5, borderRadius: 6,
     },
-    rowDate: { fontSize: 11, color: c.text.muted, fontWeight: '600' },
+    fieldChipText: { fontSize: 10.5, fontWeight: '800', color: c.text.secondary },
+    fieldChipMore: { fontSize: 10.5, fontWeight: '700', color: c.text.muted },
+    rowFields: { fontSize: 12, fontWeight: '600', color: c.text.tertiary },
+    adminNoteBox: {
+      flexDirection: 'row', alignItems: 'flex-start', gap: 5,
+      backgroundColor: c.bg.subtle,
+      paddingHorizontal: 8, paddingVertical: 6, borderRadius: 8,
+    },
+    adminNoteText: {
+      flex: 1, fontSize: 11.5, color: c.text.secondary, fontWeight: '600', lineHeight: 16,
+    },
+    metaRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+    rowDate: { fontSize: 11, color: c.text.muted, fontWeight: '700' },
   });
 }

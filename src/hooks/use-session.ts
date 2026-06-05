@@ -15,8 +15,41 @@ export type SessionRow = {
   notes: string | null;
   created_at: string;
   completed_at: string | null;
-  gym: { id: string; name: string; branch: string | null } | null;
+  membership_id: string | null;
+  membership: {
+    id: string;
+    membership_type: 'monthly' | 'period' | 'passes' | 'single';
+    total_passes: number | null;
+    used_passes: number;
+    start_date: string;
+    end_date: string | null;
+  } | null;
+  gym: { id: string; name: string; branch: string | null; logo_url: string | null } | null;
 };
+
+// 특정 암장에서 내가 한 세션 목록 (recent N개).
+export function useMySessionsAtGym(gymId: string | undefined, limit = 10) {
+  return useQuery({
+    queryKey: ['sessions', 'at-gym', gymId, limit] as const,
+    enabled: !!gymId,
+    queryFn: async (): Promise<SessionRow[]> => {
+      const { data: userRes } = await supabase.auth.getUser();
+      const uid = userRes.user?.id;
+      if (!uid) return [];
+      const { data, error } = await supabase
+        .from('sessions')
+        .select(
+          'id, user_id, gym_id, session_date, duration_min, condition, notes, created_at, completed_at, membership_id, membership:memberships(id, membership_type, total_passes, used_passes, start_date, end_date), gym:gyms(id, name, branch, logo_url)',
+        )
+        .eq('user_id', uid)
+        .eq('gym_id', gymId!)
+        .order('session_date', { ascending: false })
+        .limit(limit);
+      if (error) throw new Error(error.message);
+      return (data ?? []) as unknown as SessionRow[];
+    },
+  });
+}
 
 export function useSession(sessionId: string | undefined) {
   return useQuery({
@@ -26,7 +59,7 @@ export function useSession(sessionId: string | undefined) {
       const { data, error } = await supabase
         .from('sessions')
         .select(
-          'id, user_id, gym_id, session_date, duration_min, condition, notes, created_at, completed_at, gym:gyms(id, name, branch)',
+          'id, user_id, gym_id, session_date, duration_min, condition, notes, created_at, completed_at, membership_id, membership:memberships(id, membership_type, total_passes, used_passes, start_date, end_date), gym:gyms(id, name, branch, logo_url)',
         )
         .eq('id', sessionId!)
         .single();
@@ -75,7 +108,7 @@ export function useSessionDetail(sessionId: string | undefined) {
         supabase
           .from('sessions')
           .select(
-            'id, user_id, gym_id, session_date, duration_min, condition, notes, created_at, completed_at, gym:gyms(id, name, branch)',
+            'id, user_id, gym_id, session_date, duration_min, condition, notes, created_at, completed_at, membership_id, membership:memberships(id, membership_type, total_passes, used_passes, start_date, end_date), gym:gyms(id, name, branch, logo_url)',
           )
           .eq('id', sessionId!)
           .single(),
@@ -172,6 +205,7 @@ export type UpdateSessionArgs = {
   durationMin: number | null;
   condition: number | null;
   notes: string | null;
+  membershipId?: string | null;          // 수정 시 undefined 면 그대로 둠
   // boulder 또는 lead — 둘 중 하나
   colors?: ColorCount[];
   leadRoutes?: LeadRoute[];
@@ -226,14 +260,18 @@ export function useUpdateSession() {
       }
 
       // 4. session UPDATE — created_by 없이 gym_id/조건만 갱신
+      const sessionPatch: Record<string, unknown> = {
+        gym_id: args.gymId,
+        duration_min: args.durationMin,
+        condition: args.condition,
+        notes: args.notes,
+      };
+      if (args.membershipId !== undefined) {
+        sessionPatch.membership_id = args.membershipId;
+      }
       const { error: e4 } = await supabase
         .from('sessions')
-        .update({
-          gym_id: args.gymId,
-          duration_min: args.durationMin,
-          condition: args.condition,
-          notes: args.notes,
-        })
+        .update(sessionPatch)
         .eq('id', args.sessionId);
       if (e4) throw new Error(e4.message);
 

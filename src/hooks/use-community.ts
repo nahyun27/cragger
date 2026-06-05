@@ -263,6 +263,59 @@ export function useToggleLike() {
   });
 }
 
+// ── My posts / comments ───────────────────────────────────────
+export function useMyPosts() {
+  const { session: authSession } = useAuth();
+  const userId = authSession?.user.id;
+  return useQuery({
+    queryKey: ['community', 'my-posts', userId] as const,
+    enabled: !!userId,
+    queryFn: async (): Promise<PostRow[]> => {
+      const { data, error } = await supabase
+        .from('posts')
+        .select(POST_SELECT_COLS)
+        .eq('author_id', userId!)
+        .order('created_at', { ascending: false });
+      if (error) throw new Error(error.message);
+      return (data ?? []) as unknown as PostRow[];
+    },
+  });
+}
+
+export type MyCommentRow = {
+  id: string;
+  post_id: string;
+  body: string;
+  created_at: string;
+  parent_comment_id: string | null;
+  post: {
+    id: string;
+    title: string | null;
+    body: string;
+    post_type: string;
+  } | null;
+};
+
+export function useMyComments() {
+  const { session: authSession } = useAuth();
+  const userId = authSession?.user.id;
+  return useQuery({
+    queryKey: ['community', 'my-comments', userId] as const,
+    enabled: !!userId,
+    queryFn: async (): Promise<MyCommentRow[]> => {
+      const { data, error } = await supabase
+        .from('post_comments')
+        .select(
+          'id, post_id, body, created_at, parent_comment_id, post:posts!post_comments_post_id_fkey(id, title, body, post_type)',
+        )
+        .eq('author_id', userId!)
+        .order('created_at', { ascending: false });
+      if (error) throw new Error(error.message);
+      return (data ?? []) as unknown as MyCommentRow[];
+    },
+  });
+}
+
 // ── Comments ───────────────────────────────────────────────────
 export type CommentRow = {
   id: string;

@@ -3,7 +3,6 @@ import { useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import React, { useMemo, useState } from 'react';
 import {
-  ActivityIndicator,
   Image,
   KeyboardAvoidingView,
   Platform,
@@ -11,12 +10,16 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 
+import { BottomCTA } from '@/components/ui/bottom-cta';
+import { Chip } from '@/components/ui/chip';
+import { FormInput } from '@/components/ui/form';
+import { ScreenHeader } from '@/components/ui/screen-header';
+import { Section } from '@/components/ui/section';
 import { useAuth } from '@/lib/auth-context';
 import { useSubmitGymInfo, type GymChanges } from '@/hooks/use-gym-submissions';
 import { uploadGymLogoSuggestion } from '@/lib/upload-image';
@@ -27,9 +30,16 @@ type BooleanField =
   | 'has_moonboard' | 'has_kilter' | 'has_tension'
   | 'has_shower' | 'has_locker' | 'has_parking';
 
-const BOOLEAN_GROUPS: { title: string; items: { key: BooleanField; label: string }[] }[] = [
+type BoolIcon = React.ComponentProps<typeof Feather>['name'];
+
+const BOOLEAN_GROUPS: {
+  title: string;
+  icon: BoolIcon;
+  items: { key: BooleanField; label: string }[];
+}[] = [
   {
     title: '종목',
+    icon: 'activity',
     items: [
       { key: 'has_boulder', label: '볼더링' },
       { key: 'has_lead', label: '리드' },
@@ -40,6 +50,7 @@ const BOOLEAN_GROUPS: { title: string; items: { key: BooleanField; label: string
   },
   {
     title: '보드',
+    icon: 'grid',
     items: [
       { key: 'has_moonboard', label: '문보드' },
       { key: 'has_kilter', label: '킬터' },
@@ -48,6 +59,7 @@ const BOOLEAN_GROUPS: { title: string; items: { key: BooleanField; label: string
   },
   {
     title: '편의시설',
+    icon: 'home',
     items: [
       { key: 'has_shower', label: '샤워실' },
       { key: 'has_locker', label: '락커' },
@@ -60,6 +72,7 @@ export default function SuggestNewGymScreen() {
   const c = useThemeColors();
   const s = useMemo(() => makeStyles(c), [c]);
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { session: authSession } = useAuth();
   const submit = useSubmitGymInfo();
 
@@ -92,23 +105,23 @@ export default function SuggestNewGymScreen() {
       customAlert('권한 필요', '사진 라이브러리 접근 권한이 필요해요');
       return;
     }
-    const r = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: 'images',
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.8,
-      base64: true,
-    });
-    if (r.canceled || !r.assets[0]) return;
-    setLogoAsset(r.assets[0]);
-    setLogoUri(r.assets[0].uri);
+    try {
+      const r = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: 'images',
+        quality: 0.8,
+      });
+      if (r.canceled || !r.assets[0]) return;
+      setLogoAsset(r.assets[0]);
+      setLogoUri(r.assets[0].uri);
+    } catch (e) {
+      customAlert('사진을 불러오지 못했어요', e instanceof Error ? e.message : '알 수 없는 오류');
+    }
   }
 
   async function handleSubmit() {
     if (!canSubmit || !authSession?.user.id) return;
     try {
       const changes: GymChanges & { name?: string; branch?: string } = {};
-      // GymChanges 타입엔 name/branch 없으니 캐스트로 강제 주입
       (changes as Record<string, unknown>).name = name.trim();
       if (branch.trim()) (changes as Record<string, unknown>).branch = branch.trim();
       changes.city = city.trim();
@@ -143,7 +156,6 @@ export default function SuggestNewGymScreen() {
           setUploading(false);
         }
       }
-      // gymId=null → 신규 제안. 트리거가 승인 시 gyms 행 INSERT.
       await submit.mutateAsync({
         gymId: null,
         changes: changes as GymChanges,
@@ -160,29 +172,33 @@ export default function SuggestNewGymScreen() {
   }
 
   return (
-    <SafeAreaView style={s.container} edges={['top']}>
-      <View style={s.header}>
-        <Pressable onPress={() => router.back()} hitSlop={8}>
-          {({ pressed }) => (
-            <View style={[s.headerBtn, pressed && { opacity: 0.6 }]}>
-              <Feather name="arrow-left" size={22} color={c.text.primary} />
-            </View>
-          )}
-        </Pressable>
-        <Text style={s.headerTitle}>새 암장 제안</Text>
-        <View style={{ width: 40 }} />
-      </View>
+    <SafeAreaView style={s.container} edges={['left', 'right']}>
+      <ScreenHeader title="새 암장 제안" onBack={() => router.back()} />
 
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <ScrollView contentContainerStyle={s.list}>
-          <Text style={s.helperTop}>
-            아직 등록되지 않은 암장을 제안해주세요. 관리자 검토 후 등록됩니다. 별표(*)는 필수.
-          </Text>
+        <ScrollView
+          contentContainerStyle={[s.list, { paddingBottom: insets.bottom + 12 }]}
+          contentInsetAdjustmentBehavior="never"
+          automaticallyAdjustContentInsets={false}
+          keyboardShouldPersistTaps="handled"
+        >
+          {/* 안내 hero */}
+          <View style={s.heroCard}>
+            <View style={s.heroIcon}>
+              <Feather name="info" size={16} color={c.brand.primaryDeep} />
+            </View>
+            <View style={{ flex: 1, gap: 3 }}>
+              <Text style={s.heroTitle}>아직 등록되지 않은 암장을 제안해주세요</Text>
+              <Text style={s.heroDesc}>
+                관리자 검토 후 등록돼요. 별표(*)는 필수.
+              </Text>
+            </View>
+          </View>
 
-          <Section title="로고 (선택)">
+          <Section title="로고" icon="image" desc="선택 — 정사각형 비율로 잘려요">
             <Pressable onPress={handlePickLogo}>
               {({ pressed }) => (
                 <View style={[s.logoBox, pressed && { opacity: 0.85 }]}>
@@ -199,119 +215,173 @@ export default function SuggestNewGymScreen() {
             </Pressable>
           </Section>
 
-          <Section title="기본 정보">
-            <Field label="암장 이름" required value={name} onChange={setName} placeholder="더클라임" />
-            <Field label="지점" value={branch} onChange={setBranch} placeholder="문래점" />
-            <Field label="시/도" required value={city} onChange={setCity} placeholder="서울" />
-            <Field label="구/군" value={district} onChange={setDistrict} placeholder="영등포구" />
-            <Field label="주소" value={address} onChange={setAddress} placeholder="도로명 주소" multiline />
+          <Section title="기본 정보" icon="map-pin" required>
+            <View style={s.fieldStack}>
+              <FieldRow label="암장 이름" required>
+                <FormInput
+                  value={name}
+                  onChangeText={setName}
+                  placeholder="더클라임"
+                />
+              </FieldRow>
+              <FieldRow label="지점">
+                <FormInput
+                  value={branch}
+                  onChangeText={setBranch}
+                  placeholder="문래점"
+                />
+              </FieldRow>
+              <FieldRow label="시/도" required>
+                <FormInput
+                  leadingIcon="map"
+                  value={city}
+                  onChangeText={setCity}
+                  placeholder="서울"
+                />
+              </FieldRow>
+              <FieldRow label="구/군">
+                <FormInput
+                  value={district}
+                  onChangeText={setDistrict}
+                  placeholder="영등포구"
+                />
+              </FieldRow>
+              <FieldRow label="주소">
+                <FormInput
+                  leadingIcon="map-pin"
+                  value={address}
+                  onChangeText={setAddress}
+                  placeholder="도로명 주소"
+                  multiline
+                />
+              </FieldRow>
+            </View>
           </Section>
 
-          <Section title="규모 (선택)">
-            <Field label="평수" value={sizePyeong} onChange={(v) => setSizePyeong(v.replace(/[^0-9]/g, ''))} placeholder="120" keyboardType="number-pad" />
-            <Field label="층수" value={floors} onChange={(v) => setFloors(v.replace(/[^0-9]/g, ''))} placeholder="2" keyboardType="number-pad" />
-            <Field label="오픈 연월일" value={openedAt} onChange={setOpenedAt} placeholder="2024-03-15" />
+          <Section title="규모" icon="maximize-2" desc="선택">
+            <View style={s.fieldStack}>
+              <FieldRow label="평수">
+                <FormInput
+                  value={sizePyeong}
+                  onChangeText={(v) => setSizePyeong(v.replace(/[^0-9]/g, ''))}
+                  placeholder="120"
+                  keyboardType="number-pad"
+                  trailingUnit="평"
+                />
+              </FieldRow>
+              <FieldRow label="층수">
+                <FormInput
+                  value={floors}
+                  onChangeText={(v) => setFloors(v.replace(/[^0-9]/g, ''))}
+                  placeholder="2"
+                  keyboardType="number-pad"
+                  trailingUnit="층"
+                />
+              </FieldRow>
+              <FieldRow label="오픈일">
+                <FormInput
+                  leadingIcon="calendar"
+                  value={openedAt}
+                  onChangeText={setOpenedAt}
+                  placeholder="2024-03-15"
+                />
+              </FieldRow>
+            </View>
           </Section>
 
           {BOOLEAN_GROUPS.map((g) => (
-            <Section key={g.title} title={g.title}>
-              <View style={s.boolGrid}>
+            <Section key={g.title} title={g.title} icon={g.icon}>
+              <View style={s.chipWrap}>
                 {g.items.map((f) => {
                   const on = !!bools[f.key];
                   return (
-                    <Pressable
+                    <Chip
                       key={f.key}
+                      label={f.label}
+                      selected={on}
                       onPress={() => setBools((p) => ({ ...p, [f.key]: !on }))}
-                    >
-                      {({ pressed }) => (
-                        <View style={[
-                          s.boolChip,
-                          on ? s.boolChipOn : s.boolChipOff,
-                          pressed && { opacity: 0.8 },
-                        ]}>
-                          <Feather name={on ? 'check' : 'plus'} size={11} color={on ? c.brand.onPrimary : c.text.secondary} />
-                          <Text style={[s.boolChipText, on && { color: c.brand.onPrimary }]}>{f.label}</Text>
-                        </View>
-                      )}
-                    </Pressable>
+                    />
                   );
                 })}
               </View>
             </Section>
           ))}
 
-          <Section title="연락처 (선택)">
-            <Field label="전화" value={phone} onChange={setPhone} placeholder="02-1234-5678" />
-            <Field label="웹사이트" value={websiteUrl} onChange={setWebsiteUrl} placeholder="https://..." />
-            <Field label="인스타그램" value={instagramHandle} onChange={setInstagramHandle} placeholder="@handle" />
+          <Section title="연락처" icon="phone" desc="선택">
+            <View style={s.fieldStack}>
+              <FieldRow label="전화">
+                <FormInput
+                  leadingIcon="phone"
+                  value={phone}
+                  onChangeText={setPhone}
+                  placeholder="02-1234-5678"
+                  keyboardType="phone-pad"
+                />
+              </FieldRow>
+              <FieldRow label="웹사이트">
+                <FormInput
+                  leadingIcon="globe"
+                  value={websiteUrl}
+                  onChangeText={setWebsiteUrl}
+                  placeholder="https://..."
+                  autoCapitalize="none"
+                />
+              </FieldRow>
+              <FieldRow label="인스타그램">
+                <FormInput
+                  leadingText="@"
+                  value={instagramHandle}
+                  onChangeText={setInstagramHandle}
+                  placeholder="handle"
+                  autoCapitalize="none"
+                />
+              </FieldRow>
+            </View>
           </Section>
 
-          <Section title="소개 (선택)">
-            <Field label="암장 소개" value={description} onChange={setDescription} placeholder="시그니처 라인, 분위기 등" multiline />
+          <Section title="소개" icon="align-left" desc="선택">
+            <FormInput
+              value={description}
+              onChangeText={setDescription}
+              placeholder="시그니처 라인, 분위기 등"
+              multiline
+              inputStyle={{ minHeight: 100 }}
+            />
           </Section>
 
-          <Section title="관리자 메모 (선택)">
-            <TextInput
+          <Section title="관리자 메모" icon="edit-3" desc="선택 — 출처 등 보조 정보">
+            <FormInput
               value={note}
               onChangeText={(t) => setNote(t.slice(0, 300))}
               placeholder="출처 등 보조 정보"
-              placeholderTextColor={c.text.muted}
               multiline
               maxLength={300}
-              style={s.noteInput}
+              inputStyle={{ minHeight: 80 }}
             />
+            <Text style={s.counter}>{note.length} / 300</Text>
           </Section>
         </ScrollView>
 
-        <View style={s.footer}>
-          <Pressable onPress={handleSubmit} disabled={!canSubmit || submit.isPending || uploading}>
-            {({ pressed }) => (
-              <View style={[
-                s.submitBtn,
-                (!canSubmit || submit.isPending || uploading) && { opacity: 0.5 },
-                pressed && { opacity: 0.85 },
-              ]}>
-                {submit.isPending || uploading ? (
-                  <ActivityIndicator color={c.brand.onPrimary} />
-                ) : (
-                  <Text style={s.submitBtnText}>제안 보내기</Text>
-                )}
-              </View>
-            )}
-          </Pressable>
-        </View>
+        <BottomCTA
+          label="제안 보내기"
+          icon="send"
+          onPress={handleSubmit}
+          loading={submit.isPending || uploading}
+          disabled={!canSubmit}
+        />
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
-  const c = useThemeColors();
-  const s = useMemo(() => makeStyles(c), [c]);
-  return (
-    <View style={s.section}>
-      <Text style={s.sectionTitle}>{title}</Text>
-      {children}
-    </View>
-  );
-}
-
-function Field({
+function FieldRow({
   label,
-  value,
-  onChange,
-  placeholder,
   required,
-  multiline,
-  keyboardType,
+  children,
 }: {
   label: string;
-  value: string;
-  onChange: (v: string) => void;
-  placeholder: string;
   required?: boolean;
-  multiline?: boolean;
-  keyboardType?: 'default' | 'number-pad';
+  children: React.ReactNode;
 }) {
   const c = useThemeColors();
   const s = useMemo(() => makeStyles(c), [c]);
@@ -321,15 +391,7 @@ function Field({
         {label}
         {required && <Text style={{ color: c.status.danger }}> *</Text>}
       </Text>
-      <TextInput
-        value={value}
-        onChangeText={onChange}
-        placeholder={placeholder}
-        placeholderTextColor={c.text.muted}
-        multiline={multiline}
-        keyboardType={keyboardType ?? 'default'}
-        style={[s.textInput, multiline && { minHeight: 64, textAlignVertical: 'top' }]}
-      />
+      {children}
     </View>
   );
 }
@@ -337,101 +399,56 @@ function Field({
 function makeStyles(c: ThemeColors) {
   return StyleSheet.create({
     container: { flex: 1, backgroundColor: c.bg.primary },
-    header: {
+    list: { padding: 18, gap: 16, paddingBottom: 100 },
+
+    heroCard: {
       flexDirection: 'row',
+      gap: 12,
+      padding: 14,
+      borderRadius: 14,
+      backgroundColor: c.brand.primaryLight,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: c.brand.primary + '33',
+    },
+    heroIcon: {
+      width: 32,
+      height: 32,
+      borderRadius: 10,
       alignItems: 'center',
-      justifyContent: 'space-between',
-      paddingHorizontal: 16,
-      paddingVertical: 12,
-      borderBottomWidth: StyleSheet.hairlineWidth,
-      borderBottomColor: c.border.subtle,
+      justifyContent: 'center',
       backgroundColor: c.bg.card,
     },
-    headerBtn: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-    headerTitle: { color: c.text.primary, fontSize: 16, fontWeight: '900', letterSpacing: -0.3 },
-    list: { padding: 20, gap: 22, paddingBottom: 100 },
-    helperTop: { fontSize: 12, color: c.text.tertiary, lineHeight: 18, fontWeight: '600' },
-    section: { gap: 12 },
-    sectionTitle: {
-      fontSize: 13,
-      fontWeight: '800',
-      color: c.text.secondary,
+    heroTitle: {
+      fontSize: 13.5,
+      fontWeight: '900',
+      color: c.brand.primaryDeep,
       letterSpacing: -0.2,
-      textTransform: 'uppercase',
     },
-    fieldRow: { gap: 5 },
-    fieldLabel: { fontSize: 13, fontWeight: '700', color: c.text.primary },
-    textInput: {
-      backgroundColor: c.bg.card,
-      borderRadius: 10,
-      borderWidth: StyleSheet.hairlineWidth,
-      borderColor: c.border.subtle,
-      paddingHorizontal: 12,
-      paddingVertical: 10,
-      color: c.text.primary,
-      fontSize: 14,
-    },
-    noteInput: {
-      backgroundColor: c.bg.card,
-      borderRadius: 10,
-      borderWidth: StyleSheet.hairlineWidth,
-      borderColor: c.border.subtle,
-      paddingHorizontal: 12,
-      paddingVertical: 10,
-      color: c.text.primary,
-      fontSize: 14,
-      minHeight: 80,
-      textAlignVertical: 'top',
-    },
+    heroDesc: { fontSize: 11.5, color: c.text.secondary, fontWeight: '600', lineHeight: 16 },
+
+    fieldStack: { gap: 10 },
+    fieldRow: { gap: 6 },
+    fieldLabel: { fontSize: 12.5, fontWeight: '800', color: c.text.secondary, letterSpacing: -0.1 },
+
+    chipWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+
     logoBox: {
       alignSelf: 'center',
       width: 100,
       height: 100,
       borderRadius: 16,
-      backgroundColor: c.bg.card,
-      borderWidth: StyleSheet.hairlineWidth,
-      borderColor: c.border.subtle,
+      backgroundColor: c.bg.subtle,
+      borderWidth: 1.5,
+      borderStyle: 'dashed',
+      borderColor: c.brand.primary,
       alignItems: 'center',
       justifyContent: 'center',
       overflow: 'hidden',
     },
     logoImg: { width: '100%', height: '100%' },
     logoEmpty: { alignItems: 'center', gap: 4 },
-    logoEmptyText: { fontSize: 11, color: c.text.muted, fontWeight: '700' },
-    boolGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
-    boolChip: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 5,
-      paddingHorizontal: 10,
-      paddingVertical: 7,
-      borderRadius: 10,
-    },
-    boolChipOn: { backgroundColor: c.brand.primary },
-    boolChipOff: {
-      backgroundColor: c.bg.card,
-      borderWidth: StyleSheet.hairlineWidth,
-      borderColor: c.border.subtle,
-    },
-    boolChipText: {
-      fontSize: 12,
-      fontWeight: '700',
-      color: c.text.secondary,
-    },
-    footer: {
-      paddingHorizontal: 20,
-      paddingTop: 12,
-      paddingBottom: 18,
-      borderTopWidth: StyleSheet.hairlineWidth,
-      borderTopColor: c.border.subtle,
-      backgroundColor: c.bg.card,
-    },
-    submitBtn: {
-      backgroundColor: c.brand.primary,
-      borderRadius: 14,
-      paddingVertical: 14,
-      alignItems: 'center',
-    },
-    submitBtnText: { color: c.brand.onPrimary, fontSize: 15, fontWeight: '800' },
+    logoEmptyText: { fontSize: 11, color: c.text.tertiary, fontWeight: '700' },
+
+    counter: { fontSize: 11, color: c.text.tertiary, textAlign: 'right', marginTop: 4 },
   });
 }

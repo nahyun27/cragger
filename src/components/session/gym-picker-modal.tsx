@@ -1,4 +1,4 @@
-import { Feather, Ionicons } from '@expo/vector-icons';
+import { Feather, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import React, { useMemo, useState } from 'react';
 import { FlatList, Pressable, Text, TextInput, View } from 'react-native';
 
@@ -66,7 +66,7 @@ export function GymPickerModal({ visible, gyms, selectedId, onSelect, onClose }:
               }`}
             >
               <View className="flex-row items-center gap-2 flex-1">
-                {isFav && <Ionicons name="star" size={14} color="#f59e0b" />}
+                {isFav && <MaterialCommunityIcons name="star" size={15} color="#f59e0b" />}
                 <View className="flex-1">
                   <View className="flex-row items-baseline gap-2">
                     <Text className="text-text-primary text-base font-medium">

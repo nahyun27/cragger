@@ -9,12 +9,14 @@ import {
   useWindowDimensions,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 
 import { BarChart, LineChart } from 'react-native-gifted-charts';
 
 import { GymStatsCard } from '@/components/stats/gym-stats-card';
+import { EmptyState } from '@/components/ui/empty-state';
+import { ScreenHeader } from '@/components/ui/screen-header';
 import { useDailyActivity } from '@/hooks/use-daily-activity';
 import { useMonthlyStats } from '@/hooks/use-monthly-stats';
 import { useUserStats } from '@/hooks/use-user-stats';
@@ -35,6 +37,7 @@ export default function StatsScreen() {
   const s = useMemo(() => makeStyles(c), [c]);
 
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [scope, setScope] = useState<Scope>('month');
   const [monthAnchor, setMonthAnchor] = useState<{ year: number; month: number }>(
     () => currentMonth(),
@@ -70,22 +73,15 @@ export default function StatsScreen() {
   }
 
   return (
-    <SafeAreaView style={s.container} edges={['top']}>
-      <View style={s.header}>
-        <Pressable
-          onPress={() => router.back()}
-          hitSlop={8}
-          style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
-        >
-          <View style={s.backBtn}>
-            <Feather name="arrow-left" size={24} color={c.text.primary} />
-          </View>
-        </Pressable>
-        <Text style={s.headerTitle}>전체 통계</Text>
-        <View style={{ width: 38 }} />
-      </View>
+    <SafeAreaView style={s.container} edges={['left', 'right']}>
+      <ScreenHeader title="전체 통계" onBack={() => router.back()} />
 
-      <ScrollView style={{ backgroundColor: c.bg.primary }} contentContainerStyle={s.scrollContent}>
+      <ScrollView
+        style={{ backgroundColor: c.bg.primary }}
+        contentContainerStyle={[s.scrollContent, { paddingBottom: insets.bottom + 12 }]}
+        contentInsetAdjustmentBehavior="never"
+        automaticallyAdjustContentInsets={false}
+      >
         {/* 1) 추이 — scope 무관 항상 최근 6개월 */}
         {deep && deep.monthly.some((m) => m.sessionCount > 0 || m.sendCount > 0) && (
           <MonthlyTrendCard deep={{ monthly: deep.monthly }} title="최근 6개월 추이" />
@@ -161,17 +157,19 @@ export default function StatsScreen() {
             </View>
 
             {stats.gyms.length === 0 ? (
-              <View style={s.emptyCard}>
-                <Feather name="activity" size={24} color={c.text.muted} />
-                <Text style={s.emptyTitle}>해당 기간 기록이 없어요</Text>
-                <Text style={s.emptySubtitle}>
-                  {scope === 'month'
+              <EmptyState
+                compact
+                icon="activity"
+                tone="muted"
+                title="해당 기간 기록이 없어요"
+                description={
+                  scope === 'month'
                     ? '다른 달로 이동해 보세요'
                     : scope === 'year'
                     ? '다른 년도로 이동해 보세요'
-                    : '아직 기록이 없어요'}
-                </Text>
-              </View>
+                    : '아직 기록이 없어요'
+                }
+              />
             ) : (
               <View style={s.gymList}>
                 {stats.gyms.map((gym, i) => (
@@ -630,7 +628,7 @@ function Divider() {
 
 function makeStyles(c: ThemeColors) {
   return StyleSheet.create({
-  container: { flex: 1, backgroundColor: c.bg.card },
+  container: { flex: 1, backgroundColor: c.bg.primary },
 
   header: {
     flexDirection: 'row',

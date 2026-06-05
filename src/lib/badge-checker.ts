@@ -73,8 +73,9 @@ type UserBadgeData = {
   totalSessions: number;
   maxV: number;
   maxLead: number;
+  // V그레이드별 누적 (V≥N 완등 수). vN_sends[3] = V3 이상 완등 수.
+  vGradeSends: number[];   // index 0~11
   // 색깔별 카운트
-  colorSendCounts: Map<string, number>;
   // 한 세션에 색깔 수 max
   maxColorsInOneSession: number;
   // 소셜
@@ -85,6 +86,8 @@ type UserBadgeData = {
   crewCreated: boolean;
   hasMeetupParticipation: boolean;
   hasBattleParticipation: boolean;
+  // 제보 — gym_submissions(편집 제보) + gym_requests(신규 암장 요청) 합산
+  totalReports: number;
   // 꾸준함
   maxStreakWeeks: number;
 };
@@ -120,9 +123,17 @@ async function fetchUserData(userId: string): Promise<UserBadgeData> {
     .from('battles')
     .select('id', { count: 'exact', head: true })
     .eq('created_by', userId);
+  const submissionsP = supabase
+    .from('gym_submissions')
+    .select('id', { count: 'exact', head: true })
+    .eq('submitter_id', userId);
+  const gymRequestsP = supabase
+    .from('gym_requests')
+    .select('id', { count: 'exact', head: true })
+    .eq('user_id', userId);
 
-  const [sessionsR, postsR, commentsR, pollVotesR, crewR, meetupsR, battlesR] = await Promise.all([
-    sessionsP, postsP, commentsP, pollVotesP, crewMembershipsP, meetupsP, battlesP,
+  const [sessionsR, postsR, commentsR, pollVotesR, crewR, meetupsR, battlesR, submissionsR, gymRequestsR] = await Promise.all([
+    sessionsP, postsP, commentsP, pollVotesP, crewMembershipsP, meetupsP, battlesP, submissionsP, gymRequestsP,
   ]);
 
   const sessions = (sessionsR.data ?? []) as Array<{ id: string; session_date: string }>;
@@ -174,7 +185,7 @@ async function fetchUserData(userId: string): Promise<UserBadgeData> {
   let totalSends = 0;
   let maxV = -1;
   let maxLead = -1;
-  const colorSendCounts = new Map<string, number>();
+  const vGradeSends = new Array<number>(12).fill(0);  // V0~V11 누적
   const colorsPerSession = new Map<string, Set<string>>();
 
   for (const a of attempts) {
@@ -185,14 +196,21 @@ async function fetchUserData(userId: string): Promise<UserBadgeData> {
     if (v == null && a.problem?.gym_id && a.problem.color) {
       v = crowdVMap.get(`${a.problem.gym_id}:${a.problem.color}`) ?? null;
     }
-    if (v != null && v > maxV) maxV = v;
+    if (v != null) {
+      if (v > maxV) maxV = v;
+      // 정수 부분만 — V3.5 → V3 으로 카운트 (보수적). 음수(VB)는 V0 카테고리에 안 넣음.
+      const vi = Math.floor(v);
+      if (vi >= 0) {
+        // V≥N 누적 카운트
+        for (let n = 0; n <= Math.min(vi, 11); n++) vGradeSends[n] += 1;
+      }
+    }
     if (a.climbing_type === 'lead') {
       const l = leadGradeToNum(a.problem?.route_grade ?? null);
       if (l != null && l > maxLead) maxLead = l;
     }
     const color = a.problem?.color;
     if (color) {
-      colorSendCounts.set(color, (colorSendCounts.get(color) ?? 0) + 1);
       const set = colorsPerSession.get(a.session_id) ?? new Set();
       set.add(color);
       colorsPerSession.set(a.session_id, set);
@@ -214,11 +232,11 @@ async function fetchUserData(userId: string): Promise<UserBadgeData> {
   const crewRows = (crewR.data ?? []) as Array<{ role: string }>;
 
   return {
+    vGradeSends,
     totalSends,
     totalSessions: sessions.length,
     maxV,
     maxLead,
-    colorSendCounts,
     maxColorsInOneSession,
     hasPost: (postsR.count ?? 0) > 0,
     hasComment: (commentsR.count ?? 0) > 0,
@@ -227,6 +245,7 @@ async function fetchUserData(userId: string): Promise<UserBadgeData> {
     crewCreated: crewRows.some((r) => r.role === 'owner'),
     hasMeetupParticipation: (meetupsR.count ?? 0) > 0,
     hasBattleParticipation: (battlesR.count ?? 0) > 0,
+    totalReports: (submissionsR.count ?? 0) + (gymRequestsR.count ?? 0),
     maxStreakWeeks,
   };
 }
@@ -243,26 +262,25 @@ function checkBadge(key: string, d: UserBadgeData): boolean {
     case 'session_10':    return d.totalSessions >= 10;
     case 'session_50':    return d.totalSessions >= 50;
     case 'session_100':   return d.totalSessions >= 100;
-    // 그레이드 (볼더링 felt_grade)
-    case 'first_v0':      return d.maxV >= 0;
-    case 'first_v1':      return d.maxV >= 1;
-    case 'first_v2':      return d.maxV >= 2;
-    case 'first_v3':      return d.maxV >= 3;
-    case 'first_v4':      return d.maxV >= 4;
-    case 'first_v5':      return d.maxV >= 5;
-    case 'first_v6':      return d.maxV >= 6;
-    case 'first_v7':      return d.maxV >= 7;
-    case 'first_v8':      return d.maxV >= 8;
-    case 'first_v9':      return d.maxV >= 9;
+    // 그레이드 (볼더링) — V≥N 완등 10개 누적
+    case 'first_v0':      return (d.vGradeSends[0]  ?? 0) >= 10;
+    case 'first_v1':      return (d.vGradeSends[1]  ?? 0) >= 10;
+    case 'first_v2':      return (d.vGradeSends[2]  ?? 0) >= 10;
+    case 'first_v3':      return (d.vGradeSends[3]  ?? 0) >= 10;
+    case 'first_v4':      return (d.vGradeSends[4]  ?? 0) >= 10;
+    case 'first_v5':      return (d.vGradeSends[5]  ?? 0) >= 10;
+    case 'first_v6':      return (d.vGradeSends[6]  ?? 0) >= 10;
+    case 'first_v7':      return (d.vGradeSends[7]  ?? 0) >= 10;
+    case 'first_v8':      return (d.vGradeSends[8]  ?? 0) >= 10;
+    case 'first_v9':      return (d.vGradeSends[9]  ?? 0) >= 10;
     // 리드 (route_grade)
     case 'first_lead_510':return d.maxLead >= 10;
     case 'first_lead_511':return d.maxLead >= 11;
     case 'first_lead_512':return d.maxLead >= 12;
     case 'first_lead_513':return d.maxLead >= 13;
     case 'first_lead_514':return d.maxLead >= 14;
-    // 색깔
-    case 'rainbow':       return d.maxColorsInOneSession >= 5;
-    case 'color_master':  return Array.from(d.colorSendCounts.values()).some((n) => n >= 20);
+    // 색깔 — 한 세션에 5색 이상 완등
+    case 'color_master':  return d.maxColorsInOneSession >= 5;
     // 소셜
     case 'first_post':    return d.hasPost;
     case 'first_comment': return d.hasComment;
@@ -271,6 +289,7 @@ function checkBadge(key: string, d: UserBadgeData): boolean {
     case 'crew_create':   return d.crewCreated;
     case 'first_meetup':  return d.hasMeetupParticipation;
     case 'first_battle':  return d.hasBattleParticipation;
+    case 'report_king':   return d.totalReports >= 10;
     // 꾸준함
     case 'streak_3':      return d.maxStreakWeeks >= 3;
     case 'streak_7':      return d.maxStreakWeeks >= 7;

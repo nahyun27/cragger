@@ -1,21 +1,32 @@
-import { customAlert } from '@/components/ui/custom-alert';
+/**
+ * 색깔별 체감 V그레이드 투표 페이지.
+ *
+ * 정책:
+ *   - 등록된 색깔(color_schemes) 만 투표 가능. 새 색깔 추가 X.
+ *   - 새 색깔이 필요하면 "정보 제보" 페이지로 우회 안내.
+ *   - 한 사용자 = 한 색깔에 한 번만 투표 (재투표 = 덮어쓰기).
+ */
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   Pressable,
   ScrollView,
+  StyleSheet,
   Text,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 
+import { customAlert } from '@/components/ui/custom-alert';
+import { EmptyState } from '@/components/ui/empty-state';
+import { ScreenHeader } from '@/components/ui/screen-header';
+import { Section } from '@/components/ui/section';
 import { GradePickerModal } from '@/components/vote/grade-picker-modal';
 import { resolveColorHex, resolveColorLabel } from '@/constants/climb-colors';
 import { useGymDetail } from '@/hooks/use-gym-detail';
-import { useThemeColors } from '@/lib/theme';
+import { useThemeColors, type ThemeColors } from '@/lib/theme';
 import {
   useGymColorAvgs,
   useSubmitGradeVote,
@@ -25,8 +36,9 @@ import {
 } from '@/hooks/use-gym-vote';
 
 export default function GymVoteScreen() {
-
-  const c = useThemeColors();  const { id } = useLocalSearchParams<{ id: string }>();
+  const c = useThemeColors();
+  const s = useMemo(() => makeStyles(c), [c]);
+  const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { data: gym } = useGymDetail(id);
   const { data: colors, isLoading, error } = useVoteableColors(id);
@@ -34,8 +46,6 @@ export default function GymVoteScreen() {
   const submitVote = useSubmitGradeVote();
 
   const [pickerColor, setPickerColor] = useState<string | null>(null);
-  // 미투표 색깔을 디폴트로 숨김. 사용자가 "난이도 추가" 탭하면 펼침.
-  const [showUnvoted, setShowUnvoted] = useState(false);
 
   const avgByColor = useMemo(() => {
     const m = new Map<string, GymColorAvg>();
@@ -43,14 +53,18 @@ export default function GymVoteScreen() {
     return m;
   }, [avgs]);
 
-  const { voted, unvoted } = useMemo(() => {
-    const v: VoteableColor[] = [];
-    const u: VoteableColor[] = [];
-    for (const c of colors ?? []) {
-      (c.currentVote ? v : u).push(c);
-    }
-    return { voted: v, unvoted: u };
+  // 정렬: 내가 투표한 색깔 먼저, 그 다음 미투표 (시각적으로 진행도 강조)
+  const sortedColors = useMemo(() => {
+    if (!colors) return [];
+    return [...colors].sort((a, b) => {
+      const av = a.currentVote ? 1 : 0;
+      const bv = b.currentVote ? 1 : 0;
+      return bv - av;
+    });
   }, [colors]);
+
+  const votedCount = colors?.filter((x) => x.currentVote).length ?? 0;
+  const totalCount = colors?.length ?? 0;
 
   const activePickerColorData = useMemo(() => {
     if (!pickerColor) return null;
@@ -70,90 +84,101 @@ export default function GymVoteScreen() {
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-background-primary" edges={['top', 'bottom']}>
-      <View className="flex-row items-center px-4 py-2 border-b border-border-subtle">
-        <Pressable onPress={() => router.back()} className="p-2 -ml-2 active:opacity-60" hitSlop={8}>
-          <Feather name="arrow-left" size={24} color={c.text.primary} />
-        </Pressable>
-        <Text className="flex-1 text-center text-text-primary text-base font-semibold mr-6">
-          난이도 투표
-        </Text>
-      </View>
+    <SafeAreaView style={s.container} edges={['left', 'right']}>
+      <ScreenHeader
+        title="난이도 투표"
+        subtitle={gym ? `${gym.name}${gym.branch ? ` ${gym.branch}` : ''}` : undefined}
+        count={totalCount > 0 ? votedCount : undefined}
+        onBack={() => router.back()}
+      />
 
-      {gym && (
-        <View className="px-4 pt-3 pb-2">
-          <Text className="text-text-primary text-base font-semibold">
-            {gym.name}
-            {gym.branch ? ` ${gym.branch}` : ''}
-          </Text>
-          <Text className="text-text-tertiary text-xs mt-0.5">
-            이 암장의 색깔별 난이도를 평가해주세요
-          </Text>
+      <ScrollView
+        contentContainerStyle={s.list}
+        contentInsetAdjustmentBehavior="never"
+        automaticallyAdjustContentInsets={false}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* 안내 hero */}
+        <View style={s.heroCard}>
+          <View style={s.heroIcon}>
+            <Feather name="thumbs-up" size={16} color={c.brand.primaryDeep} />
+          </View>
+          <View style={{ flex: 1, gap: 3 }}>
+            <Text style={s.heroTitle}>색깔별 체감 V그레이드를 평가해주세요</Text>
+            <Text style={s.heroDesc}>
+              여러 사용자의 평가가 모이면 평균이 만들어져요. 재투표는 덮어쓰기.
+            </Text>
+          </View>
         </View>
-      )}
 
-      {isLoading && (
-        <View className="p-6 items-center">
-          <ActivityIndicator />
-        </View>
-      )}
+        {isLoading && (
+          <View style={{ paddingVertical: 40, alignItems: 'center' }}>
+            <ActivityIndicator color={c.brand.primary} />
+          </View>
+        )}
 
-      {error && (
-        <View className="mx-4 mb-3 border border-status-danger rounded-md p-3 bg-background-secondary">
-          <Text className="text-status-danger">{error.message}</Text>
-        </View>
-      )}
+        {error && (
+          <EmptyState
+            icon="alert-triangle"
+            tone="danger"
+            title="목록을 불러오지 못했어요"
+            description={error.message}
+          />
+        )}
 
-      {colors && (
-        <ScrollView contentContainerClassName="px-4 pb-6">
-          {voted.length === 0 ? (
-            <View className="py-8 items-center">
-              <Text className="text-text-secondary text-center">
-                아직 평가한 색깔이 없어요
-              </Text>
-              <Text className="text-text-tertiary text-xs text-center mt-1">
-                아래 "난이도 추가" 버튼으로 시작하세요
-              </Text>
-            </View>
-          ) : (
-            <View>
-              {voted.map((c, i) => (
-                <View key={c.color}>
-                  {i > 0 && <View className="h-px bg-border-subtle" />}
-                  <VoteRow color={c} onPress={() => setPickerColor(c.color)} />
-                </View>
+        {colors && colors.length === 0 && (
+          <EmptyState
+            icon="edit-3"
+            tone="muted"
+            title="등록된 색깔이 없어요"
+            description={'이 암장의 색깔이 아직 등록돼 있지 않아요.\n어떤 색깔이 있는지 제보해주세요!'}
+            action={{
+              label: '색깔 정보 제보하기',
+              icon: 'edit-3',
+              onPress: () =>
+                router.push({ pathname: '/gym/[id]/suggest', params: { id: id! } } as never),
+            }}
+          />
+        )}
+
+        {colors && colors.length > 0 && (
+          <Section title="등록된 색깔" icon="droplet" desc={`${totalCount}개 중 ${votedCount}개 투표 완료`}>
+            <View style={{ gap: 4 }}>
+              {sortedColors.map((row) => (
+                <VoteRow
+                  key={row.color}
+                  color={row}
+                  avg={avgByColor.get(row.color)}
+                  onPress={() => setPickerColor(row.color)}
+                  c={c}
+                />
               ))}
             </View>
-          )}
+          </Section>
+        )}
 
-          {unvoted.length > 0 && (
-            <Pressable
-              onPress={() => setShowUnvoted((v) => !v)}
-              className="border border-dashed border-border-default rounded-lg py-3 items-center mt-4 active:opacity-60"
-            >
-              <Text className="text-text-secondary text-sm font-medium">
-                {showUnvoted
-                  ? `− 닫기`
-                  : `+ 난이도 추가 (${unvoted.length}색)`}
-              </Text>
-            </Pressable>
-          )}
-
-          {showUnvoted && unvoted.length > 0 && (
-            <View className="mt-3">
-              <Text className="text-text-tertiary text-xs px-1 mb-1">
-                아직 평가하지 않은 색깔
-              </Text>
-              {unvoted.map((c, i) => (
-                <View key={c.color}>
-                  {i > 0 && <View className="h-px bg-border-subtle" />}
-                  <VoteRow color={c} onPress={() => setPickerColor(c.color)} />
+        {/* 제보 안내 — 색깔이 누락됐을 때 자연스럽게 이동할 수 있게 */}
+        {colors && colors.length > 0 && (
+          <Pressable
+            onPress={() =>
+              router.push({ pathname: '/gym/[id]/suggest', params: { id: id! } } as never)
+            }
+          >
+            {({ pressed }) => (
+              <View style={[s.suggestCard, pressed && { opacity: 0.75 }]}>
+                <View style={s.suggestIcon}>
+                  <Feather name="plus-circle" size={16} color={c.brand.primaryDeep} />
                 </View>
-              ))}
-            </View>
-          )}
-        </ScrollView>
-      )}
+                <View style={{ flex: 1, gap: 2 }}>
+                  <Text style={s.suggestTitle}>여기 다른 색깔도 있나요?</Text>
+                  <Text style={s.suggestDesc}>제보해서 다음 사용자도 평가할 수 있게 해주세요</Text>
+                </View>
+                <Feather name="chevron-right" size={16} color={c.text.muted} />
+              </View>
+            )}
+          </Pressable>
+        )}
+      </ScrollView>
 
       <GradePickerModal
         visible={!!pickerColor}
@@ -170,49 +195,129 @@ export default function GymVoteScreen() {
 }
 
 function VoteRow({
-  color,
-  onPress,
+  color, avg, onPress, c,
 }: {
   color: VoteableColor;
+  avg: GymColorAvg | undefined;
   onPress: () => void;
+  c: ThemeColors;
 }) {
+  const s = makeStyles(c);
   const hex = resolveColorHex(color.color);
   const label = resolveColorLabel(color.color);
-  const needsBorder = color.color === 'white' || color.color === 'yellow';
+  const needsBorder = ['white', 'yellow', 'lime'].includes(color.color.toLowerCase());
   const voted = !!color.currentVote;
   return (
-    <View className="flex-row items-center gap-3 py-3">
-      <View
-        className="w-8 h-8 rounded-full"
-        style={{
-          backgroundColor: hex,
-          ...(needsBorder ? { borderWidth: 1, borderColor: '#D4D4D8' } : null),
-        }}
-      />
-      <View className="flex-1">
-        <Text className="text-text-primary font-medium">{label}</Text>
-        {voted ? (
-          <Text className="text-text-secondary text-xs mt-0.5">
-            내 평가: <Text className="font-semibold">{color.currentVote}</Text>
-          </Text>
-        ) : (
-          <Text className="text-text-tertiary text-xs mt-0.5">아직 투표 안 함</Text>
-        )}
-      </View>
-      <Pressable
-        onPress={onPress}
-        className={`px-3 py-1.5 rounded-md ${
-          voted ? 'border border-border-default' : 'bg-brand-primary'
-        }`}
-      >
-        <Text
-          className={`text-sm font-medium ${
-            voted ? 'text-text-primary' : 'text-background-primary'
-          }`}
-        >
-          {voted ? '수정' : '투표하기'}
-        </Text>
-      </Pressable>
-    </View>
+    <Pressable onPress={onPress}>
+      {({ pressed }) => (
+        <View style={[s.voteRow, pressed && { backgroundColor: c.bg.subtle }]}>
+          <View
+            style={[
+              s.colorDot,
+              { backgroundColor: hex },
+              needsBorder ? { borderWidth: 1, borderColor: '#D4D4D8' } : null,
+            ]}
+          />
+          <View style={{ flex: 1 }}>
+            <Text style={s.colorLabel}>{label}</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 2 }}>
+              {voted ? (
+                <View style={s.voteChip}>
+                  <Feather name="check" size={9} color={c.brand.primaryDeep} />
+                  <Text style={s.voteChipText}>{color.currentVote}</Text>
+                </View>
+              ) : (
+                <Text style={s.notVotedText}>아직 평가 안 함</Text>
+              )}
+              {avg && avg.voteCount > 0 && (
+                <Text style={s.avgText}>
+                  평균 {avg.avgVGradeLabel} · {avg.voteCount}표
+                </Text>
+              )}
+            </View>
+          </View>
+          <View style={[s.actionBtn, voted ? s.actionBtnVoted : s.actionBtnFresh]}>
+            <Text style={[s.actionBtnText, voted ? s.actionBtnTextVoted : s.actionBtnTextFresh]}>
+              {voted ? '수정' : '투표'}
+            </Text>
+          </View>
+        </View>
+      )}
+    </Pressable>
   );
+}
+
+function makeStyles(c: ThemeColors) {
+  return StyleSheet.create({
+    container: { flex: 1, backgroundColor: c.bg.primary },
+    list: { padding: 18, gap: 16, paddingBottom: 24 },
+
+    heroCard: {
+      flexDirection: 'row', gap: 12,
+      padding: 14, borderRadius: 14,
+      backgroundColor: c.brand.primaryLight,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: c.brand.primary + '33',
+    },
+    heroIcon: {
+      width: 32, height: 32, borderRadius: 10,
+      alignItems: 'center', justifyContent: 'center',
+      backgroundColor: c.bg.card,
+    },
+    heroTitle: {
+      fontSize: 13.5, fontWeight: '900', color: c.brand.primaryDeep, letterSpacing: -0.2,
+    },
+    heroDesc: { fontSize: 11.5, color: c.text.secondary, fontWeight: '600', lineHeight: 16 },
+
+    voteRow: {
+      flexDirection: 'row', alignItems: 'center', gap: 12,
+      paddingHorizontal: 8, paddingVertical: 10, borderRadius: 12,
+    },
+    colorDot: {
+      width: 30, height: 30, borderRadius: 15,
+    },
+    colorLabel: {
+      fontSize: 14, fontWeight: '900', color: c.text.primary, letterSpacing: -0.2,
+    },
+    voteChip: {
+      flexDirection: 'row', alignItems: 'center', gap: 3,
+      paddingHorizontal: 7, paddingVertical: 2, borderRadius: 999,
+      backgroundColor: c.brand.primaryLight,
+    },
+    voteChipText: {
+      fontSize: 11, fontWeight: '900', color: c.brand.primaryDeep, letterSpacing: -0.2,
+    },
+    notVotedText: { fontSize: 11.5, color: c.text.muted, fontWeight: '700' },
+    avgText: { fontSize: 11, color: c.text.tertiary, fontWeight: '600' },
+
+    actionBtn: {
+      paddingHorizontal: 12, paddingVertical: 7, borderRadius: 999,
+    },
+    actionBtnFresh: { backgroundColor: c.brand.primary },
+    actionBtnVoted: {
+      backgroundColor: c.bg.subtle,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: c.border.subtle,
+    },
+    actionBtnText: { fontSize: 12, fontWeight: '900', letterSpacing: -0.2 },
+    actionBtnTextFresh: { color: c.brand.onPrimary },
+    actionBtnTextVoted: { color: c.text.secondary },
+
+    suggestCard: {
+      flexDirection: 'row', alignItems: 'center', gap: 12,
+      padding: 14, borderRadius: 14,
+      borderWidth: 1.5, borderColor: c.brand.primary + '55',
+      borderStyle: 'dashed',
+      backgroundColor: c.bg.card,
+    },
+    suggestIcon: {
+      width: 34, height: 34, borderRadius: 11,
+      alignItems: 'center', justifyContent: 'center',
+      backgroundColor: c.brand.primaryLight,
+    },
+    suggestTitle: {
+      fontSize: 13.5, fontWeight: '900', color: c.text.primary, letterSpacing: -0.2,
+    },
+    suggestDesc: { fontSize: 11.5, color: c.text.tertiary, fontWeight: '700' },
+  });
 }

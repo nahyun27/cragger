@@ -1,5 +1,7 @@
 import { customAlert } from '@/components/ui/custom-alert';
+import { ActionMenu, type ActionMenuItem } from '@/components/ui/action-menu';
 import { FeaturedBadgeChip } from '@/components/ui/featured-badge-chip';
+import { ScreenHeader } from '@/components/ui/screen-header';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useState, useMemo} from 'react';
 import {
@@ -7,16 +9,18 @@ import {
   Alert,
   Image,
   KeyboardAvoidingView,
+  Modal,
   Platform,
   Pressable,
   ScrollView,
+  Share,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Feather } from '@expo/vector-icons';
+import { Feather, Ionicons } from '@expo/vector-icons';
 
 import {
   POST_TYPE_LABEL,
@@ -129,6 +133,7 @@ export default function PostDetailScreen() {
   const [replyToName, setReplyToName] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingBody, setEditingBody] = useState('');
+  const [menuOpen, setMenuOpen] = useState(false);
   const commentInputRef = React.useRef<TextInput>(null);
 
   if (postQ.isLoading) {
@@ -226,48 +231,54 @@ export default function PostDetailScreen() {
     }
   }
 
+  const menuItems: ActionMenuItem[] = [
+    {
+      icon: 'share-2', label: '공유',
+      onPress: async () => {
+        try {
+          await Share.share({
+            message: `${post.title ?? '커뮤니티 글'}\n\n${post.body.slice(0, 120)}`,
+          });
+        } catch { /* user cancelled */ }
+      },
+    },
+    ...(isMine ? [
+      {
+        icon: 'edit-3' as const, label: '수정',
+        onPress: () => router.push({ pathname: '/community/[id]/edit', params: { id: id! } }),
+      },
+      {
+        icon: 'trash-2' as const, label: '삭제', tone: 'danger' as const,
+        loading: deletePost.isPending,
+        onPress: handleDeletePost,
+      },
+    ] : []),
+  ];
+
   return (
-    <SafeAreaView style={s.container} edges={['top']}>
-      {/* Detail Header */}
-      <View style={s.header}>
-        <Pressable onPress={() => router.back()} style={({ pressed }) => [s.headerAction, { opacity: pressed ? 0.6 : 1 }]} hitSlop={8}>
-          <Feather name="arrow-left" size={24} color={c.text.primary} />
-        </Pressable>
-        <Text style={s.headerTitle}>상세 보기</Text>
-        {isMine ? (
-          <View style={s.headerRightGroup}>
-            <Pressable
-              onPress={() =>
-                router.push({ pathname: '/community/[id]/edit', params: { id: id! } })
-              }
-              style={({ pressed }) => [s.headerAction, { opacity: pressed ? 0.6 : 1 }]}
-              hitSlop={8}
-            >
-              <Feather name="edit-3" size={20} color={c.text.tertiary} />
-            </Pressable>
-            <Pressable
-              onPress={handleDeletePost}
-              disabled={deletePost.isPending}
-              style={({ pressed }) => [s.headerAction, { opacity: pressed ? 0.6 : 1 }]}
-              hitSlop={8}
-            >
-              {deletePost.isPending ? (
-                <ActivityIndicator size="small" color={c.status.danger} />
-              ) : (
-                <Feather name="trash-2" size={20} color={c.status.danger} />
-              )}
-            </Pressable>
-          </View>
-        ) : (
-          <View style={{ width: 40 }} />
-        )}
-      </View>
+    <SafeAreaView style={s.container} edges={['left', 'right']}>
+      <ScreenHeader
+        title="상세 보기"
+        onBack={() => router.back()}
+        rightActions={[{ icon: 'more-vertical', onPress: () => setMenuOpen(true) }]}
+      />
+
+      <ActionMenu
+        visible={menuOpen}
+        onClose={() => setMenuOpen(false)}
+        items={menuItems}
+      />
 
       <KeyboardAvoidingView
         style={{ flex: 1, backgroundColor: c.bg.primary }}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <ScrollView style={{ flex: 1 }} contentContainerStyle={s.scrollContent}>
+        <ScrollView
+          style={{ flex: 1 }}
+          contentContainerStyle={s.scrollContent}
+          contentInsetAdjustmentBehavior="never"
+          automaticallyAdjustContentInsets={false}
+        >
           {/* Post card (mirrors feed card style) */}
           <View style={s.postCard}>
             <PostHeader post={post} />
@@ -335,7 +346,7 @@ export default function PostDetailScreen() {
                 style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
               >
                 <View style={s.metricBtn}>
-                  <Feather name="heart" size={18} color={liked ? '#ef4444' : '#64748b'} />
+                  <Ionicons name={liked ? 'heart' : 'heart-outline'} size={20} color={liked ? '#ef4444' : '#64748b'} />
                   <Text
                     style={[s.metricText, liked && s.metricTextLiked]}
                     numberOfLines={1}
@@ -453,7 +464,7 @@ export default function PostDetailScreen() {
         )}
 
         {/* Comment Input Box */}
-        <View style={[s.commentInputBar, { paddingBottom: 10 + insets.bottom }]}>
+        <View style={[s.commentInputBar, { paddingBottom: Math.max(insets.bottom, 8) }]}>
           <TextInput
             ref={commentInputRef}
             value={commentBody}
@@ -493,6 +504,7 @@ export default function PostDetailScreen() {
 function PostHeader({ post }: { post: PostRow }) {
   const c = useThemeColors();
   const s = useMemo(() => makeStyles(c), [c]);
+  const router = useRouter();
 
   const authorName = post.author?.display_name ?? post.author?.username ?? '익명';
   const label = POST_TYPE_LABEL[post.post_type];
@@ -500,25 +512,40 @@ function PostHeader({ post }: { post: PostRow }) {
   const avatarText = getAvatarTextColor(authorName);
   const avatarUrl = post.author?.avatar_url;
   const badge = BADGE_COLORS[post.post_type] || BADGE_COLORS.general;
+  const authorId = post.author_id;
+  const goToProfile = () => {
+    if (authorId) router.push({
+      pathname: '/u/[id]',
+      params: { id: authorId, returnTo: `/community/${post.id}` },
+    } as never);
+  };
 
   return (
     <View style={s.postHeader}>
-      <View style={[s.avatar, { backgroundColor: avatarBg }]}>
-        {avatarUrl ? (
-          <Image source={{ uri: avatarUrl }} style={s.avatarImage} resizeMode="cover" />
-        ) : (
-          <Text style={[s.avatarTextVal, { color: avatarText }]}>
-            {(authorName[0] ?? '?').toUpperCase()}
-          </Text>
+      <Pressable onPress={goToProfile} hitSlop={4}>
+        {({ pressed }) => (
+          <View style={[s.avatar, { backgroundColor: avatarBg, opacity: pressed ? 0.7 : 1 }]}>
+            {avatarUrl ? (
+              <Image source={{ uri: avatarUrl }} style={s.avatarImage} resizeMode="cover" />
+            ) : (
+              <Text style={[s.avatarTextVal, { color: avatarText }]}>
+                {(authorName[0] ?? '?').toUpperCase()}
+              </Text>
+            )}
+          </View>
         )}
-      </View>
-      <View style={s.authorInfo}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-          <Text style={s.authorName}>{authorName}</Text>
-          <FeaturedBadgeChip badgeKey={post.author?.featured_badge_key} size={13} />
-        </View>
-        <Text style={s.timestamp}>{formatRelativeTime(post.created_at)}</Text>
-      </View>
+      </Pressable>
+      <Pressable onPress={goToProfile} hitSlop={4} style={s.authorInfo}>
+        {({ pressed }) => (
+          <View style={{ opacity: pressed ? 0.7 : 1 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+              <Text style={s.authorName}>{authorName}</Text>
+              <FeaturedBadgeChip badgeKey={post.author?.featured_badge_key} size={11} />
+            </View>
+            <Text style={s.timestamp}>{formatRelativeTime(post.created_at)}</Text>
+          </View>
+        )}
+      </Pressable>
       <View style={[s.badge, { backgroundColor: badge.bg, borderColor: badge.border }]}>
         <Text style={[s.badgeText, { color: badge.text }]}>{label}</Text>
       </View>
@@ -772,33 +799,49 @@ function CommentItem({
 }) {
   const c = useThemeColors();
   const s = useMemo(() => makeStyles(c), [c]);
+  const router = useRouter();
 
   const authorName = comment.author?.display_name ?? comment.author?.username ?? '익명';
   const avatarBg = getAvatarBgColor(authorName);
   const avatarText = getAvatarTextColor(authorName);
   const avatarUrl = comment.author?.avatar_url;
   const canSaveEdit = editingBody.trim().length > 0 && !savingEdit;
+  const authorId = comment.author_id;
+  const goToProfile = () => {
+    if (authorId) router.push({
+      pathname: '/u/[id]',
+      params: { id: authorId, returnTo: `/community/${comment.post_id}` },
+    } as never);
+  };
 
   return (
     <View style={[s.commentItem, isReply && s.commentItemReply]}>
-      <View style={[s.avatarSmall, { backgroundColor: avatarBg }]}>
-        {avatarUrl ? (
-          <Image source={{ uri: avatarUrl }} style={s.avatarSmallImage} resizeMode="cover" />
-        ) : (
-          <Text style={[s.avatarTextValSmall, { color: avatarText }]}>
-            {(authorName[0] ?? '?').toUpperCase()}
-          </Text>
+      <Pressable onPress={goToProfile} hitSlop={4}>
+        {({ pressed }) => (
+          <View style={[s.avatarSmall, { backgroundColor: avatarBg, opacity: pressed ? 0.7 : 1 }]}>
+            {avatarUrl ? (
+              <Image source={{ uri: avatarUrl }} style={s.avatarSmallImage} resizeMode="cover" />
+            ) : (
+              <Text style={[s.avatarTextValSmall, { color: avatarText }]}>
+                {(authorName[0] ?? '?').toUpperCase()}
+              </Text>
+            )}
+          </View>
         )}
-      </View>
+      </Pressable>
       <View style={s.commentContent}>
         <View style={s.commentHeader}>
-          <View style={s.commentAuthorInfo}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-              <Text style={s.commentAuthor}>{authorName}</Text>
-              <FeaturedBadgeChip badgeKey={comment.author?.featured_badge_key} size={10} />
-            </View>
-            <Text style={s.commentTime}>{formatRelativeTime(comment.created_at)}</Text>
-          </View>
+          <Pressable onPress={goToProfile} hitSlop={4} style={s.commentAuthorInfo}>
+            {({ pressed }) => (
+              <View style={{ opacity: pressed ? 0.7 : 1 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                  <Text style={s.commentAuthor}>{authorName}</Text>
+                  <FeaturedBadgeChip badgeKey={comment.author?.featured_badge_key} size={10} />
+                </View>
+                <Text style={s.commentTime}>{formatRelativeTime(comment.created_at)}</Text>
+              </View>
+            )}
+          </Pressable>
           {!isEditing && (
             <View style={s.commentActions}>
               <Pressable
@@ -875,11 +918,111 @@ function CommentItem({
   );
 }
 
+function PostActionMenu({
+  visible, isMine, deleting, onClose, onEdit, onDelete, onShare,
+}: {
+  visible: boolean;
+  isMine: boolean;
+  deleting: boolean;
+  onClose: () => void;
+  onEdit: () => void;
+  onDelete: () => void;
+  onShare: () => void;
+}) {
+  const c = useThemeColors();
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <Pressable
+        onPress={onClose}
+        style={{ flex: 1, backgroundColor: c.bg.overlay, justifyContent: 'flex-end' }}
+      >
+        <Pressable
+          onPress={(e) => e.stopPropagation()}
+          style={{
+            backgroundColor: c.bg.card,
+            paddingHorizontal: 12,
+            paddingTop: 8,
+            paddingBottom: 28,
+            borderTopLeftRadius: 22,
+            borderTopRightRadius: 22,
+          }}
+        >
+          <View
+            style={{
+              alignSelf: 'center',
+              width: 38, height: 4, borderRadius: 999,
+              backgroundColor: c.border.strong, marginBottom: 10,
+            }}
+          />
+          <ActionMenuItem
+            icon="share-2"
+            label="공유"
+            color={c.text.primary}
+            onPress={onShare}
+          />
+          {isMine && (
+            <ActionMenuItem
+              icon="edit-3"
+              label="수정"
+              color={c.text.primary}
+              onPress={onEdit}
+            />
+          )}
+          {isMine && (
+            <ActionMenuItem
+              icon="trash-2"
+              label={deleting ? '삭제 중...' : '삭제'}
+              color={c.status.danger}
+              onPress={onDelete}
+              disabled={deleting}
+            />
+          )}
+          <Pressable
+            onPress={onClose}
+            style={({ pressed }) => [{
+              marginTop: 6, paddingVertical: 14, borderRadius: 12,
+              alignItems: 'center', backgroundColor: c.bg.subtle,
+              opacity: pressed ? 0.7 : 1,
+            }]}
+          >
+            <Text style={{ fontSize: 14, fontWeight: '800', color: c.text.secondary }}>취소</Text>
+          </Pressable>
+        </Pressable>
+      </Pressable>
+    </Modal>
+  );
+}
+
+function ActionMenuItem({ icon, label, color, onPress, disabled }: {
+  icon: keyof typeof Feather.glyphMap;
+  label: string;
+  color: string;
+  onPress: () => void;
+  disabled?: boolean;
+}) {
+  const c = useThemeColors();
+  return (
+    <Pressable
+      onPress={onPress}
+      disabled={disabled}
+      style={({ pressed }) => [{
+        flexDirection: 'row', alignItems: 'center', gap: 12,
+        paddingVertical: 14, paddingHorizontal: 14, borderRadius: 12,
+        opacity: pressed ? 0.6 : disabled ? 0.4 : 1,
+        backgroundColor: pressed ? c.bg.subtle : 'transparent',
+      }]}
+    >
+      <Feather name={icon} size={18} color={color} />
+      <Text style={{ flex: 1, fontSize: 15, fontWeight: '800', color }}>{label}</Text>
+    </Pressable>
+  );
+}
+
 function makeStyles(c: ThemeColors) {
   return StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: c.bg.card,
+    backgroundColor: c.bg.primary,
   },
   loadingContainer: {
     flex: 1,

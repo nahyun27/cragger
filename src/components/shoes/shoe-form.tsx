@@ -14,6 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 
 import { Section } from '@/components/ui/section';
+import { FormInput } from '@/components/ui/form';
 import { Sheet } from '@/components/ui/sheet';
 import { useThemeColors, type ThemeColors } from '@/lib/theme';
 import {
@@ -157,31 +158,29 @@ export function ShoeForm({ value, onChange }: Props) {
       keyboardShouldPersistTaps="handled"
       showsVerticalScrollIndicator={false}
     >
-      <Section title="브랜드">
+      <Section title="브랜드" icon="award">
         <BrandPicker
           value={value.brand}
           onChange={(next) => onChange({ ...value, brand: next })}
         />
       </Section>
 
-      <Section title="모델명" required>
-        <TextInput
+      <Section title="모델명" required icon="tag">
+        <FormInput
           placeholder="예: 드라고, 솔루션 컴프"
-          placeholderTextColor={c.text.muted}
           value={value.model}
           onChangeText={(t) => onChange({ ...value, model: t.slice(0, 50) })}
-          style={s.textInput}
         />
       </Section>
 
-      <Section title="사이즈" required>
+      <Section title="사이즈" required icon="maximize-2">
         <SizePicker
           value={value.size}
           onSelect={(next) => onChange({ ...value, size: next })}
         />
       </Section>
 
-      <Section title="원했던 핏 스타일">
+      <Section title="원했던 핏 스타일" icon="target">
         <View style={s.rowGap8}>
           {WANTED_FIT_OPTIONS.map((opt) => {
             const active = value.wantedFit === opt;
@@ -352,7 +351,7 @@ export function ShoeForm({ value, onChange }: Props) {
         />
       </Section>
 
-      <Section title="상태" required>
+      <Section title="상태" required icon="activity">
         <View style={s.rowGap8}>
           {STATUS_OPTIONS.map((opt) => {
             const active = value.status === opt;
@@ -382,7 +381,7 @@ export function ShoeForm({ value, onChange }: Props) {
         </View>
       </Section>
 
-      <Section title="구매일">
+      <Section title="구매일" icon="calendar">
         <View style={s.rowCenterGap8}>
           <Pressable
             onPress={() => setShowPicker(true)}
@@ -445,7 +444,7 @@ export function ShoeForm({ value, onChange }: Props) {
         )}
       </Section>
 
-      <Section title="전반적 평점">
+      <Section title="전반적 평점" icon="star">
         <Text style={s.ratingSubLabel}>
           {RATING_LABEL.overall.sub}
         </Text>
@@ -478,16 +477,13 @@ export function ShoeForm({ value, onChange }: Props) {
         </Section>
       ))}
 
-      <Section title="메모">
-        <TextInput
+      <Section title="메모" icon="message-square">
+        <FormInput
           placeholder="다운사이즈 폭 / 사용 빈도 / 발 느낌 등"
-          placeholderTextColor={c.text.muted}
           value={value.note}
           onChangeText={(t) => onChange({ ...value, note: t.slice(0, 200) })}
           maxLength={200}
           multiline
-          textAlignVertical="top"
-          style={s.textAreaInput}
         />
       </Section>
 
@@ -517,7 +513,7 @@ export function ShoeForm({ value, onChange }: Props) {
         )}
       </Pressable>
 
-      <Section title="사진">
+      <Section title="사진" icon="image">
         <View style={s.photoBanner}>
           <Feather name="image" size={15} color={c.text.muted} />
           <Text style={s.photoBannerText}>사진 첨부는 준비 중이에요</Text>

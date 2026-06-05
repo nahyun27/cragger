@@ -14,7 +14,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { z } from 'zod';
 import { Feather } from '@expo/vector-icons';
 
@@ -38,6 +38,7 @@ type FormValues = z.infer<typeof schema>;
 export default function GymRequestScreen() {
 
   const c = useThemeColors();  const router = useRouter();
+  const insets = useSafeAreaInsets();
   const submit = useSubmitGymRequest();
 
   const {
@@ -66,7 +67,7 @@ export default function GymRequestScreen() {
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-background-primary" edges={['top', 'bottom']}>
+    <SafeAreaView className="flex-1 bg-background-primary" edges={['top']}>
       <View className="flex-row items-center px-4 py-2 border-b border-border-subtle">
         <Pressable onPress={() => router.back()} className="p-2 -ml-2 active:opacity-60" hitSlop={8}>
           <Feather name="arrow-left" size={24} color={c.text.primary} />
@@ -80,7 +81,12 @@ export default function GymRequestScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         className="flex-1"
       >
-        <ScrollView contentContainerClassName="p-4 gap-5">
+        <ScrollView
+          contentContainerClassName="p-4 gap-5"
+          contentContainerStyle={{ paddingBottom: insets.bottom + 12 }}
+          contentInsetAdjustmentBehavior="never"
+          automaticallyAdjustContentInsets={false}
+        >
           <Text className="text-text-tertiary text-sm">
             찾는 암장이 없으면 알려주세요. 검토 후 목록에 추가됩니다.
           </Text>

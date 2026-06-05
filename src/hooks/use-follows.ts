@@ -8,6 +8,7 @@ export type FollowUserMini = {
   username: string;
   display_name: string | null;
   avatar_url: string | null;
+  featured_badge_key: string | null;
 };
 
 export type FollowCounts = {
@@ -122,7 +123,7 @@ export function useFollowers(userId: string | undefined) {
     queryFn: async (): Promise<FollowUserMini[]> => {
       const { data, error } = await supabase
         .from('follows')
-        .select('follower:profiles!follows_follower_id_fkey(id, username, display_name, avatar_url), created_at')
+        .select('follower:profiles!follows_follower_id_fkey(id, username, display_name, avatar_url, featured_badge_key), created_at')
         .eq('followee_id', userId!)
         .order('created_at', { ascending: false });
       if (error) throw new Error(error.message);
@@ -141,7 +142,7 @@ export function useFollowing(userId: string | undefined) {
     queryFn: async (): Promise<FollowUserMini[]> => {
       const { data, error } = await supabase
         .from('follows')
-        .select('followee:profiles!follows_followee_id_fkey(id, username, display_name, avatar_url), created_at')
+        .select('followee:profiles!follows_followee_id_fkey(id, username, display_name, avatar_url, featured_badge_key), created_at')
         .eq('follower_id', userId!)
         .order('created_at', { ascending: false });
       if (error) throw new Error(error.message);
@@ -167,7 +168,7 @@ export function useSearchUsers(query: string, limit = 30) {
       // username ILIKE OR display_name ILIKE — Supabase or() 사용
       const { data, error } = await supabase
         .from('profiles')
-        .select('id, username, display_name, avatar_url, is_private')
+        .select('id, username, display_name, avatar_url, featured_badge_key, is_private')
         .or(`username.ilike.%${q}%,display_name.ilike.%${q}%`)
         .limit(limit);
       if (error) throw new Error(error.message);

@@ -16,8 +16,8 @@ import {
   Platform,
 } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Feather } from '@expo/vector-icons';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Feather, Ionicons } from '@expo/vector-icons';
 
 import { useAuth } from '@/lib/auth-context';
 import {
@@ -48,7 +48,9 @@ import {
   useCrewHomeStats,
   type CrewActiveMember,
 } from '@/hooks/use-crew-stats';
-import { effectiveStatus, useBattles, type Battle } from '@/hooks/use-battles';
+import { effectiveStatus, useBattles, useMyBattleSends, type Battle } from '@/hooks/use-battles';
+import { resolveColorHex, resolveColorLabel } from '@/constants/climb-colors';
+import { EmptyState } from '@/components/ui/empty-state';
 import {
   useAcceptJoinRequest,
   useCrewJoinRequests,
@@ -58,6 +60,7 @@ import {
   type CrewJoinRequest,
 } from '@/hooks/use-crew-requests';
 import { FeaturedBadgeChip } from '@/components/ui/featured-badge-chip';
+import { ScreenHeader } from '@/components/ui/screen-header';
 import { Sheet } from '@/components/ui/sheet';
 import { useThemeColors, type ThemeColors } from '@/lib/theme';
 
@@ -92,6 +95,7 @@ function getCrewAvatarColors(name: string) {
 export default function CrewDetailScreen() {
   const c = useThemeColors();
   const s = useMemo(() => makeStyles(c), [c]);
+  const insets = useSafeAreaInsets();
 
   const { id, tab: initialTab } = useLocalSearchParams<{ id: string; tab?: string }>();
   const router = useRouter();
@@ -208,31 +212,24 @@ export default function CrewDetailScreen() {
   const firstChar = data.name.length > 0 ? data.name.charAt(0).toUpperCase() : '?';
 
   return (
-    <SafeAreaView style={s.safeContainer} edges={['top']}>
-      {/* Header */}
-      <View style={s.headerRow}>
-        <Pressable onPress={() => router.back()} hitSlop={8}>
-          {({ pressed }) => (
-            <View style={[s.headerIconBtn, pressed && s.btnPressed]}>
-              <Feather name="arrow-left" size={22} color={c.text.primary} />
-            </View>
-          )}
-        </Pressable>
-        <Text style={s.headerTitle}>크루 정보</Text>
-        {isMember ? (
-          <Pressable onPress={handleOpenMenu} hitSlop={8}>
-            {({ pressed }) => (
-              <View style={[s.headerIconBtn, pressed && s.btnPressed]}>
-                <Feather name="more-vertical" size={20} color={c.text.primary} />
-              </View>
-            )}
-          </Pressable>
-        ) : (
-          <View style={{ width: 40 }} />
-        )}
-      </View>
+    <SafeAreaView style={s.safeContainer} edges={['left', 'right']}>
+      <ScreenHeader
+        title="크루 정보"
+        onBack={() => router.back()}
+        rightActions={
+          isMember
+            ? [{ icon: 'more-vertical', onPress: handleOpenMenu }]
+            : undefined
+        }
+      />
 
-      <ScrollView style={{ flex: 1, backgroundColor: c.bg.primary }} contentContainerStyle={s.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={{ flex: 1, backgroundColor: c.bg.primary }}
+        contentContainerStyle={[s.scrollContent, { paddingBottom: insets.bottom + 12 }]}
+        contentInsetAdjustmentBehavior="never"
+        automaticallyAdjustContentInsets={false}
+        showsVerticalScrollIndicator={false}
+      >
         {/* Hero Area */}
         {/* Hero Area */}
         {/* Horizontal Header (Reference Style) */}
@@ -695,10 +692,7 @@ function CrewBattlesSection({ crewId }: { crewId: string }) {
       )}
 
       {data && data.length === 0 && (
-        <View style={s.battleEmptyCard}>
-          <Feather name="zap" size={20} color={c.text.muted} />
-          <Text style={s.battleEmptyText}>아직 대결이 없어요</Text>
-        </View>
+        <EmptyState compact icon="zap" tone="muted" title="아직 대결이 없어요" />
       )}
 
       {partitioned.scheduled.length > 0 && (
@@ -731,6 +725,9 @@ function BattleCard({ battle, crewId, past }: { battle: Battle; crewId: string; 
   const isHome = battle.crew_id === crewId;
   const opponent = isHome ? battle.opponent_crew : battle.crew;
 
+  // 종료된 대결이면 내 색깔별 완등 수 같이 보여줌. 종료 외엔 hook 호출 자체 skip.
+  const mySends = useMyBattleSends(past ? battle.id : undefined);
+
   const statusMeta = ({
     scheduled: { bg: '#fff7ed', fg: '#c2410c', label: '예정' },
     active: { bg: '#ecfeff', fg: '#0e7490', label: '진행 중' },
@@ -748,7 +745,7 @@ function BattleCard({ battle, crewId, past }: { battle: Battle; crewId: string; 
       {({ pressed }) => (
         <View style={[
           s.battleCard,
-          past && { opacity: 0.65 },
+          past && { opacity: 0.85 },
           pressed && s.cardPressed
         ]}>
           <View style={s.battleCardHeader}>
@@ -764,11 +761,11 @@ function BattleCard({ battle, crewId, past }: { battle: Battle; crewId: string; 
             </View>
             <Feather name="chevron-right" size={15} color={c.border.strong} />
           </View>
-          
+
           <Text style={s.battleTitleText} numberOfLines={1}>
             {battle.title}
           </Text>
-          
+
           {isCrewVs && opponent && (
             <View style={s.battleVSContainer}>
               <Text style={s.battleVSTag}>VS</Text>
@@ -777,7 +774,7 @@ function BattleCard({ battle, crewId, past }: { battle: Battle; crewId: string; 
               </Text>
             </View>
           )}
-          
+
           <View style={s.battleDateRow}>
             <Feather name="calendar" size={10} color={c.text.muted} />
             <Text style={s.battleDateText}>
@@ -785,6 +782,27 @@ function BattleCard({ battle, crewId, past }: { battle: Battle; crewId: string; 
               {battle.gym ? ` · ${battle.gym.name}${battle.gym.branch ? ` ${battle.gym.branch}` : ''}` : ''}
             </Text>
           </View>
+
+          {past && mySends.data && mySends.data.total > 0 && (
+            <View style={s.myResultRow}>
+              <Text style={s.myResultLabel}>내 완등</Text>
+              <Text style={s.myResultCount}>{mySends.data.total}</Text>
+              {mySends.data.byColor.slice(0, 4).map((entry) => (
+                <View key={entry.color} style={s.myResultColorChip}>
+                  <View
+                    style={[
+                      s.myResultDot,
+                      { backgroundColor: resolveColorHex(entry.color) },
+                    ]}
+                  />
+                  <Text style={s.myResultColorCount}>×{entry.count}</Text>
+                </View>
+              ))}
+              {mySends.data.byColor.length > 4 && (
+                <Text style={s.myResultMore}>+{mySends.data.byColor.length - 4}</Text>
+              )}
+            </View>
+          )}
         </View>
       )}
     </Pressable>
@@ -844,10 +862,7 @@ function CrewMeetupsSection({ crewId }: { crewId: string }) {
       )}
 
       {data && data.upcoming.length === 0 && data.past.length === 0 && (
-        <View style={s.battleEmptyCard}>
-          <Feather name="calendar" size={20} color={c.text.muted} />
-          <Text style={s.battleEmptyText}>예정된 모임이 없어요</Text>
-        </View>
+        <EmptyState compact icon="calendar" tone="muted" title="예정된 모임이 없어요" />
       )}
 
       {data && data.upcoming.length > 0 && (
@@ -978,10 +993,7 @@ function CrewFeedSection({ crewId }: { crewId: string }) {
       )}
 
       {!feed.isLoading && posts.length === 0 && (
-        <View style={s.battleEmptyCard}>
-          <Feather name="message-square" size={20} color={c.text.muted} />
-          <Text style={s.battleEmptyText}>크루 첫 글을 남겨보세요</Text>
-        </View>
+        <EmptyState compact icon="message-square" tone="muted" title="크루 첫 글을 남겨보세요" />
       )}
 
       {posts.length > 0 && (
@@ -1072,7 +1084,7 @@ function CrewPostCard({
                   liked && s.feedActionLiked,
                   likePressed && s.btnPressed
                 ]}>
-                  <Feather name="heart" size={11} color={liked ? '#ef4444' : '#94a3b8'} />
+                  <Ionicons name={liked ? 'heart' : 'heart-outline'} size={12} color={liked ? '#ef4444' : '#94a3b8'} />
                   <Text style={[s.feedActionText, liked && s.feedActionTextLiked]}>
                     {post.like_count}
                   </Text>
@@ -1138,9 +1150,15 @@ function MemberRow({
 
   function goToProfile() {
     if (isMe) {
-      router.push('/(tabs)/profile' as never);
+      router.push({
+        pathname: '/(tabs)/profile',
+        params: { back: '1', returnTo: `/crew/${crewId}` },
+      } as never);
     } else {
-      router.push({ pathname: '/u/[id]', params: { id: member.user_id } } as never);
+      router.push({
+        pathname: '/u/[id]',
+        params: { id: member.user_id, returnTo: `/crew/${crewId}` },
+      } as never);
     }
   }
 
@@ -1233,17 +1251,17 @@ function PublicCrewPreview({ crewId, isRecruiting }: { crewId: string; isRecruit
           )}
         </>
       ) : (
-        <View style={s.publicLockedBox}>
-          <Feather name="lock" size={14} color={c.text.muted} />
-          <Text style={s.publicLockedText}>비공개 크루 — 초대코드로만 가입할 수 있어요</Text>
-          <Pressable onPress={() => router.push('/crew/join' as never)}>
-            {({ pressed }) => (
-              <Text style={[s.publicLockedLink, pressed && { opacity: 0.6 }]}>
-                코드로 가입하기
-              </Text>
-            )}
-          </Pressable>
-        </View>
+        <EmptyState
+          icon="lock"
+          tone="muted"
+          title="비공개 크루예요"
+          description={'초대 코드를 받은 사람만 가입할 수 있어요.\n크루장에게 코드를 받아 입력해보세요.'}
+          action={{
+            label: '코드로 가입하기',
+            icon: 'key',
+            onPress: () => router.push('/crew/join' as never),
+          }}
+        />
       )}
 
       <Sheet
@@ -1299,6 +1317,7 @@ function JoinRequestsSection({ crewId }: { crewId: string }) {
             key={r.id}
             request={r}
             isLast={i === requests.length - 1}
+            crewId={crewId}
           />
         ))}
       </View>
@@ -1306,7 +1325,7 @@ function JoinRequestsSection({ crewId }: { crewId: string }) {
   );
 }
 
-function JoinRequestRow({ request, isLast }: { request: CrewJoinRequest; isLast: boolean }) {
+function JoinRequestRow({ request, isLast, crewId }: { request: CrewJoinRequest; isLast: boolean; crewId: string }) {
   const c = useThemeColors();
   const s = useMemo(() => makeStyles(c), [c]);
   const router = useRouter();
@@ -1354,7 +1373,10 @@ function JoinRequestRow({ request, isLast }: { request: CrewJoinRequest; isLast:
     >
       <Pressable
         onPress={() =>
-          router.push({ pathname: '/u/[id]', params: { id: request.user_id } } as never)
+          router.push({
+            pathname: '/u/[id]',
+            params: { id: request.user_id, returnTo: `/crew/${crewId}` },
+          } as never)
         }
         style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}
       >
@@ -1444,7 +1466,7 @@ function ActiveMembersStrip({
         contentContainerStyle={s.activeMembersScroll}
       >
         {top.map((m) => (
-          <ActiveMemberChip key={m.user_id} member={m} />
+          <ActiveMemberChip key={m.user_id} member={m} crewId={crewId} />
         ))}
         {total > top.length && (
           <Pressable
@@ -1464,7 +1486,7 @@ function ActiveMembersStrip({
   );
 }
 
-function ActiveMemberChip({ member }: { member: CrewActiveMember }) {
+function ActiveMemberChip({ member, crewId }: { member: CrewActiveMember; crewId: string }) {
   const c = useThemeColors();
   const s = useMemo(() => makeStyles(c), [c]);
   const router = useRouter();
@@ -1474,7 +1496,10 @@ function ActiveMemberChip({ member }: { member: CrewActiveMember }) {
 
   return (
     <Pressable
-      onPress={() => router.push({ pathname: '/u/[id]', params: { id: member.user_id } } as never)}
+      onPress={() => router.push({
+        pathname: '/u/[id]',
+        params: { id: member.user_id, returnTo: `/crew/${crewId}` },
+      } as never)}
       style={({ pressed }) => [pressed && { opacity: 0.7 }]}
     >
       <View style={s.activeMembersMore}>
@@ -1631,10 +1656,7 @@ function AnnouncementsSection({
       )}
 
       {!isLoading && items.length === 0 && (
-        <View style={s.battleEmptyCard}>
-          <Feather name="volume-2" size={20} color={c.text.muted} />
-          <Text style={s.battleEmptyText}>아직 공지가 없어요</Text>
-        </View>
+        <EmptyState compact icon="volume-2" tone="muted" title="아직 공지가 없어요" />
       )}
 
       {items.length > 0 && (
@@ -1860,7 +1882,7 @@ function makeStyles(c: ThemeColors) {
   scrollContent: {
     paddingHorizontal: 20,
     paddingTop: 0,
-    paddingBottom: 40,
+    paddingBottom: 12,
   },
   headerRow: {
     flexDirection: 'row',
@@ -2046,27 +2068,6 @@ function makeStyles(c: ThemeColors) {
     fontSize: 12,
     fontWeight: '700',
     color: c.text.secondary,
-  },
-  publicLockedBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    backgroundColor: c.bg.subtle,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    borderRadius: 12,
-    flexWrap: 'wrap',
-  },
-  publicLockedText: {
-    flex: 1,
-    fontSize: 12,
-    fontWeight: '600',
-    color: c.text.secondary,
-  },
-  publicLockedLink: {
-    fontSize: 12,
-    fontWeight: '800',
-    color: c.brand.primary,
   },
   publicMessageInput: {
     backgroundColor: c.bg.subtle,
@@ -2521,6 +2522,55 @@ function makeStyles(c: ThemeColors) {
     color: c.text.muted,
     fontSize: 10,
     fontWeight: '700',
+  },
+  myResultRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginTop: 8,
+    paddingTop: 8,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: c.border.subtle,
+  },
+  myResultLabel: {
+    fontSize: 10.5,
+    fontWeight: '900',
+    color: c.text.tertiary,
+    letterSpacing: 0.3,
+    textTransform: 'uppercase',
+  },
+  myResultCount: {
+    fontSize: 12,
+    fontWeight: '900',
+    color: c.brand.primaryDeep,
+    letterSpacing: -0.2,
+  },
+  myResultColorChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 999,
+    backgroundColor: c.bg.subtle,
+  },
+  myResultDot: {
+    width: 9,
+    height: 9,
+    borderRadius: 4.5,
+    borderWidth: 0.5,
+    borderColor: '#cbd5e1',
+  },
+  myResultColorCount: {
+    fontSize: 10.5,
+    fontWeight: '800',
+    color: c.text.secondary,
+  },
+  myResultMore: {
+    fontSize: 10.5,
+    fontWeight: '700',
+    color: c.text.muted,
   },
   battleEmptyCard: {
     padding: 24,

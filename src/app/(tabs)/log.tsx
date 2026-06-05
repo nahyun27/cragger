@@ -11,12 +11,12 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
-import { BlurView } from 'expo-blur';
 
 import { SessionCalendar } from '@/components/log/session-calendar';
 import { SessionRow } from '@/components/session/session-row';
+import { EmptyState } from '@/components/ui/empty-state';
 import { useRecentSessions } from '@/hooks/use-recent-sessions';
-import { useThemeColors, useEffectiveScheme, type ThemeColors } from '@/lib/theme';
+import { useThemeColors, type ThemeColors } from '@/lib/theme';
 
 type ViewMode = 'list' | 'calendar';
 
@@ -40,17 +40,17 @@ export default function LogScreen() {
   }, [sessions]);
 
   const insets = useSafeAreaInsets();
-  const scheme = useEffectiveScheme();
 
   return (
     <View style={s.container}>
       {/* Header */}
-      <View className="z-20 border-b border-border-subtle absolute top-0 left-0 right-0" style={{ paddingTop: Math.max(insets.top, 20) }}>
-        <BlurView
-          tint={scheme === 'dark' ? 'dark' : 'light'}
-          intensity={80}
-          style={StyleSheet.absoluteFill}
-        />
+      <View
+        className="z-20 border-b border-border-subtle absolute top-0 left-0 right-0"
+        style={{
+          paddingTop: Math.max(insets.top, 20),
+          backgroundColor: c.bg.card,
+        }}
+      >
         <View style={s.header}>
         <View>
           <Text style={s.headerTitle}>기록</Text>
@@ -62,15 +62,14 @@ export default function LogScreen() {
           hitSlop={6}
         >
           <View style={s.writeBtn}>
-            <Feather name="plus" size={14} color="#ffffff" />
+            <Feather name="plus" size={14} color={c.brand.onPrimary} />
             <Text style={s.writeBtnText}>기록 추가</Text>
           </View>
         </Pressable>
-      </View>
-      </View>
+        </View>
 
-      {/* View toggle */}
-      <View style={[s.toggleWrap, { paddingTop: Math.max(insets.top, 20) + 60 }]}>
+        {/* View toggle */}
+        <View style={s.toggleWrap}>
         <View style={s.toggle}>
           <ToggleBtn
             label="리스트"
@@ -86,10 +85,11 @@ export default function LogScreen() {
           />
         </View>
       </View>
+      </View>
 
       <View style={{ flex: 1, backgroundColor: c.bg.primary }}>
         {viewMode === 'calendar' ? (
-          <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingTop: 4 }}>
+          <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingTop: Math.max(insets.top, 20) + 150 }}>
             <SessionCalendar />
           </ScrollView>
         ) : (
@@ -110,7 +110,9 @@ export default function LogScreen() {
               <FlatList
                 data={sessions}
                 keyExtractor={(item) => item.id}
-                contentContainerStyle={s.listContent}
+                contentContainerStyle={[s.listContent, { paddingTop: Math.max(insets.top, 20) + 150 }]}
+                contentInsetAdjustmentBehavior="never"
+                automaticallyAdjustContentInsets={false}
                 refreshing={isRefetching}
                 onRefresh={refetch}
                 ListHeaderComponent={
@@ -146,28 +148,22 @@ export default function LogScreen() {
                     <Text style={s.sectionTitle}>지난 세션 목록</Text>
 
                     {isEmpty && (
-                      <View style={s.emptyCard}>
-                        <View style={s.emptyIconWrapper}>
-                          <Feather name="activity" size={28} color="#94a3b8" />
-                        </View>
-                        <Text style={s.emptyTitle}>기록이 존재하지 않습니다</Text>
-                        <Text style={s.emptySubtitle}>
-                          첫 번째 등반 흔적을 남기고 기록을 쌓아가보세요!
-                        </Text>
-                        <Pressable
-                          onPress={() => router.push('/session/new')}
-                          style={({ pressed }) => [{ opacity: pressed ? 0.9 : 1 }]}
-                        >
-                          <View style={s.emptyBtn}>
-                            <Text style={s.emptyBtnText}>등반 기록 추가하기</Text>
-                          </View>
-                        </Pressable>
-                      </View>
+                      <EmptyState
+                        icon="activity"
+                        tone="muted"
+                        title="기록이 존재하지 않습니다"
+                        description="첫 번째 등반 흔적을 남기고 기록을 쌓아가보세요!"
+                        action={{
+                          label: '등반 기록 추가하기',
+                          icon: 'edit-3',
+                          onPress: () => router.push('/session/new'),
+                        }}
+                      />
                     )}
                   </>
                 }
                 renderItem={({ item }) => <SessionRow session={item} />}
-                ItemSeparatorComponent={() => <View style={{ height: 8 }} />}
+                ItemSeparatorComponent={() => <View style={{ height: 10 }} />}
               />
             )}
           </>
@@ -210,7 +206,7 @@ function makeStyles(c: ThemeColors) {
   return StyleSheet.create({
     container: {
       flex: 1,
-      backgroundColor: c.bg.card,
+      backgroundColor: c.bg.primary,
     },
     header: {
       flexDirection: 'row',
