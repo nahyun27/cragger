@@ -1366,10 +1366,7 @@ function MemberRow({
             size={40}
           />
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, flex: 1 }}>
-            <Text style={s.memberNameText} numberOfLines={1}>
-              {name}
-              {isMe && <Text style={s.memberMeTag}> (나)</Text>}
-            </Text>
+            <Text style={s.memberNameText} numberOfLines={1}>{name}</Text>
             <FeaturedBadgeChip badgeKey={member.user?.featured_badge_key} size={12} />
           </View>
           {member.role === 'owner' && (
@@ -2584,7 +2581,7 @@ function makeStyles(c: ThemeColors) {
     justifyContent: 'center',
   },
   memberNameText: {
-    flex: 1,
+    flexShrink: 1,
     fontSize: 15,
     fontWeight: '800',
     color: c.text.primary,
