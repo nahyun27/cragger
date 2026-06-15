@@ -2,7 +2,7 @@ import { customAlert } from '@/components/ui/custom-alert';
 import * as ImagePicker from 'expo-image-picker';
 import * as MediaLibrary from 'expo-media-library';
 import * as Sharing from 'expo-sharing';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from '@/lib/router';
 import React, { useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -66,6 +66,7 @@ export default function SessionShareScreen() {
   const [layoutType, setLayoutType] = useState<'grid' | 'list' | 'stats'>('grid');
   const [bgColor, setBgColor] = useState<string>('#ffffff');
   const [bgOpacity, setBgOpacity] = useState<number>(0.4);
+  const [showGymLogo, setShowGymLogo] = useState<boolean>(true);
 
   async function pickBackgroundImage() {
     try {
@@ -165,7 +166,7 @@ export default function SessionShareScreen() {
 
       <ScrollView
         style={s.scroll}
-        contentContainerStyle={{ paddingBottom: insets.bottom + 12 }}
+        contentContainerStyle={{ paddingBottom: 16 }}
         contentInsetAdjustmentBehavior="never"
         automaticallyAdjustContentInsets={false}
         showsVerticalScrollIndicator={false}
@@ -188,6 +189,7 @@ export default function SessionShareScreen() {
               backgroundColor={bgColor}
               backgroundImageUri={bgImageUri}
               backgroundOpacity={bgOpacity}
+              showGymLogo={showGymLogo}
             />
           </View>
           <View style={s.previewMeta}>
@@ -334,11 +336,33 @@ export default function SessionShareScreen() {
               </View>
             )}
           </SectionCard>
+
+          {/* Gym logo toggle */}
+          <SectionCard title="암장 로고" icon="image" c={c}
+            trailing={
+              <Pressable
+                onPress={() => setShowGymLogo((v) => !v)}
+                hitSlop={8}
+                style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
+              >
+                <View style={[
+                  s.logoToggle,
+                  showGymLogo && { backgroundColor: c.brand.primary },
+                ]}>
+                  <View style={[s.logoToggleThumb, showGymLogo && { transform: [{ translateX: 18 }] }]} />
+                </View>
+              </Pressable>
+            }
+          >
+            <Text style={{ fontSize: 12, color: c.text.tertiary, fontWeight: '600' }}>
+              {showGymLogo ? '우측 상단에 암장 로고가 표시돼요' : '로고가 숨겨진 상태예요'}
+            </Text>
+          </SectionCard>
         </View>
       </ScrollView>
 
       {/* Sticky Actions */}
-      <View style={s.actions}>
+      <View style={[s.actions, { paddingBottom: Math.max(16, insets.bottom) }]}>
         <Pressable
           onPress={handleSave}
           disabled={busy !== null}
@@ -594,6 +618,20 @@ function makeStyles(c: ThemeColors) {
       borderTopWidth: StyleSheet.hairlineWidth,
       borderTopColor: c.border.subtle,
       backgroundColor: c.bg.card,
+    },
+    logoToggle: {
+      width: 42, height: 24, borderRadius: 12,
+      backgroundColor: c.bg.subtle,
+      borderWidth: 1, borderColor: c.border.subtle,
+      justifyContent: 'center',
+      paddingHorizontal: 3,
+    },
+    logoToggleThumb: {
+      width: 18, height: 18, borderRadius: 9,
+      backgroundColor: '#ffffff',
+      shadowColor: '#000', shadowOpacity: 0.15,
+      shadowRadius: 2, shadowOffset: { width: 0, height: 1 },
+      elevation: 2,
     },
     actionBtn: {
       flexDirection: 'row',

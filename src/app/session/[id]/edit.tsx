@@ -1,5 +1,5 @@
 import { customAlert } from '@/components/ui/custom-alert';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from '@/lib/router';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,

@@ -93,10 +93,21 @@ export type LeadSummary = {
 
 export type SessionDiscipline = 'boulder' | 'lead' | 'mixed' | 'empty';
 
+export type SprayWallAttemptSummary = {
+  problemId: string;
+  number: number;
+  name: string | null;
+  color: string | null;
+  problem_type: 'boulder' | 'endurance';
+  result: 'send' | 'fall';
+  tries: number;
+};
+
 export type SessionDetail = SessionRow & {
   discipline: SessionDiscipline;
   color_summary: ColorSummary[];
   lead_summary: LeadSummary[];   // 등급 오름차순
+  spray_wall_summary: SprayWallAttemptSummary[];
 };
 
 export function useSessionDetail(sessionId: string | undefined) {
@@ -114,7 +125,7 @@ export function useSessionDetail(sessionId: string | undefined) {
           .single(),
         supabase
           .from('attempts')
-          .select('result, climbing_type, problem:problems(color, route_grade)')
+          .select('result, climbing_type, tries, problem:problems(color, route_grade), spray_wall_problem:spray_wall_problems(id, number, name, color, problem_type)')
           .eq('session_id', sessionId!),
       ]);
       if (sessionRes.error) throw new Error(sessionRes.error.message);
@@ -124,11 +135,14 @@ export function useSessionDetail(sessionId: string | undefined) {
       const attempts = (attemptsRes.data ?? []) as Array<{
         result: 'onsight' | 'flash' | 'send' | 'project' | 'fall' | 'redpoint';
         climbing_type: 'boulder' | 'lead' | 'board';
+        tries: number;
         problem: { color: string | null; route_grade: string | null } | null;
+        spray_wall_problem: { id: string; number: number; name: string | null; color: string | null; problem_type: string } | null;
       }>;
 
       const colorMap = new Map<string, ColorSummary>();
       const leadMap = new Map<string, LeadSummary>();
+      const sprayWallMap = new Map<string, SprayWallAttemptSummary>();
       let boulderCount = 0;
       let leadCount = 0;
 
@@ -137,7 +151,18 @@ export function useSessionDetail(sessionId: string | undefined) {
           a.result === 'send' || a.result === 'onsight' ||
           a.result === 'flash' || a.result === 'redpoint';
 
-        if (a.climbing_type === 'lead' && a.problem?.route_grade) {
+        if (a.spray_wall_problem) {
+          const sp = a.spray_wall_problem;
+          sprayWallMap.set(sp.id, {
+            problemId: sp.id,
+            number: sp.number,
+            name: sp.name,
+            color: sp.color,
+            problem_type: (sp.problem_type as 'boulder' | 'endurance') ?? 'boulder',
+            result: isSend ? 'send' : 'fall',
+            tries: a.tries ?? 1,
+          });
+        } else if (a.climbing_type === 'lead' && a.problem?.route_grade) {
           leadCount += 1;
           const grade = a.problem.route_grade;
           const cur = leadMap.get(grade) ?? {
@@ -163,10 +188,13 @@ export function useSessionDetail(sessionId: string | undefined) {
         }
       }
 
+      const sprayWallList = Array.from(sprayWallMap.values()).sort((a, b) => a.number - b.number);
+
       const discipline: SessionDiscipline =
         boulderCount > 0 && leadCount > 0 ? 'mixed' :
         leadCount > 0 ? 'lead' :
-        boulderCount > 0 ? 'boulder' : 'empty';
+        boulderCount > 0 ? 'boulder' :
+        sprayWallList.length > 0 ? 'boulder' : 'empty';
 
       const lead_summary = Array.from(leadMap.values()).sort((a, b) =>
         compareGrade(a.grade, b.grade),
@@ -177,6 +205,7 @@ export function useSessionDetail(sessionId: string | undefined) {
         discipline,
         color_summary: Array.from(colorMap.values()),
         lead_summary,
+        spray_wall_summary: sprayWallList,
       };
     },
   });

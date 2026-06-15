@@ -1,11 +1,14 @@
 import { customAlert } from '@/components/ui/custom-alert';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from '@/lib/router';
 import React, { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Dimensions,
+  Image,
   Pressable,
   ScrollView,
+  StyleSheet,
   Text,
   TextInput,
   View,
@@ -13,7 +16,9 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 
+import { BoardEntry, makeEmptyBoardProblem, type BoardProblemEntry, type BoardType } from '@/components/climb/board-entry';
 import { GRID_COLORS, type GridColor } from '@/components/climb/color-grid';
+import { EnduranceEntry, type EnduranceStyle } from '@/components/climb/endurance-entry';
 import { LeadEntry, type LeadRoute } from '@/components/climb/lead-entry';
 import {
   ColorCountsTable,
@@ -23,6 +28,7 @@ import {
 import { GymPickerModal } from '@/components/session/gym-picker-modal';
 import { MembershipPicker } from '@/components/session/membership-picker';
 import { Chip } from '@/components/ui/chip';
+import { Sheet } from '@/components/ui/sheet';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { Section } from '@/components/ui/section';
 import { FormInput } from '@/components/ui/form';
@@ -31,7 +37,9 @@ import { useGyms } from '@/hooks/use-gyms';
 import { useGymRegisteredColors } from '@/hooks/use-gym-registered-colors';
 import { useRecentColorActivity } from '@/hooks/use-recent-color-activity';
 import { useRecentGyms } from '@/hooks/use-recent-gyms';
-import { useRecordSession, type ClimbingDiscipline } from '@/hooks/use-record-session';
+import { useRecordSession, type ClimbingDiscipline, type SprayWallAttemptEntry } from '@/hooks/use-record-session';
+import { useSprayWallProblems, useSprayWallPhotos, useGymColorSchemes, type HoldType, type SprayWallPhoto } from '@/hooks/use-spray-wall';
+import { resolveColorHex, resolveColorLabel } from '@/constants/climb-colors';
 import { useThemeColors } from '@/lib/theme';
 
 // ── 날짜 칩 헬퍼 ────────────────────────────────────────────
@@ -125,12 +133,263 @@ function DisciplineBtn({
   );
 }
 
+const SW = Dimensions.get('window').width;
+
+const SW_HOLD_COLOR: Record<HoldType, string> = {
+  start: '#22c55e', middle: '#3b82f6', top: '#ef4444', foot: '#7c3aed',
+};
+const SW_HOLD_SIZE: Record<HoldType, number> = {
+  start: 28, middle: 20, top: 28, foot: 20,
+};
+
+// ── 스프레이월 문제 선택 컴포넌트 ───────────────────────────────
+function SprayWallAttemptPicker({ problems, colorSchemes, photos, attempts, onChange }: {
+  problems: NonNullable<ReturnType<typeof useSprayWallProblems>['data']>;
+  colorSchemes: NonNullable<ReturnType<typeof useGymColorSchemes>['data']>;
+  photos: SprayWallPhoto[];
+  attempts: SprayWallAttemptEntry[];
+  onChange: (a: SprayWallAttemptEntry[]) => void;
+}) {
+  const c = useThemeColors();
+  const [previewId, setPreviewId] = React.useState<string | null>(null);
+  const [previewPhotoH, setPreviewPhotoH] = React.useState(SW * 0.75);
+
+  const previewProblem = React.useMemo(
+    () => problems.find((p) => p.id === previewId) ?? null,
+    [problems, previewId],
+  );
+  const previewPhoto = React.useMemo(() => {
+    if (!previewProblem) return null;
+    return photos.find((ph) => ph.id === previewProblem.photo_id) ?? photos[0] ?? null;
+  }, [previewProblem, photos]);
+
+  React.useEffect(() => {
+    if (!previewPhoto) return;
+    Image.getSize(previewPhoto.photo_url, (w, h) => {
+      setPreviewPhotoH(Math.min(Math.round(SW * h / w), 480));
+    });
+  }, [previewPhoto]);
+
+  function getColorHex(color: string | null): string | null {
+    if (!color) return null;
+    const s = colorSchemes.find((cs) => cs.color === color);
+    return resolveColorHex(color, s?.color_hex ?? null);
+  }
+
+  function getAttempt(problemId: string): SprayWallAttemptEntry | undefined {
+    return attempts.find((a) => a.problemId === problemId);
+  }
+
+  function addProblem(problemId: string) {
+    if (getAttempt(problemId)) return;
+    onChange([...attempts, { problemId, result: 'send', tries: 1 }]);
+  }
+
+  function removeProblem(problemId: string) {
+    onChange(attempts.filter((a) => a.problemId !== problemId));
+  }
+
+  function updateAttempt(problemId: string, patch: Partial<SprayWallAttemptEntry>) {
+    onChange(attempts.map((a) => a.problemId === problemId ? { ...a, ...patch } : a));
+  }
+
+  const sorted = [...problems].sort((a, b) => a.number - b.number);
+
+  return (
+    <View style={{ gap: 6 }}>
+      <Text style={{ fontSize: 11, color: c.text.muted, fontWeight: '600', marginBottom: 2 }}>
+        문제를 탭해서 추가 · 추가한 문제는 결과와 횟수를 설정해요
+      </Text>
+
+      {sorted.map((p, idx) => {
+        const attempt = getAttempt(p.id);
+        const colorHex = getColorHex(p.color);
+        const badgeColor = colorHex ?? '#7c3aed';
+        const isAdded = !!attempt;
+
+        return (
+          <View
+            key={p.id}
+            style={[
+              swStyles.row,
+              {
+                backgroundColor: isAdded ? `${badgeColor}12` : c.bg.card,
+                borderColor: isAdded ? badgeColor : c.border.subtle,
+              },
+            ]}
+          >
+            {/* 번호 배지 (리스트 순서) */}
+            <View style={[swStyles.badge, { backgroundColor: badgeColor }]}>
+              <Text style={swStyles.badgeText}>{idx + 1}</Text>
+            </View>
+
+            {/* 문제 정보 + 보기 버튼 */}
+            <Pressable style={{ flex: 1 }} onPress={() => !isAdded && addProblem(p.id)}>
+              <Text style={{ fontSize: 13, fontWeight: '700', color: c.text.primary }} numberOfLines={1}>
+                {p.name || (p.description ? p.description : `문제 #${idx + 1}`)}
+              </Text>
+              <Text style={{ fontSize: 11, color: c.text.tertiary, fontWeight: '600' }}>
+                {p.problem_type === 'endurance' ? '지구력' : '찍볼'}
+              </Text>
+            </Pressable>
+
+            {/* 보기 버튼 */}
+            {photos.length > 0 && (
+              <Pressable
+                onPress={() => setPreviewId(p.id)}
+                hitSlop={8}
+                style={swStyles.previewBtn}
+              >
+                <Feather name="eye" size={14} color={c.text.tertiary} />
+              </Pressable>
+            )}
+
+            {/* 추가된 문제: 결과 + 횟수 */}
+            {isAdded && attempt ? (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                {/* 결과 토글 */}
+                <Pressable
+                  onPress={() => updateAttempt(p.id, { result: attempt.result === 'send' ? 'fall' : 'send' })}
+                  style={[
+                    swStyles.resultBtn,
+                    { backgroundColor: attempt.result === 'send' ? '#22c55e' : '#ef4444' },
+                  ]}
+                >
+                  <Text style={swStyles.resultText}>
+                    {attempt.result === 'send' ? '완등' : '미완'}
+                  </Text>
+                </Pressable>
+
+                {/* 횟수 조절 */}
+                <View style={swStyles.triesRow}>
+                  <Pressable
+                    onPress={() => updateAttempt(p.id, { tries: Math.max(1, attempt.tries - 1) })}
+                    hitSlop={6}
+                  >
+                    <Feather name="minus" size={14} color={c.text.tertiary} />
+                  </Pressable>
+                  <Text style={[swStyles.triesText, { color: c.text.primary }]}>{attempt.tries}</Text>
+                  <Pressable
+                    onPress={() => updateAttempt(p.id, { tries: attempt.tries + 1 })}
+                    hitSlop={6}
+                  >
+                    <Feather name="plus" size={14} color={c.text.tertiary} />
+                  </Pressable>
+                </View>
+
+                {/* 제거 */}
+                <Pressable onPress={() => removeProblem(p.id)} hitSlop={8}>
+                  <Feather name="x" size={16} color={c.text.muted} />
+                </Pressable>
+              </View>
+            ) : (
+              <Pressable onPress={() => addProblem(p.id)} style={swStyles.addBtn}>
+                <Feather name="plus" size={14} color={badgeColor} />
+              </Pressable>
+            )}
+          </View>
+        );
+      })}
+
+      {/* ── 문제 미리보기 시트 ──────────────────────────────── */}
+      <Sheet
+        visible={!!previewId}
+        onClose={() => setPreviewId(null)}
+        variant="bottom"
+        title={previewProblem ? (previewProblem.name || `문제 #${sorted.indexOf(previewProblem) + 1}`) : ''}
+        noScroll
+        contentStyle={{ paddingHorizontal: 0, paddingTop: 0 }}
+      >
+        {previewProblem && previewPhoto ? (
+          <ScrollView
+            style={{ width: SW, height: previewPhotoH }}
+            contentContainerStyle={{ width: SW, height: previewPhotoH }}
+            maximumZoomScale={3}
+            minimumZoomScale={1}
+            bouncesZoom
+            showsVerticalScrollIndicator={false}
+            showsHorizontalScrollIndicator={false}
+          >
+            <View style={{ width: SW, height: previewPhotoH }}>
+              <Image
+                source={{ uri: previewPhoto.photo_url }}
+                style={{ width: SW, height: previewPhotoH }}
+                resizeMode="contain"
+              />
+              {previewProblem.holds.map((h, idx) => {
+                const isEnd = previewProblem.problem_type === 'endurance';
+                const color = isEnd ? '#f97316' : SW_HOLD_COLOR[h.hold_type];
+                const size = isEnd ? 20 : SW_HOLD_SIZE[h.hold_type];
+                const label = isEnd
+                  ? String(idx + 1)
+                  : h.hold_type === 'start' ? 'S'
+                  : h.hold_type === 'top' ? 'T'
+                  : '';
+                const left = (h.marker_x / 100) * SW - size / 2;
+                const top = (h.marker_y / 100) * previewPhotoH - size / 2;
+                return (
+                  <View
+                    key={h.id}
+                    style={{
+                      position: 'absolute', left, top,
+                      width: size, height: size, borderRadius: size / 2,
+                      backgroundColor: color,
+                      alignItems: 'center', justifyContent: 'center',
+                      borderWidth: 2, borderColor: '#ffffff',
+                      shadowColor: '#000', shadowOpacity: 0.3,
+                      shadowRadius: 3, shadowOffset: { width: 0, height: 2 },
+                      elevation: 4,
+                    }}
+                  >
+                    {label ? (
+                      <Text style={{ color: '#ffffff', fontSize: size * 0.38, fontWeight: '900' }}>{label}</Text>
+                    ) : null}
+                  </View>
+                );
+              })}
+            </View>
+          </ScrollView>
+        ) : null}
+      </Sheet>
+    </View>
+  );
+}
+
+const swStyles = StyleSheet.create({
+  row: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    padding: 10, borderRadius: 12,
+    borderWidth: 1.5,
+  },
+  badge: {
+    width: 28, height: 28, borderRadius: 14,
+    alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+  },
+  badgeText: { color: '#ffffff', fontSize: 12, fontWeight: '900' },
+  resultBtn: {
+    paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8,
+  },
+  resultText: { color: '#ffffff', fontSize: 11, fontWeight: '800' },
+  triesRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  triesText: { fontSize: 14, fontWeight: '900', minWidth: 18, textAlign: 'center' },
+  addBtn: {
+    width: 28, height: 28, borderRadius: 14,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  previewBtn: {
+    width: 28, height: 28, borderRadius: 8,
+    alignItems: 'center', justifyContent: 'center',
+  },
+});
+
 export default function NewSessionScreen() {
 
   const c = useThemeColors();  const router = useRouter();
   const insets = useSafeAreaInsets();
   const recordSession = useRecordSession();
-  const params = useLocalSearchParams<{ gymId?: string }>();
+  const params = useLocalSearchParams<{ gymId?: string; date?: string }>();
+  // 캘린더에서 특정 날짜 클릭 시 ?date=YYYY-MM-DD 로 들어옴.
+  const forcedDate = params.date && /^\d{4}-\d{2}-\d{2}$/.test(params.date) ? params.date : null;
 
   const [dateChoice, setDateChoice] = useState<DateChoice>('today');
   const [gymId, setGymId] = useState<string | null>(params.gymId ?? null);
@@ -142,10 +401,20 @@ export default function NewSessionScreen() {
   const [discipline, setDiscipline] = useState<ClimbingDiscipline>('boulder');
   const [colorCounts, setColorCounts] = useState<ColorCountsValue>(emptyColorCounts);
   const [leadRoutes, setLeadRoutes] = useState<LeadRoute[]>([]);
+  const [boardType, setBoardType] = useState<BoardType | null>(null);
+  const [boardProblems, setBoardProblems] = useState<BoardProblemEntry[]>(() => [makeEmptyBoardProblem()]);
+  const [enduranceStyle, setEnduranceStyle] = useState<EnduranceStyle | null>(null);
+  const [sprayWallAttempts, setSprayWallAttempts] = useState<SprayWallAttemptEntry[]>([]);
 
   const { data: recentGyms } = useRecentGyms();
   const { data: recentColors } = useRecentColorActivity(gymId);
   const { data: registeredColors } = useGymRegisteredColors(gymId);
+  const sprayWallProblemsQ = useSprayWallProblems(gymId ?? undefined);
+  const sprayWallPhotosQ = useSprayWallPhotos(gymId ?? undefined);
+  const gymColorSchemesQ = useGymColorSchemes(gymId ?? undefined);
+  const sprayWallProblemList = sprayWallProblemsQ.data ?? [];
+  const sprayWallPhotoList = sprayWallPhotosQ.data ?? [];
+  const gymColorSchemes = gymColorSchemesQ.data ?? [];
   // primary = 그 암장에 등록된 색깔 (recent activity desc). secondary = 나머지.
   // 등록 정보 없으면 primary=전체 14색 (이전과 동일 동작).
   const { colorOrder, primaryCount } = useMemo<{
@@ -187,27 +456,46 @@ export default function NewSessionScreen() {
     [allGyms, gymId],
   );
 
+  // 등반 종목 = 암장 필수, 지구력/근력 = 암장 옵션
+  const isClimbDiscipline = discipline === 'boulder' || discipline === 'lead' || discipline === 'board';
+
   const canSubmit = useMemo(() => {
-    if (!gymId) return false;
+    if (isClimbDiscipline && !gymId) return false;
     if (discipline === 'boulder') {
-      return Object.values(colorCounts).some((c) => c.tries > 0);
+      return Object.values(colorCounts).some((c) => c.tries > 0) || sprayWallAttempts.length > 0;
     }
-    return leadRoutes.length > 0;
-  }, [gymId, discipline, colorCounts, leadRoutes]);
+    if (discipline === 'lead') {
+      return leadRoutes.length > 0;
+    }
+    if (discipline === 'board') {
+      const filled = boardProblems.filter((p) => p.name.trim().length > 0);
+      return !!boardType && filled.length > 0;
+    }
+    if (discipline === 'endurance') {
+      return !!enduranceStyle || sprayWallAttempts.length > 0;
+    }
+    // strength
+    return true;
+  }, [isClimbDiscipline, gymId, discipline, colorCounts, leadRoutes, boardType, boardProblems, enduranceStyle, sprayWallAttempts]);
 
   async function handleSubmit() {
-    if (!gymId || recordSession.isPending) return;
+    if (recordSession.isPending) return;
+    if (isClimbDiscipline && !gymId) return;
     try {
       await recordSession.mutateAsync({
         gymId,
-        sessionDate: isoDateForChoice(dateChoice),
+        sessionDate: forcedDate ?? isoDateForChoice(dateChoice),
         durationMin,
         condition,
         notes: notes.trim() ? notes.trim().slice(0, 100) : null,
         membershipId,
         discipline,
         colors: discipline === 'boulder' ? Object.values(colorCounts) : undefined,
+        sprayWallAttempts: (discipline === 'boulder' || discipline === 'endurance') ? sprayWallAttempts : undefined,
         leadRoutes: discipline === 'lead' ? leadRoutes : undefined,
+        boardType: discipline === 'board' ? boardType : null,
+        boardProblems: discipline === 'board' ? boardProblems : undefined,
+        enduranceStyle: discipline === 'endurance' ? enduranceStyle : null,
       });
       router.replace('/(tabs)/log');
     } catch (e) {
@@ -227,7 +515,7 @@ export default function NewSessionScreen() {
         automaticallyAdjustContentInsets={false}
       >
         <Section title="종목" required icon="activity">
-          <View className="flex-row gap-2">
+          <View className="flex-row flex-wrap gap-2">
             <DisciplineBtn
               label="볼더링"
               icon="square"
@@ -243,41 +531,66 @@ export default function NewSessionScreen() {
             <DisciplineBtn
               label="보드"
               icon="grid"
-              active={false}
-              disabled
-              onPress={() => customAlert('준비 중', '보드 기록은 v1.1에서 추가됩니다.')}
+              active={discipline === 'board'}
+              onPress={() => setDiscipline('board')}
             />
             <DisciplineBtn
               label="지구력"
               icon="activity"
-              active={false}
-              disabled
-              onPress={() => customAlert('준비 중', '지구력 기록은 v1.1에서 추가됩니다.')}
+              active={discipline === 'endurance'}
+              onPress={() => setDiscipline('endurance')}
+            />
+            <DisciplineBtn
+              label="근력"
+              icon="zap"
+              active={discipline === 'strength'}
+              onPress={() => setDiscipline('strength')}
             />
           </View>
         </Section>
 
         <Section title="날짜" required icon="calendar">
-          <View className="flex-row gap-2">
-            {DATE_CHIPS.map(({ value, label }) => (
+          {forcedDate ? (
+            <View className="flex-row items-center gap-2 px-3 py-2.5 rounded-xl bg-background-secondary border border-border-subtle">
+              <Feather name="calendar" size={14} color={c.brand.primary} />
+              <Text className="text-text-primary text-sm font-extrabold">
+                {forcedDate.replace(/-/g, '.')}
+              </Text>
+              <Text className="text-text-tertiary text-[11px] font-semibold">
+                · 캘린더에서 선택한 날짜
+              </Text>
+            </View>
+          ) : (
+            <View className="flex-row gap-2">
+              {DATE_CHIPS.map(({ value, label }) => (
+                <Chip
+                  key={value}
+                  label={label}
+                  selected={dateChoice === value}
+                  onPress={() => setDateChoice(value)}
+                />
+              ))}
               <Chip
-                key={value}
-                label={label}
-                selected={dateChoice === value}
-                onPress={() => setDateChoice(value)}
+                label="더 이전"
+                selected={false}
+                onPress={() =>
+                  customAlert('준비 중', '그저께 이전 날짜 선택은 v1.1에서 추가됩니다.')
+                }
               />
-            ))}
-            <Chip
-              label="더 이전"
-              selected={false}
-              onPress={() =>
-                customAlert('준비 중', '그저께 이전 날짜 선택은 v1.1에서 추가됩니다.')
-              }
-            />
-          </View>
+            </View>
+          )}
         </Section>
 
-        <Section title="암장" required icon="map-pin">
+        <Section
+          title="암장"
+          required={isClimbDiscipline}
+          icon="map-pin"
+        >
+          {!isClimbDiscipline && (
+            <Text className="text-text-tertiary text-[11px] font-semibold mb-2">
+              선택 — 헬스장 / 홈트레이닝 등 외부 시설은 비워두세요
+            </Text>
+          )}
           <View className="flex-row flex-wrap gap-2">
             <Chip
               label="장소 검색"
@@ -364,9 +677,8 @@ export default function NewSessionScreen() {
           </View>
         </Section>
 
-        {discipline === 'boulder' ? (
+        {discipline === 'boulder' && (
           <Section title="색깔별 기록" icon="droplet">
-            <Text className="text-text-tertiary text-xs mb-2">안 적어도 돼요 (옵션)</Text>
             <ColorCountsTable
               value={colorCounts}
               onChange={setColorCounts}
@@ -374,9 +686,38 @@ export default function NewSessionScreen() {
               primaryCount={primaryCount}
             />
           </Section>
-        ) : (
+        )}
+
+        {/* ── 스프레이월 문제 (볼더링 + 지구력 + 스프레이월 있는 암장) ── */}
+        {(discipline === 'boulder' || discipline === 'endurance') && sprayWallProblemList.length > 0 && (
+          <Section title="스프레이월 문제" icon="map-pin">
+            <SprayWallAttemptPicker
+              problems={sprayWallProblemList}
+              colorSchemes={gymColorSchemes}
+              photos={sprayWallPhotoList}
+              attempts={sprayWallAttempts}
+              onChange={setSprayWallAttempts}
+            />
+          </Section>
+        )}
+        {discipline === 'lead' && (
           <Section title="루트 기록" required icon="trending-up">
             <LeadEntry value={leadRoutes} onChange={setLeadRoutes} />
+          </Section>
+        )}
+        {discipline === 'board' && (
+          <Section title="보드 기록" required icon="grid">
+            <BoardEntry
+              boardType={boardType}
+              onChangeBoardType={setBoardType}
+              problems={boardProblems}
+              onChangeProblems={setBoardProblems}
+            />
+          </Section>
+        )}
+        {discipline === 'endurance' && (
+          <Section title="지구력" required icon="activity">
+            <EnduranceEntry value={enduranceStyle} onChange={setEnduranceStyle} />
           </Section>
         )}
 

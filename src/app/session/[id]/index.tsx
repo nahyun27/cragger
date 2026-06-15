@@ -1,5 +1,5 @@
 import { customAlert } from '@/components/ui/custom-alert';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from '@/lib/router';
 import React, { useState } from 'react';
 import {
   ActivityIndicator,
@@ -22,6 +22,7 @@ import {
   useSessionDetail,
   type ColorSummary,
   type LeadSummary,
+  type SprayWallAttemptSummary,
 } from '@/hooks/use-session';
 
 const KO_WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
@@ -320,6 +321,22 @@ export default function SessionDetailScreen() {
           </View>
         )}
 
+        {/* 스프레이월 섹션 */}
+        {data.spray_wall_summary.length > 0 && (
+          <View className="gap-4">
+            <Text className="text-text-primary text-lg font-bold">스프레이월 기록</Text>
+            <View className="bg-background-secondary rounded-2xl border border-border-subtle overflow-hidden">
+              {data.spray_wall_summary.map((item, idx) => (
+                <SprayWallSummaryRow
+                  key={item.problemId}
+                  item={item}
+                  isLast={idx === data.spray_wall_summary.length - 1}
+                />
+              ))}
+            </View>
+          </View>
+        )}
+
         {/* 리드 등급 섹션 */}
         {(data.discipline === 'lead' || data.discipline === 'mixed') && data.lead_summary.length > 0 && (
           <View className="gap-4">
@@ -333,7 +350,7 @@ export default function SessionDetailScreen() {
         )}
 
         {/* 둘 다 없을 때 */}
-        {data.discipline === 'empty' && (
+        {data.discipline === 'empty' && data.spray_wall_summary.length === 0 && (
           <View className="p-8 items-center justify-center bg-background-secondary rounded-2xl border border-border-subtle">
             <Feather name="activity" size={24} color={c.text.muted} className="mb-2" />
             <Text className="text-text-secondary text-sm">기록된 등반이 없어요</Text>
@@ -446,6 +463,45 @@ const LEAD_RESULT_LABEL: Record<keyof LeadSummary['breakdown'], { label: string;
   redpoint: { label: '레드포인트', color: '#c2410c' },
   fall:     { label: '폴',         color: '#b91c1c' },
 };
+
+function SprayWallSummaryRow({ item, isLast }: { item: SprayWallAttemptSummary; isLast: boolean }) {
+  const c = useThemeColors();
+  const hex = item.color ? resolveColorHex(item.color) : '#7c3aed';
+  const isSend = item.result === 'send';
+  return (
+    <View
+      style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+        gap: 12,
+        borderBottomWidth: isLast ? 0 : StyleSheet.hairlineWidth,
+        borderBottomColor: c.border.subtle,
+      }}
+    >
+      <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: hex, alignItems: 'center', justifyContent: 'center' }}>
+        <Text style={{ color: '#fff', fontSize: 11, fontWeight: '900' }}>{item.number}</Text>
+      </View>
+      <View style={{ flex: 1 }}>
+        <Text style={{ fontSize: 14, fontWeight: '700', color: c.text.primary }} numberOfLines={1}>
+          {item.name ?? `문제 #${item.number}`}
+        </Text>
+        <Text style={{ fontSize: 11, color: c.text.tertiary, fontWeight: '600', marginTop: 1 }}>
+          {item.problem_type === 'endurance' ? '지구력' : '찍볼'} · {item.tries}번 시도
+        </Text>
+      </View>
+      <View style={{
+        paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20,
+        backgroundColor: isSend ? '#dcfce7' : '#fee2e2',
+      }}>
+        <Text style={{ fontSize: 12, fontWeight: '800', color: isSend ? '#16a34a' : '#dc2626' }}>
+          {isSend ? '완등' : '미완'}
+        </Text>
+      </View>
+    </View>
+  );
+}
 
 function LeadSummaryRow({ summary }: { summary: LeadSummary }) {
   const c = useThemeColors();
