@@ -317,8 +317,8 @@ export default function CrewDetailScreen() {
               )}
               {data.home_gym && (
                 <View style={s.profileHomeGym}>
-                  <Feather name="home" size={10} color={c.text.tertiary} />
-                  <Text style={s.profileGymText} numberOfLines={1}>
+                  <Feather name="home" size={10} color={c.brand.primary} />
+                  <Text style={s.profileHomeGymText} numberOfLines={1}>
                     {data.home_gym.name}{data.home_gym.branch ? ` ${data.home_gym.branch}` : ''}
                   </Text>
                 </View>
@@ -2129,7 +2129,7 @@ function makeStyles(c: ThemeColors) {
     flexDirection: 'row',
     alignItems: 'center',
     paddingTop: 16,
-    paddingBottom: 16,
+    paddingBottom: 8,
     paddingHorizontal: 20,
     marginHorizontal: -20,
     backgroundColor: c.bg.card,
@@ -2200,13 +2200,20 @@ function makeStyles(c: ThemeColors) {
     alignItems: 'center',
     marginTop: 6,
     gap: 8,
-    flex: 1,
   },
   profileHomeGym: {
     flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: c.bg.accent,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
     gap: 4,
-    marginLeft: 'auto',
+  },
+  profileHomeGymText: {
+    fontSize: 11,
+    color: c.brand.primary,
+    fontWeight: '800',
   },
   profileMemberCount: {
     fontSize: 13,
