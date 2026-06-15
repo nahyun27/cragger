@@ -43,24 +43,22 @@ export function FollowListScreen({ userId, initialTab = 'followers' }: { userId:
       />
 
       {/* Tab bar */}
-      <View style={s.tabBar}>
-        <Pressable onPress={() => setTab('followers')} style={{ flex: 1 }}>
-          {({ pressed }) => (
-            <View style={[s.tabItem, tab === 'followers' && s.tabItemActive, pressed && { opacity: 0.7 }]}>
-              <Text style={[s.tabText, tab === 'followers' && s.tabTextActive]}>
-                팔로워{followersQ.data ? ` · ${followersQ.data.length}` : ''}
-              </Text>
-            </View>
-          )}
+      <View style={s.segControl}>
+        <Pressable
+          onPress={() => setTab('followers')}
+          style={[s.segItem, tab === 'followers' && s.segItemActive]}
+        >
+          <Text style={[s.segText, tab === 'followers' && s.segTextActive]}>
+            팔로워{followersQ.data != null ? ` ${followersQ.data.length}` : ''}
+          </Text>
         </Pressable>
-        <Pressable onPress={() => setTab('following')} style={{ flex: 1 }}>
-          {({ pressed }) => (
-            <View style={[s.tabItem, tab === 'following' && s.tabItemActive, pressed && { opacity: 0.7 }]}>
-              <Text style={[s.tabText, tab === 'following' && s.tabTextActive]}>
-                팔로잉{followingQ.data ? ` · ${followingQ.data.length}` : ''}
-              </Text>
-            </View>
-          )}
+        <Pressable
+          onPress={() => setTab('following')}
+          style={[s.segItem, tab === 'following' && s.segItemActive]}
+        >
+          <Text style={[s.segText, tab === 'following' && s.segTextActive]}>
+            팔로잉{followingQ.data != null ? ` ${followingQ.data.length}` : ''}
+          </Text>
         </Pressable>
       </View>
 
@@ -153,23 +151,36 @@ function UserRow({ user, isLast }: { user: FollowUserMini; isLast: boolean }) {
 function makeStyles(c: ThemeColors) {
   return StyleSheet.create({
     container: { flex: 1, backgroundColor: c.bg.primary },
-    tabBar: {
+
+    // 세그먼트 컨트롤
+    segControl: {
       flexDirection: 'row',
-      paddingHorizontal: 18,
-      paddingTop: 14,
-      paddingBottom: 12,
-      gap: 6,
+      marginHorizontal: 18,
+      marginTop: 14,
+      marginBottom: 10,
+      backgroundColor: c.bg.subtle,
+      borderRadius: 14,
+      padding: 3,
     },
-    tabItem: {
+    segItem: {
       flex: 1,
       paddingVertical: 9,
-      borderRadius: 12,
+      borderRadius: 11,
       alignItems: 'center',
-      backgroundColor: c.bg.subtle,
     },
-    tabItemActive: { backgroundColor: c.brand.primary },
-    tabText: { fontSize: 13, fontWeight: '800', color: c.text.secondary, letterSpacing: -0.2 },
-    tabTextActive: { color: c.brand.onPrimary, fontWeight: '900' },
+    segItemActive: {
+      backgroundColor: c.brand.primary,
+    },
+    segText: {
+      fontSize: 14,
+      fontWeight: '700',
+      color: c.text.tertiary,
+      letterSpacing: -0.2,
+    },
+    segTextActive: {
+      color: '#ffffff',
+      fontWeight: '900',
+    },
     list: { padding: 18, gap: 16 },
     loaderWrap: { paddingVertical: 32, alignItems: 'center' },
 
