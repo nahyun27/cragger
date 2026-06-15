@@ -2297,7 +2297,8 @@ function makeStyles(c: ThemeColors) {
   profileDescriptionBox: {
     backgroundColor: c.bg.card,
     paddingBottom: 16,
-    paddingHorizontal: 20,
+    paddingLeft: 100,
+    paddingRight: 20,
     marginHorizontal: -20,
   },
   profileDescriptionText: {
