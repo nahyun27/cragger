@@ -1,6 +1,6 @@
 import { customAlert } from '@/components/ui/custom-alert';
 import { Feather } from '@expo/vector-icons';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from '@/lib/router';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
@@ -16,7 +16,7 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { GymPickerModal } from '@/components/session/gym-picker-modal';
+import { MultiGymPickerField } from '@/components/gym/multi-gym-picker-field';
 import { Section } from '@/components/ui/section';
 import { FormInput } from '@/components/ui/form';
 import { BottomCTA } from '@/components/ui/bottom-cta';
@@ -26,6 +26,7 @@ import {
   addMonthsISO,
   useDeleteMembership,
   useMembership,
+  useMembershipUsage,
   useUpdateMembership,
   type MembershipType,
 } from '@/hooks/use-memberships';
@@ -51,8 +52,8 @@ export default function EditMembershipScreen() {
   const isDark = colorScheme === 'dark';
   const iconColor = isDark ? '#f8fafc' : '#0f172a';
 
-  const [gymId, setGymId] = useState<string | null>(null);
-  const [showGymModal, setShowGymModal] = useState(false);
+  const [gymIds, setGymIds] = useState<string[]>([]);
+  const [name, setName] = useState<string>('');
   const [type, setType] = useState<MembershipType>('period');
   const [durationMonths, setDurationMonths] = useState<number>(1);
   const [totalPasses, setTotalPasses] = useState<string>('10');
@@ -68,7 +69,8 @@ export default function EditMembershipScreen() {
 
   useEffect(() => {
     if (prefilled || !data) return;
-    setGymId(data.gym_id);
+    setGymIds(data.gym_ids?.length ? data.gym_ids : [data.gym_id]);
+    setName(data.name ?? '');
     // 월/1일권 레거시 값은 UI상 '기간권'으로 통합
     setType(
       data.membership_type === 'passes' ? 'passes' : 'period',
@@ -91,13 +93,9 @@ export default function EditMembershipScreen() {
     setPrefilled(true);
   }, [data, prefilled]);
 
-  const selectedGym = useMemo(
-    () => allGyms?.find((g) => g.id === gymId) ?? null,
-    [allGyms, gymId],
-  );
 
   const canSubmit = useMemo(() => {
-    if (!gymId || !data) return false;
+    if (gymIds.length === 0 || !data) return false;
     if (type === 'passes') {
       const n = parseInt(totalPasses, 10);
       if (!Number.isFinite(n) || n < 1) return false;
@@ -105,17 +103,28 @@ export default function EditMembershipScreen() {
       if (!Number.isFinite(u) || u < 0 || u > n) return false;
     }
     return true;
-  }, [gymId, type, totalPasses, usedPasses, data]);
+  }, [gymIds, type, totalPasses, usedPasses, data]);
 
   async function handleSave() {
-    if (!id || !data || !gymId || !canSubmit || updateMembership.isPending) return;
+    if (!id || !data || !canSubmit || updateMembership.isPending) return;
     try {
       const priceNum = price.trim() ? parseInt(price.replace(/[^\d]/g, ''), 10) : null;
       const endDate =
         type === 'period' ? addMonthsISO(data.start_date, durationMonths) : null;
+      const firstGym = allGyms?.find((g) => g.id === gymIds[0]);
+      const firstGymLabel = firstGym
+        ? `${firstGym.name}${firstGym.branch ? ` ${firstGym.branch}` : ''}`
+        : '암장';
+      const gymName = name.trim()
+        ? name.trim()
+        : gymIds.length > 1
+        ? `${firstGymLabel} 외 ${gymIds.length - 1}곳`
+        : firstGymLabel;
       await updateMembership.mutateAsync({
         id,
-        gymId,
+        gymIds,
+        gymName,
+        name: name.trim() || null,
         membershipType: type,
         startDate: data.start_date,
         endDate,
@@ -217,26 +226,25 @@ export default function EditMembershipScreen() {
           contentInsetAdjustmentBehavior="never"
           automaticallyAdjustContentInsets={false}
         >
-          {/* Gym Section */}
+          {/* 이름 (옵션) */}
+          <Section title="이름" icon="tag">
+            <Text className="text-text-tertiary text-[11px] font-semibold mb-2">
+              선택 — 연합 패스 별칭 (예: T-pass)
+            </Text>
+            <FormInput
+              placeholder="예: T-pass"
+              value={name}
+              onChangeText={(t) => setName(t.slice(0, 30))}
+              maxLength={30}
+            />
+          </Section>
+
+          {/* Gym Section — 다중 선택 */}
           <Section title="암장" required icon="map-pin">
-            <Pressable
-              onPress={() => setShowGymModal(true)}
-              className="flex-row items-center justify-between border border-border-subtle bg-background-secondary rounded-xl py-3 px-4 active:bg-background-tertiary"
-            >
-              <View className="flex-row items-center gap-2">
-                <Feather name="search" size={16} color={c.text.tertiary} />
-                <Text
-                  className={`text-base ${
-                    selectedGym ? 'text-text-primary font-semibold' : 'text-text-muted'
-                  }`}
-                >
-                  {selectedGym
-                    ? `${selectedGym.name}${selectedGym.branch ? ` ${selectedGym.branch}` : ''}`
-                    : '암장을 선택해주세요'}
-                </Text>
-              </View>
-              <Feather name="chevron-down" size={16} color={c.text.tertiary} />
-            </Pressable>
+            <Text className="text-text-tertiary text-[11px] font-semibold mb-2">
+              여러 지점 이용 가능한 패스면 모두 추가하세요
+            </Text>
+            <MultiGymPickerField value={gymIds} onChange={setGymIds} />
           </Section>
 
           {/* Start Date Section (Read-Only Card) */}
@@ -414,6 +422,9 @@ export default function EditMembershipScreen() {
               {notes.length} / 200
             </Text>
           </Section>
+
+          {/* Usage History — sessions linked to this membership */}
+          <UsageHistorySection membershipId={id} />
         </ScrollView>
 
         <BottomCTA
@@ -424,18 +435,118 @@ export default function EditMembershipScreen() {
           disabled={!canSubmit}
         />
       </KeyboardAvoidingView>
-
-    <GymPickerModal
-      visible={showGymModal}
-      gyms={allGyms ?? []}
-      selectedId={gymId}
-      onSelect={(pickedId) => {
-        setGymId(pickedId);
-        setShowGymModal(false);
-      }}
-      onClose={() => setShowGymModal(false)}
-    />
-  </SafeAreaView>
+    </SafeAreaView>
 );
+}
+
+// 사용 이력 — 이 회원권에 연결된 세션 목록
+function UsageHistorySection({ membershipId }: { membershipId: string | undefined }) {
+  const c = useThemeColors();
+  const router = useRouter();
+  const { data: usage, isLoading } = useMembershipUsage(membershipId);
+
+  return (
+    <Section title="사용 이력" icon="clock">
+      {isLoading ? (
+        <View style={{ paddingVertical: 16, alignItems: 'center' }}>
+          <ActivityIndicator color={c.brand.primary} />
+        </View>
+      ) : !usage || usage.length === 0 ? (
+        <View
+          style={{
+            paddingVertical: 18,
+            paddingHorizontal: 12,
+            borderRadius: 12,
+            borderWidth: 1,
+            borderStyle: 'dashed',
+            borderColor: c.border.subtle,
+            alignItems: 'center',
+            gap: 6,
+          }}
+        >
+          <Feather name="inbox" size={18} color={c.text.muted} />
+          <Text style={{ fontSize: 12, fontWeight: '700', color: c.text.tertiary }}>
+            아직 연결된 기록이 없어요
+          </Text>
+        </View>
+      ) : (
+        <View style={{ gap: 6 }}>
+          {usage.map((u) => (
+            <Pressable
+              key={u.session_id}
+              onPress={() =>
+                router.push({
+                  pathname: '/session/[id]',
+                  params: { id: u.session_id },
+                })
+              }
+            >
+              {({ pressed }) => (
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 10,
+                    paddingHorizontal: 12,
+                    paddingVertical: 10,
+                    borderRadius: 12,
+                    borderWidth: 1,
+                    borderColor: c.border.subtle,
+                    backgroundColor: pressed ? c.bg.subtle : c.bg.card,
+                  }}
+                >
+                  <View
+                    style={{
+                      paddingHorizontal: 8,
+                      paddingVertical: 4,
+                      borderRadius: 8,
+                      backgroundColor: c.bg.subtle,
+                    }}
+                  >
+                    <Text
+                      style={{
+                        fontSize: 11,
+                        fontWeight: '900',
+                        color: c.text.secondary,
+                        letterSpacing: -0.2,
+                      }}
+                    >
+                      {u.session_date.slice(5).replace('-', '.')}
+                    </Text>
+                  </View>
+                  <Text
+                    style={{
+                      flex: 1,
+                      fontSize: 13,
+                      fontWeight: '800',
+                      color: c.text.primary,
+                      letterSpacing: -0.2,
+                    }}
+                    numberOfLines={1}
+                  >
+                    {u.gym
+                      ? `${u.gym.name}${u.gym.branch ? ` ${u.gym.branch}` : ''}`
+                      : '암장 미선택'}
+                  </Text>
+                  {u.send_count > 0 && (
+                    <Text
+                      style={{
+                        fontSize: 11,
+                        fontWeight: '800',
+                        color: c.brand.primaryDeep,
+                      }}
+                    >
+                      완등 {u.send_count}
+                    </Text>
+                  )}
+                  <Feather name="chevron-right" size={14} color={c.text.muted} />
+                </View>
+              )}
+            </Pressable>
+          ))}
+        </View>
+      )}
+    </Section>
+  );
 }
 

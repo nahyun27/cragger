@@ -1,4 +1,4 @@
-import { useRouter } from 'expo-router';
+import { useRouter } from '@/lib/router';
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { useMemo, useState } from 'react';
 import {
@@ -25,6 +25,7 @@ import {
 import { useDiscoverCrews, type CrewSummary } from '@/hooks/use-crews';
 import { FeaturedBadgeChip } from '@/components/ui/featured-badge-chip';
 import { EmptyState } from '@/components/ui/empty-state';
+import { UserAvatar } from '@/components/ui/user-avatar';
 import { useThemeColors, type ThemeColors } from '@/lib/theme';
 
 type FilterKey = 'all' | PostType;
@@ -65,7 +66,8 @@ function formatRelativeTime(iso: string): string {
 const KO_WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
 
 // 모임 일시·장소·정원 + 상태 라벨. 미입력 필드는 placeholder 텍스트.
-function describeMeetup(post: PostRow): {
+// 상태 색은 모임 상세 카드(community/[id]/index.tsx MeetupInfoCard)와 같은 톤 매핑을 사용.
+function describeMeetup(post: PostRow, c: ThemeColors): {
   when: string;
   where: string | null;
   capacity: string;
@@ -75,8 +77,8 @@ function describeMeetup(post: PostRow): {
 } {
   let when = '날짜 미정';
   let statusLabel: string | null = null;
-  let statusBg = '#fef3c7';
-  let statusFg = '#b45309';
+  let statusBg = c.status.warningBg;
+  let statusFg = c.status.warning;
   if (post.meetup_at) {
     const d = new Date(post.meetup_at);
     const mm = String(d.getMonth() + 1).padStart(2, '0');
@@ -88,12 +90,12 @@ function describeMeetup(post: PostRow): {
     const hoursLeft = (d.getTime() - Date.now()) / 3_600_000;
     if (hoursLeft < 0) {
       statusLabel = '종료';
-      statusBg = '#f1f5f9';
-      statusFg = '#64748b';
+      statusBg = c.bg.subtle;
+      statusFg = c.text.tertiary;
     } else if (hoursLeft < 48) {
       statusLabel = '곧 시작';
-      statusBg = '#fee2e2';
-      statusFg = '#dc2626';
+      statusBg = c.status.dangerBg;
+      statusFg = c.status.danger;
     }
   }
   const where = post.gym
@@ -105,8 +107,8 @@ function describeMeetup(post: PostRow): {
     : `정원 무제한 (${post.participant_count}명)`;
   if (statusLabel == null && cap != null && post.participant_count >= cap) {
     statusLabel = '마감';
-    statusBg = '#f1f5f9';
-    statusFg = '#64748b';
+    statusBg = c.bg.subtle;
+    statusFg = c.text.tertiary;
   }
   return {
     when,
@@ -397,14 +399,11 @@ function PostCard({
   const router = useRouter();
   const toggle = useToggleLike();
   const authorName = post.author?.display_name ?? post.author?.username ?? '익명';
-  const firstChar = authorName.length > 0 ? authorName.charAt(0).toUpperCase() : '?';
-  const avatarBg = getAvatarBgColor(authorName);
-  const avatarText = getAvatarTextColor(authorName);
   const avatarUrl = post.author?.avatar_url;
   const badge = BADGE_COLORS[post.post_type] || BADGE_COLORS.general;
   const label = POST_TYPE_LABEL[post.post_type];
   const firstImage = post.image_urls[0];
-  const meetup = post.post_type === 'meetup' ? describeMeetup(post) : null;
+  const meetup = post.post_type === 'meetup' ? describeMeetup(post, c) : null;
   const authorId = post.author_id;
   const goToProfile = () => {
     if (authorId) router.push({
@@ -427,14 +426,15 @@ function PostCard({
           <View style={s.cardHeader}>
             <View style={s.userInfo}>
               <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <Pressable onPress={goToProfile} hitSlop={6}>
+                <Pressable onPress={goToProfile} hitSlop={6} style={{ marginRight: 10 }}>
                   {({ pressed: p2 }) => (
-                    <View style={[s.avatar, { backgroundColor: avatarBg, opacity: p2 ? 0.7 : 1 }]}>
-                      {avatarUrl ? (
-                        <Image source={{ uri: avatarUrl }} style={s.avatarImage} resizeMode="cover" />
-                      ) : (
-                        <Text style={[s.avatarTextVal, { color: avatarText }]}>{firstChar}</Text>
-                      )}
+                    <View style={{ opacity: p2 ? 0.7 : 1 }}>
+                      <UserAvatar
+                        userKey={authorId}
+                        username={authorName}
+                        avatarUrl={avatarUrl}
+                        size={36}
+                      />
                     </View>
                   )}
                 </Pressable>
@@ -484,7 +484,7 @@ function PostCard({
           {meetup && (
             <View style={s.meetupInfoBox}>
               <View style={s.meetupInfoRow}>
-                <Feather name="calendar" size={13} color={c.brand.primaryDeep} />
+                <Feather name="calendar" size={13} color={c.status.warning} />
                 <Text style={s.meetupInfoText} numberOfLines={1}>{meetup.when}</Text>
                 {meetup.statusLabel && (
                   <View style={[s.meetupStatusPill, meetup.statusColor]}>
@@ -494,12 +494,12 @@ function PostCard({
               </View>
               {meetup.where && (
                 <View style={s.meetupInfoRow}>
-                  <Feather name="map-pin" size={13} color={c.brand.primaryDeep} />
+                  <Feather name="map-pin" size={13} color={c.status.warning} />
                   <Text style={s.meetupInfoText} numberOfLines={1}>{meetup.where}</Text>
                 </View>
               )}
               <View style={s.meetupInfoRow}>
-                <Feather name="users" size={13} color={c.brand.primaryDeep} />
+                <Feather name="users" size={13} color={c.status.warning} />
                 <Text style={s.meetupInfoText} numberOfLines={1}>{meetup.capacity}</Text>
               </View>
             </View>
@@ -955,7 +955,9 @@ function makeStyles(c: ThemeColors) {
     },
 
     meetupInfoBox: {
-      backgroundColor: c.brand.primaryLight,
+      backgroundColor: c.status.warningBg,
+      borderWidth: 1,
+      borderColor: c.status.warning + '33',
       borderRadius: 12,
       paddingHorizontal: 12,
       paddingVertical: 10,
@@ -971,7 +973,7 @@ function makeStyles(c: ThemeColors) {
       flex: 1,
       fontSize: 13,
       fontWeight: '800',
-      color: c.brand.primaryDeep,
+      color: c.status.warning,
     },
     meetupStatusPill: {
       paddingHorizontal: 7,

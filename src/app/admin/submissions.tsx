@@ -1,5 +1,5 @@
 import { customAlert } from '@/components/ui/custom-alert';
-import { useRouter } from 'expo-router';
+import { useRouter } from '@/lib/router';
 import React, { useMemo } from 'react';
 import {
   ActivityIndicator,
@@ -34,7 +34,7 @@ const FIELD_LABEL: Record<string, string> = {
   phone: '전화', website_url: '웹사이트', instagram_handle: '인스타',
   has_boulder: '볼더링', has_lead: '리드', has_top_rope: '탑로프',
   has_speed: '스피드', has_auto_belay: '오토빌레이',
-  has_moonboard: '문보드', has_kilter: '킬터', has_tension: '텐션',
+  has_moonboard: '문보드', has_kilter: '킬터', has_tension: '텐션', has_spray_wall: '스프레이월',
   has_shower: '샤워실', has_locker: '락커', has_parking: '주차장',
   logo_url: '로고', add_colors: '색깔 추가', remove_colors: '색깔 제거',
   color_order: '색깔 순서',

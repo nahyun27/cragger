@@ -1,20 +1,24 @@
-import { useRouter } from 'expo-router';
-import React, { useMemo, useState } from 'react';
+import { useRouter } from '@/lib/router';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
+  type LayoutChangeEvent,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from 'react-native';
+import Animated, { Easing, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 
 import { SessionCalendar } from '@/components/log/session-calendar';
 import { SessionRow } from '@/components/session/session-row';
 import { EmptyState } from '@/components/ui/empty-state';
+import { SESSION_CATEGORIES, type SessionCategory } from '@/constants/session-category';
 import { useRecentSessions } from '@/hooks/use-recent-sessions';
 import { useThemeColors, type ThemeColors } from '@/lib/theme';
 
@@ -24,9 +28,57 @@ export default function LogScreen() {
   const router = useRouter();
   const c = useThemeColors();
   const s = useMemo(() => makeStyles(c), [c]);
-  const [viewMode, setViewMode] = useState<ViewMode>('list');
+  const [viewMode, setViewMode] = useState<ViewMode>('calendar');
+  const toggleLayouts = useRef<{ x: number; y: number; width: number; height: number }[]>([]);
+  const toggleX = useSharedValue(0);
+  const toggleW = useSharedValue(0);
+  const togglePillTop = useSharedValue(0);
+  const togglePillH = useSharedValue(0);
+  const SLIDE = { duration: 220, easing: Easing.out(Easing.ease) } as const;
+  const pillStyle = useAnimatedStyle(() => ({
+    position: 'absolute' as const,
+    top: togglePillTop.value,
+    height: togglePillH.value,
+    left: toggleX.value,
+    width: toggleW.value,
+    borderRadius: 10,
+    backgroundColor: c.brand.primary,
+    shadowColor: c.brand.primary,
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 2,
+  }));
+  useEffect(() => {
+    const idx = viewMode === 'calendar' ? 0 : 1;
+    const layout = toggleLayouts.current[idx];
+    if (layout) {
+      toggleX.value = withTiming(layout.x, SLIDE);
+      toggleW.value = withTiming(layout.width, SLIDE);
+    }
+  }, [viewMode]);
+  const [categoryFilter, setCategoryFilter] = useState<SessionCategory | 'all'>('all');
+  const [gymQuery, setGymQuery] = useState('');
   const { data: sessions, isLoading, error, isRefetching, refetch } = useRecentSessions(20);
-  const isEmpty = !isLoading && (sessions?.length ?? 0) === 0;
+
+  const filteredSessions = useMemo(() => {
+    if (!sessions) return sessions;
+    const q = gymQuery.trim().toLowerCase();
+    return sessions.filter((s) => {
+      if (categoryFilter !== 'all') {
+        // 카테고리 미입력 세션은 attempts 기반 추론 (discipline) — boulder/lead/board 비교
+        const inferred = s.category ?? (s.discipline === 'lead' ? 'lead' : s.discipline === 'boulder' ? 'boulder' : null);
+        if (inferred !== categoryFilter) return false;
+      }
+      if (q) {
+        const name = ((s.gym?.name ?? '') + ' ' + (s.gym?.branch ?? '')).toLowerCase();
+        if (!name.includes(q)) return false;
+      }
+      return true;
+    });
+  }, [sessions, categoryFilter, gymQuery]);
+
+  const isEmpty = !isLoading && (filteredSessions?.length ?? 0) === 0;
 
   const stats = useMemo(() => {
     if (!sessions) return { totalSessions: 0, totalSends: 0, latestGym: '-' };
@@ -71,17 +123,30 @@ export default function LogScreen() {
         {/* View toggle */}
         <View style={s.toggleWrap}>
         <View style={s.toggle}>
-          <ToggleBtn
-            label="리스트"
-            icon="list"
-            active={viewMode === 'list'}
-            onPress={() => setViewMode('list')}
-          />
+          <Animated.View style={pillStyle} />
           <ToggleBtn
             label="캘린더"
             icon="calendar"
             active={viewMode === 'calendar'}
             onPress={() => setViewMode('calendar')}
+            onLayout={(e) => {
+              const { x, y, width, height } = e.nativeEvent.layout;
+              toggleLayouts.current[0] = { x, y, width, height };
+              if (togglePillH.value === 0) { togglePillTop.value = y; togglePillH.value = height; }
+              if (viewMode === 'calendar') { toggleX.value = x; toggleW.value = width; }
+            }}
+          />
+          <ToggleBtn
+            label="리스트"
+            icon="list"
+            active={viewMode === 'list'}
+            onPress={() => setViewMode('list')}
+            onLayout={(e) => {
+              const { x, y, width, height } = e.nativeEvent.layout;
+              toggleLayouts.current[1] = { x, y, width, height };
+              if (togglePillH.value === 0) { togglePillTop.value = y; togglePillH.value = height; }
+              if (viewMode === 'list') { toggleX.value = x; toggleW.value = width; }
+            }}
           />
         </View>
       </View>
@@ -89,7 +154,13 @@ export default function LogScreen() {
 
       <View style={{ flex: 1, backgroundColor: c.bg.primary }}>
         {viewMode === 'calendar' ? (
-          <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingTop: Math.max(insets.top, 20) + 150 }}>
+          <ScrollView
+            style={{ flex: 1 }}
+            contentContainerStyle={{
+              paddingTop: Math.max(insets.top, 20) + 134,
+              paddingBottom: 120,  // 리스트 뷰와 동일 — 탭바 + 살짝
+            }}
+          >
             <SessionCalendar />
           </ScrollView>
         ) : (
@@ -108,9 +179,9 @@ export default function LogScreen() {
 
             {!isLoading && !error && (
               <FlatList
-                data={sessions}
+                data={filteredSessions}
                 keyExtractor={(item) => item.id}
-                contentContainerStyle={[s.listContent, { paddingTop: Math.max(insets.top, 20) + 150 }]}
+                contentContainerStyle={[s.listContent, { paddingTop: Math.max(insets.top, 20) + 134 }]}
                 contentInsetAdjustmentBehavior="never"
                 automaticallyAdjustContentInsets={false}
                 refreshing={isRefetching}
@@ -147,17 +218,73 @@ export default function LogScreen() {
 
                     <Text style={s.sectionTitle}>지난 세션 목록</Text>
 
+                    {/* 필터 — 카테고리 칩 + 암장 검색 */}
+                    <View style={s.filterWrap}>
+                      <ScrollView
+                        horizontal
+                        showsHorizontalScrollIndicator={false}
+                        contentContainerStyle={{ gap: 6, paddingRight: 16 }}
+                      >
+                        <FilterChip
+                          label="전체"
+                          active={categoryFilter === 'all'}
+                          onPress={() => setCategoryFilter('all')}
+                          fg={c.text.primary}
+                          bg={c.bg.subtle}
+                        />
+                        {SESSION_CATEGORIES.map((cat) => (
+                          <FilterChip
+                            key={cat.key}
+                            label={cat.label}
+                            active={categoryFilter === cat.key}
+                            onPress={() => setCategoryFilter(cat.key)}
+                            fg={cat.fg}
+                            bg={cat.bg}
+                          />
+                        ))}
+                      </ScrollView>
+                      <View style={s.searchBar}>
+                        <Feather name="search" size={14} color={c.text.tertiary} />
+                        <TextInput
+                          value={gymQuery}
+                          onChangeText={setGymQuery}
+                          placeholder="암장 이름으로 검색"
+                          placeholderTextColor={c.text.muted}
+                          style={s.searchInput}
+                          autoCapitalize="none"
+                          autoCorrect={false}
+                        />
+                        {gymQuery.length > 0 && (
+                          <Pressable onPress={() => setGymQuery('')} hitSlop={6}>
+                            <Feather name="x" size={14} color={c.text.tertiary} />
+                          </Pressable>
+                        )}
+                      </View>
+                    </View>
+
                     {isEmpty && (
                       <EmptyState
                         icon="activity"
                         tone="muted"
-                        title="기록이 존재하지 않습니다"
-                        description="첫 번째 등반 흔적을 남기고 기록을 쌓아가보세요!"
-                        action={{
-                          label: '등반 기록 추가하기',
-                          icon: 'edit-3',
-                          onPress: () => router.push('/session/new'),
-                        }}
+                        title={
+                          (sessions?.length ?? 0) === 0
+                            ? '기록이 존재하지 않습니다'
+                            : '조건에 맞는 기록이 없어요'
+                        }
+                        description={
+                          (sessions?.length ?? 0) === 0
+                            ? '첫 번째 등반 흔적을 남기고 기록을 쌓아가보세요!'
+                            : '필터를 조정해보세요'
+                        }
+                        action={
+                          (sessions?.length ?? 0) === 0
+                            ? {
+                                label: '등반 기록 추가하기',
+                                icon: 'edit-3',
+                                onPress: () => router.push('/session/new'),
+                              }
+                            : undefined
+                        }
                       />
                     )}
                   </>
@@ -173,25 +300,69 @@ export default function LogScreen() {
   );
 }
 
+function FilterChip({
+  label,
+  active,
+  onPress,
+  fg,
+  bg,
+}: {
+  label: string;
+  active: boolean;
+  onPress: () => void;
+  fg: string;
+  bg: string;
+}) {
+  const c = useThemeColors();
+  return (
+    <Pressable onPress={onPress}>
+      {({ pressed }) => (
+        <View
+          style={{
+            paddingHorizontal: 12,
+            paddingVertical: 6,
+            borderRadius: 999,
+            backgroundColor: active ? bg : c.bg.card,
+            borderWidth: 1.5,
+            borderColor: active ? fg : c.border.subtle,
+            opacity: pressed ? 0.7 : 1,
+          }}
+        >
+          <Text
+            style={{
+              fontSize: 12,
+              fontWeight: '800',
+              color: active ? fg : c.text.secondary,
+              letterSpacing: -0.2,
+            }}
+          >
+            {label}
+          </Text>
+        </View>
+      )}
+    </Pressable>
+  );
+}
+
 function ToggleBtn({
   label,
   icon,
   active,
   onPress,
+  onLayout,
 }: {
   label: string;
   icon: React.ComponentProps<typeof Feather>['name'];
   active: boolean;
   onPress: () => void;
+  onLayout?: (e: LayoutChangeEvent) => void;
 }) {
   const c = useThemeColors();
   const s = useMemo(() => makeStyles(c), [c]);
-  // Pressable 함수형 style 의 flex 가 silently drop 되는 케이스를 피하려고
-  // children-as-function + 정적 style 패턴.
   return (
-    <Pressable onPress={onPress} style={s.togglePressable}>
+    <Pressable onPress={onPress} onLayout={onLayout} style={s.togglePressable}>
       {({ pressed }) => (
-        <View style={[s.toggleBtn, active && s.toggleBtnActive, pressed && { opacity: 0.85 }]}>
+        <View style={[s.toggleBtn, pressed && { opacity: 0.85 }]}>
           <Feather name={icon} size={14} color={active ? c.brand.onPrimary : c.text.tertiary} />
           <Text style={[s.toggleBtnLabel, active && s.toggleBtnLabelActive]}>
             {label}
@@ -214,7 +385,7 @@ function makeStyles(c: ThemeColors) {
       justifyContent: 'space-between',
       paddingHorizontal: 24,
       paddingTop: 16,
-      paddingBottom: 14,
+      paddingBottom: 8,
     },
     headerTitle: {
       fontSize: 24,
@@ -251,7 +422,7 @@ function makeStyles(c: ThemeColors) {
 
     toggleWrap: {
       paddingHorizontal: 16,
-      paddingTop: 14,
+      paddingTop: 4,
       paddingBottom: 6,
     },
     toggle: {
@@ -322,6 +493,30 @@ function makeStyles(c: ThemeColors) {
       marginBottom: 12,
       marginTop: 8,
       paddingHorizontal: 4,
+    },
+
+    filterWrap: {
+      gap: 8,
+      marginBottom: 14,
+      paddingHorizontal: 4,
+    },
+    searchBar: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      paddingHorizontal: 12,
+      paddingVertical: 9,
+      borderRadius: 12,
+      backgroundColor: c.bg.card,
+      borderWidth: 1,
+      borderColor: c.border.subtle,
+    },
+    searchInput: {
+      flex: 1,
+      fontSize: 13,
+      fontWeight: '600',
+      color: c.text.primary,
+      padding: 0,
     },
 
     statsCard: {

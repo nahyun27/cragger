@@ -2,6 +2,7 @@ import React from 'react';
 import { Platform, Pressable, Text, TextInput, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import { useThemeColors } from '@/lib/theme';
 
 export type PollDraft = {
   enabled: boolean;
@@ -29,6 +30,7 @@ type Props = {
 };
 
 export function PollComposer({ value, onChange }: Props) {
+  const c = useThemeColors();
   const [showPicker, setShowPicker] = React.useState(false);
 
   function setEnabled(enabled: boolean) {
@@ -75,7 +77,7 @@ export function PollComposer({ value, onChange }: Props) {
               height: 22,
               borderRadius: 999,
               padding: 2,
-              backgroundColor: value.enabled ? '#06b6d4' : '#e2e8f0',
+              backgroundColor: value.enabled ? c.brand.primary : c.border.subtle,
               justifyContent: 'center',
               alignItems: value.enabled ? 'flex-end' : 'flex-start',
             }}
@@ -90,10 +92,10 @@ export function PollComposer({ value, onChange }: Props) {
             />
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={{ fontSize: 14, fontWeight: '800', color: '#0f172a' }}>
+            <Text style={{ fontSize: 14, fontWeight: '800', color: c.text.primary }}>
               투표 추가
             </Text>
-            <Text style={{ fontSize: 11, color: '#94a3b8', marginTop: 1 }}>
+            <Text style={{ fontSize: 11, color: c.text.muted, marginTop: 1 }}>
               여론조사형 — 글에 투표 위젯이 붙어요
             </Text>
           </View>
@@ -106,31 +108,31 @@ export function PollComposer({ value, onChange }: Props) {
             gap: 10,
             padding: 14,
             borderRadius: 14,
-            backgroundColor: '#f8fafc',
+            backgroundColor: c.bg.subtle,
             borderWidth: 1,
-            borderColor: '#e2e8f0',
+            borderColor: c.border.subtle,
           }}
         >
           {/* 질문 */}
           <View
             style={{
-              backgroundColor: '#ffffff',
+              backgroundColor: c.bg.card,
               borderRadius: 10,
               borderWidth: 1,
-              borderColor: '#e2e8f0',
+              borderColor: c.border.subtle,
               paddingHorizontal: 12,
             }}
           >
             <TextInput
               placeholder="질문을 입력하세요 (예: 다음 모임 장소?)"
-              placeholderTextColor="#9CA3AF"
+              placeholderTextColor={c.text.muted}
               value={value.question}
               onChangeText={setQuestion}
               maxLength={QUESTION_MAX}
               style={{
                 paddingVertical: 10,
                 fontSize: 14,
-                color: '#0f172a',
+                color: c.text.primary,
                 fontWeight: '700',
               }}
             />
@@ -145,10 +147,10 @@ export function PollComposer({ value, onChange }: Props) {
                   flexDirection: 'row',
                   alignItems: 'center',
                   gap: 8,
-                  backgroundColor: '#ffffff',
+                  backgroundColor: c.bg.card,
                   borderRadius: 10,
                   borderWidth: 1,
-                  borderColor: '#e2e8f0',
+                  borderColor: c.border.subtle,
                   paddingHorizontal: 12,
                 }}
               >
@@ -157,18 +159,18 @@ export function PollComposer({ value, onChange }: Props) {
                     width: 22,
                     height: 22,
                     borderRadius: 11,
-                    backgroundColor: '#ecfeff',
+                    backgroundColor: c.brand.primaryLight,
                     alignItems: 'center',
                     justifyContent: 'center',
                   }}
                 >
-                  <Text style={{ fontSize: 11, fontWeight: '800', color: '#0e7490' }}>
+                  <Text style={{ fontSize: 11, fontWeight: '800', color: c.brand.primaryDeep }}>
                     {i + 1}
                   </Text>
                 </View>
                 <TextInput
                   placeholder={`선택지 ${i + 1}`}
-                  placeholderTextColor="#9CA3AF"
+                  placeholderTextColor={c.text.muted}
                   value={opt}
                   onChangeText={(t) => setOption(i, t)}
                   maxLength={OPTION_MAX}
@@ -176,7 +178,7 @@ export function PollComposer({ value, onChange }: Props) {
                     flex: 1,
                     paddingVertical: 9,
                     fontSize: 13,
-                    color: '#0f172a',
+                    color: c.text.primary,
                   }}
                 />
                 {value.options.length > 2 && (
@@ -185,7 +187,7 @@ export function PollComposer({ value, onChange }: Props) {
                       <Feather
                         name="x"
                         size={14}
-                        color="#94a3b8"
+                        color={c.text.muted}
                         style={{ opacity: pressed ? 0.5 : 1 }}
                       />
                     )}
@@ -205,14 +207,14 @@ export function PollComposer({ value, onChange }: Props) {
                       paddingVertical: 10,
                       borderRadius: 10,
                       borderWidth: 1,
-                      borderColor: '#cffafe',
+                      borderColor: c.brand.primaryLight,
                       borderStyle: 'dashed',
-                      backgroundColor: '#ecfeff',
+                      backgroundColor: c.brand.primaryLight,
                       opacity: pressed ? 0.7 : 1,
                     }}
                   >
-                    <Feather name="plus" size={12} color="#06b6d4" />
-                    <Text style={{ fontSize: 12, fontWeight: '800', color: '#06b6d4' }}>
+                    <Feather name="plus" size={12} color={c.brand.primary} />
+                    <Text style={{ fontSize: 12, fontWeight: '800', color: c.brand.primary }}>
                       선택지 추가
                     </Text>
                   </View>
@@ -240,15 +242,15 @@ export function PollComposer({ value, onChange }: Props) {
                   height: 18,
                   borderRadius: 4,
                   borderWidth: 1.5,
-                  borderColor: value.isMulti ? '#06b6d4' : '#cbd5e1',
-                  backgroundColor: value.isMulti ? '#06b6d4' : '#ffffff',
+                  borderColor: value.isMulti ? c.brand.primary : c.border.subtle,
+                  backgroundColor: value.isMulti ? c.brand.primary : c.bg.card,
                   alignItems: 'center',
                   justifyContent: 'center',
                 }}
               >
                 {value.isMulti && <Feather name="check" size={11} color="#ffffff" />}
               </View>
-              <Text style={{ fontSize: 13, fontWeight: '700', color: '#475569' }}>
+              <Text style={{ fontSize: 13, fontWeight: '700', color: c.text.secondary }}>
                 복수 선택 허용
               </Text>
             </View>
@@ -267,17 +269,17 @@ export function PollComposer({ value, onChange }: Props) {
                 paddingVertical: 9,
                 borderRadius: 10,
                 borderWidth: 1,
-                borderColor: '#e2e8f0',
-                backgroundColor: '#ffffff',
+                borderColor: c.border.subtle,
+                backgroundColor: c.bg.card,
               }}
             >
-              <Feather name="clock" size={13} color="#64748b" />
+              <Feather name="clock" size={13} color={c.text.secondary} />
               <Text
                 style={{
                   flex: 1,
                   fontSize: 12,
                   fontWeight: '700',
-                  color: value.closesAt ? '#0f172a' : '#94a3b8',
+                  color: value.closesAt ? c.text.primary : c.text.muted,
                 }}
               >
                 {value.closesAt
@@ -290,7 +292,7 @@ export function PollComposer({ value, onChange }: Props) {
                 onPress={() => onChange({ ...value, closesAt: null })}
                 hitSlop={6}
               >
-                <Feather name="x" size={14} color="#94a3b8" />
+                <Feather name="x" size={14} color={c.text.muted} />
               </Pressable>
             )}
           </View>
@@ -312,7 +314,7 @@ export function PollComposer({ value, onChange }: Props) {
                   onPress={() => setShowPicker(false)}
                   style={{ alignSelf: 'flex-end', padding: 6 }}
                 >
-                  <Text style={{ fontSize: 13, fontWeight: '800', color: '#06b6d4' }}>
+                  <Text style={{ fontSize: 13, fontWeight: '800', color: c.brand.primary }}>
                     완료
                   </Text>
                 </Pressable>

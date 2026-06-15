@@ -1,9 +1,9 @@
 import { customAlert } from '@/components/ui/custom-alert';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from '@/lib/router';
 import * as ImagePicker from 'expo-image-picker';
 
 import { ImageCropModal } from '@/components/crop/image-crop-modal';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Image,
@@ -29,7 +29,7 @@ import { useSubmitGymInfo, type GymChanges } from '@/hooks/use-gym-submissions';
 import { extractEdgeBgColor } from '@/lib/extract-edge-color';
 import { matchGymStyle } from '@/lib/gym-logos';
 import { GymThumbnail } from '@/components/gym/gym-thumbnail';
-import { uploadGymLogoSuggestion } from '@/lib/upload-image';
+import { uploadGymLogoSuggestion, uploadSprayWallPhoto } from '@/lib/upload-image';
 import { CLIMB_COLOR_HEX, CLIMB_COLOR_LABEL, resolveColorHex } from '@/constants/climb-colors';
 import { useThemeColors, type ThemeColors } from '@/lib/theme';
 
@@ -101,12 +101,17 @@ export default function SuggestGymScreen() {
   const c = useThemeColors();
   const s = useMemo(() => makeStyles(c), [c]);
   const router = useRouter();
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, section } = useLocalSearchParams<{ id: string; section?: string }>();
   const { session: authSession } = useAuth();
   const { data: gym, isLoading } = useGymDetail(id);
   // DB 에 logo_url 없으면 정적 매핑(브랜드 로고) 으로 fallback.
   const staticLogo = useMemo(
     () => (gym ? matchGymStyle(gym.name, gym.branch).logo : null),
+    [gym],
+  );
+  // 정적 매핑이 가진 브랜드 배경색 — DB.logo_bg_hex 가 비어 있으면 '원래 색' 후보.
+  const staticBg = useMemo(
+    () => (gym ? matchGymStyle(gym.name, gym.branch).bg ?? null : null),
     [gym],
   );
   // 정적 require → URI (배경색 자동 추출 등 외부 API 가 string URI 필요).
@@ -126,7 +131,12 @@ export default function SuggestGymScreen() {
   const [logoAsset, setLogoAsset] = useState<ImagePicker.ImagePickerAsset | null>(null);
   const [logoBgHex, setLogoBgHex] = useState<string>('');  // '' = 기본(없음), '#ffffff', '#000000', 자유 hex
   const [logoBgMode, setLogoBgMode] = useState<'auto' | 'manual'>('auto');  // 'auto' = 추천 (테두리 픽셀로 추정)
+  // DB에 이미 저장된 원래 배경색 — '원래 색' 버튼으로 복원하기 위해 보존
+  const [originalBgHex, setOriginalBgHex] = useState<string | null>(null);
   const [note, setNote] = useState('');
+  // 스프레이월 — null = 변경 안 함, true/false = 제보
+  const [sprayWallEnabled, setSprayWallEnabled] = useState<boolean | null>(null);
+  const [sprayWallAssets, setSprayWallAssets] = useState<ImagePicker.ImagePickerAsset[]>([]);
   // 색깔 구성 — 현재 등록된 색깔 집합 + 토글로 add/remove 추적
   const [colorState, setColorState] = useState<Record<string, 'registered' | 'add' | 'remove' | 'absent'>>({});
   // 순서 — 현재 보이는 색깔(registered + add - remove) 의 정렬 순서. 드래그로 변경.
@@ -134,6 +144,8 @@ export default function SuggestGymScreen() {
   // 원본 순서 — 변경 감지용 (직렬화해서 비교)
   const initialOrderRef = React.useRef<string>('');
   const [uploading, setUploading] = useState(false);
+  const scrollRef = useRef<ScrollView>(null);
+  const sprayWallY = useRef<number>(0);
 
   // dirty 셋 — 사용자가 명시적으로 토글/입력한 필드.
   const [dirty, setDirty] = useState<Set<string>>(new Set());
@@ -157,7 +169,7 @@ export default function SuggestGymScreen() {
       parking_info: gym.parking_info ?? '',
       phone: gym.phone ?? '',
       website_url: gym.website_url ?? '',
-      instagram_handle: gym.instagram_handle ?? '',
+      instagram_handle: gym.instagram_handle ? `@${gym.instagram_handle}` : '',
     });
     setNumbers({
       size_pyeong: gym.size_pyeong != null ? String(gym.size_pyeong) : '',
@@ -178,7 +190,10 @@ export default function SuggestGymScreen() {
     });
     setOpenedAt(gym.opened_at ?? '');
     {
-      const existingBg = (gym as { logo_bg_hex?: string | null }).logo_bg_hex ?? null;
+      // 원래 색 = DB 우선, 없으면 정적 브랜드 배경
+      const dbBg = (gym as { logo_bg_hex?: string | null }).logo_bg_hex ?? null;
+      const existingBg = dbBg ?? staticBg;
+      setOriginalBgHex(existingBg);
       if (existingBg) {
         setLogoBgHex(existingBg);
         setLogoBgMode('manual');
@@ -201,14 +216,23 @@ export default function SuggestGymScreen() {
     setPrefilled(true);
   }, [gym, prefilled]);
 
-  // 기존 로고(DB 또는 정적 매핑) + bg 미저장 + auto 모드 → 마운트 시점에 한 번 자동 추출.
+  // section=spray_wall 파라미터로 진입 시 해당 섹션으로 스크롤
+  useEffect(() => {
+    if (!prefilled || section !== 'spray_wall') return;
+    const timer = setTimeout(() => {
+      scrollRef.current?.scrollTo({ y: sprayWallY.current, animated: true });
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [prefilled, section]);
+
+  // 기존 로고 + bg 미저장 → 마운트 시점에 한 번 자동 추출.
+  // DB.logo_bg_hex 또는 정적 브랜드 bg 가 있으면 건드리지 않음.
   useEffect(() => {
     if (!prefilled) return;
+    if (gym?.logo_bg_hex || staticBg) return;            // 원본/브랜드 색 보존
+    if (dirty.has('logo_bg_hex')) return;
     const sourceUri = gym?.logo_url ?? staticLogoUri ?? null;
     if (!sourceUri) return;
-    if (logoBgMode !== 'auto') return;
-    if (logoBgHex) return;
-    if (dirty.has('logo_bg_hex')) return;
     let cancelled = false;
     (async () => {
       const guessed = await extractEdgeBgColor(sourceUri);
@@ -221,7 +245,7 @@ export default function SuggestGymScreen() {
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [prefilled, gym?.logo_url, staticLogoUri]);
+  }, [prefilled, gym?.logo_url, gym?.logo_bg_hex, staticLogoUri, staticBg]);
 
   // 색깔 토글:
   // registered → remove (제보로 빼기) | absent → add (제보로 넣기)
@@ -297,14 +321,16 @@ export default function SuggestGymScreen() {
       if (v === 'add' || v === 'remove') n += 1;
     }
     if (colorOrder.join(',') !== initialOrderRef.current && initialOrderRef.current) n += 1;
+    if (sprayWallEnabled !== null) n += 1;
+    if (sprayWallAssets.length > 0) n += sprayWallAssets.length;
     return n;
-  }, [dirty, colorState, colorOrder]);
+  }, [dirty, colorState, colorOrder, sprayWallEnabled, sprayWallAssets]);
 
   async function handleSubmit() {
     if (!id || !authSession?.user.id) return;
     const hasColorChange = Object.values(colorState).some((v) => v === 'add' || v === 'remove');
     const hasOrderChange = colorOrder.join(',') !== initialOrderRef.current;
-    if (dirty.size === 0 && !hasColorChange && !hasOrderChange && !note.trim()) {
+    if (dirty.size === 0 && !hasColorChange && !hasOrderChange && sprayWallEnabled === null && !note.trim()) {
       customAlert('알림', '수정할 항목을 1개 이상 선택하거나 메모를 작성해주세요');
       return;
     }
@@ -312,7 +338,8 @@ export default function SuggestGymScreen() {
       const changes: GymChanges = {};
       for (const f of STRING_FIELDS) {
         if (dirty.has(f.key)) {
-          const v = strings[f.key]?.trim();
+          let v = strings[f.key]?.trim();
+          if (f.key === 'instagram_handle' && v) v = v.replace(/@/g, '');
           if (v) (changes as Record<string, unknown>)[f.key] = v;
         }
       }
@@ -348,6 +375,24 @@ export default function SuggestGymScreen() {
         try {
           const url = await uploadGymLogoSuggestion(logoAsset, authSession.user.id);
           changes.logo_url = url;
+        } finally {
+          setUploading(false);
+        }
+      }
+      // 스프레이월 여부
+      if (sprayWallEnabled !== null) {
+        changes.has_spray_wall = sprayWallEnabled;
+      }
+      // 스프레이월 사진 업로드
+      if (sprayWallEnabled === true && sprayWallAssets.length > 0) {
+        setUploading(true);
+        try {
+          const urls: string[] = [];
+          for (const asset of sprayWallAssets) {
+            const url = await uploadSprayWallPhoto(asset, authSession.user.id);
+            urls.push(url);
+          }
+          changes.spray_wall_photos = urls;
         } finally {
           setUploading(false);
         }
@@ -393,7 +438,6 @@ export default function SuggestGymScreen() {
       <ScreenHeader
         title="정보 제보"
         onBack={() => router.back()}
-        count={changeCount > 0 ? changeCount : undefined}
         subtitle={gym ? `${gym.name}${gym.branch ? ` ${gym.branch}` : ''}` : undefined}
       />
 
@@ -402,6 +446,7 @@ export default function SuggestGymScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <ScrollView
+          ref={scrollRef}
           contentContainerStyle={[s.list, { paddingBottom: 16 }]}
           contentInsetAdjustmentBehavior="never"
           automaticallyAdjustContentInsets={false}
@@ -512,6 +557,39 @@ export default function SuggestGymScreen() {
                   </Text>
                 </View>
               </Pressable>
+              {/* 원래 색 — DB에 저장돼 있던 hex 그대로 복원 */}
+              {originalBgHex && (() => {
+                const isActive =
+                  logoBgMode === 'manual' &&
+                  logoBgHex.trim().toLowerCase() === originalBgHex.toLowerCase();
+                return (
+                  <Pressable
+                    key="original"
+                    onPress={() => {
+                      setLogoBgMode('manual');
+                      setLogoBgHex(originalBgHex);
+                      markDirty('logo_bg_hex');
+                    }}
+                    style={({ pressed }) => [{ flex: 1, opacity: pressed ? 0.85 : 1 }]}
+                  >
+                    <View style={[s.bgColorSwatch, isActive && s.bgColorSwatchActive]}>
+                      <View
+                        style={[
+                          s.bgColorChip,
+                          {
+                            backgroundColor: originalBgHex,
+                            borderWidth: originalBgHex.toLowerCase() === '#ffffff' ? 1 : 0,
+                            borderColor: c.border.subtle,
+                          },
+                        ]}
+                      />
+                      <Text style={[s.bgColorLabel, isActive && { color: c.brand.primaryDeep, fontWeight: '900' }]}>
+                        원래 색
+                      </Text>
+                    </View>
+                  </Pressable>
+                );
+              })()}
               {([
                 { label: '없음', value: '' },
                 { label: '흰색', value: '#ffffff' },
@@ -621,8 +699,8 @@ export default function SuggestGymScreen() {
               placeholder="@handle"
               value={strings.instagram_handle ?? ''}
               onChange={(v) => {
-                // @ 없이 입력해도 자동 보정 — 단순 영숫자+밑줄+점
-                const cleaned = v.replace(/[^A-Za-z0-9_.]/g, '').slice(0, 30);
+                // @ 포함 자유 입력 — 저장 시 @ 제거
+                const cleaned = v.replace(/[^@A-Za-z0-9_.]/g, '').slice(0, 31);
                 setStrings((p) => ({ ...p, instagram_handle: cleaned }));
                 markDirty('instagram_handle');
               }}
@@ -719,6 +797,118 @@ export default function SuggestGymScreen() {
             />
           </SectionWrap>
 
+          {/* 스프레이월 */}
+          <View onLayout={(e) => { sprayWallY.current = e.nativeEvent.layout.y; }}>
+          <SectionWrap title="스프레이월" icon="grid">
+            <Text style={s.boolHint}>
+              현재: {gym?.has_spray_wall ? '있음' : '없음'} — 변경할 경우 아래에서 선택해주세요.
+            </Text>
+            <View style={[s.boolGrid, { marginTop: 6 }]}>
+              {([
+                { label: '있어요', value: true },
+                { label: '없어요', value: false },
+              ] as const).map((opt) => {
+                const active = sprayWallEnabled === opt.value;
+                return (
+                  <Pressable
+                    key={String(opt.value)}
+                    onPress={() => setSprayWallEnabled(active ? null : opt.value)}
+                  >
+                    {({ pressed }) => (
+                      <View style={[
+                        s.boolChip,
+                        active ? (opt.value ? s.boolChipOn : s.boolChipOff) : s.boolChipNeutral,
+                        pressed && { opacity: 0.8 },
+                      ]}>
+                        <Feather
+                          name={active ? (opt.value ? 'check' : 'x') : 'circle'}
+                          size={12}
+                          color={active ? (opt.value ? c.brand.onPrimary : c.status.danger) : c.text.tertiary}
+                        />
+                        <Text style={[
+                          s.boolChipText,
+                          active && opt.value && { color: c.brand.onPrimary },
+                          active && !opt.value && { color: c.status.danger },
+                        ]}>{opt.label}</Text>
+                      </View>
+                    )}
+                  </Pressable>
+                );
+              })}
+              {sprayWallEnabled !== null && (
+                <Pressable onPress={() => { setSprayWallEnabled(null); setSprayWallAssets([]); }}>
+                  {({ pressed }) => (
+                    <View style={[s.boolChip, s.boolChipNeutral, pressed && { opacity: 0.8 }]}>
+                      <Feather name="rotate-ccw" size={12} color={c.text.tertiary} />
+                      <Text style={s.boolChipText}>되돌리기</Text>
+                    </View>
+                  )}
+                </Pressable>
+              )}
+            </View>
+
+            {sprayWallEnabled === true && (
+              <View style={{ marginTop: 14, gap: 10 }}>
+                <Text style={s.boolHint}>사진 첨부 (선택) — 없어도 제보 가능해요</Text>
+                {sprayWallAssets.length > 0 && (
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                    {sprayWallAssets.map((asset, i) => (
+                      <View key={i} style={{ position: 'relative' }}>
+                        <Image
+                          source={{ uri: asset.uri }}
+                          style={{ width: 80, height: 80, borderRadius: 10 }}
+                          resizeMode="cover"
+                        />
+                        <Pressable
+                          onPress={() => setSprayWallAssets((prev) => prev.filter((_, j) => j !== i))}
+                          style={{
+                            position: 'absolute', top: -6, right: -6,
+                            width: 20, height: 20, borderRadius: 10,
+                            backgroundColor: c.status.danger,
+                            alignItems: 'center', justifyContent: 'center',
+                          }}
+                        >
+                          <Feather name="x" size={10} color="#ffffff" />
+                        </Pressable>
+                      </View>
+                    ))}
+                  </View>
+                )}
+                <Pressable
+                  onPress={async () => {
+                    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+                    if (!perm.granted) { customAlert('권한 필요', '사진 라이브러리 접근 권한이 필요해요'); return; }
+                    const r = await ImagePicker.launchImageLibraryAsync({
+                      mediaTypes: 'images',
+                      quality: 0.85,
+                      allowsMultipleSelection: true,
+                      selectionLimit: 5,
+                    });
+                    if (!r.canceled) {
+                      setSprayWallAssets((prev) => [...prev, ...r.assets].slice(0, 5));
+                    }
+                  }}
+                >
+                  {({ pressed }) => (
+                    <View style={[{
+                      flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+                      paddingVertical: 10, borderRadius: 10,
+                      backgroundColor: c.bg.subtle,
+                      borderWidth: 1, borderStyle: 'dashed', borderColor: c.border.strong,
+                      opacity: pressed ? 0.7 : 1,
+                    }]}>
+                      <Feather name="camera" size={14} color={c.text.secondary} />
+                      <Text style={{ fontSize: 13, fontWeight: '700', color: c.text.secondary }}>
+                        사진 선택 {sprayWallAssets.length > 0 ? `(${sprayWallAssets.length}/5)` : '(최대 5장)'}
+                      </Text>
+                    </View>
+                  )}
+                </Pressable>
+              </View>
+            )}
+          </SectionWrap>
+          </View>
+
           <SectionWrap title="색깔 구성" icon="droplet">
             <Text style={s.boolHint}>
               현재 등록된 색깔에 ✓. 탭으로 추가(+) / 제거(✕) 제안.
@@ -795,7 +985,7 @@ export default function SuggestGymScreen() {
             <FormInput
               value={note}
               onChangeText={(t) => setNote(t.slice(0, 300))}
-              placeholder="출처(인스타·홈피·직접 방문 등) 같은 보조 정보"
+              placeholder="출처(인스타·홈피·직접 방문 등), 폐점 정보 등 보조 정보"
               multiline
               maxLength={300}
             />
@@ -875,9 +1065,14 @@ function OpenYearMonthField({
   value: string;
   onChange: (iso: string) => void;
 }) {
-  const m = /^(\d{4})-(\d{2})/.exec(value || '');
-  const yearStr = m?.[1] ?? '';
-  const monthStr = m?.[2] ?? '';
+  // 로컬 state — 부모 value에서 초기값만 파생하고 이후 독립적으로 관리.
+  // value에서 매번 파생하면 중간 타이핑(예: "202") 시 emit('')이
+  // 부모를 초기화해서 입력값이 지워지는 버그 발생.
+  const initM = /^(\d{4})-(\d{2})/.exec(value || '');
+  const [yearStr, setYearStr] = useState(initM?.[1] ?? '');
+  const [monthStr, setMonthStr] = useState(
+    initM?.[2] ? String(parseInt(initM[2], 10)) : '',
+  );
 
   function emit(y: string, mo: string) {
     if (y.length === 4 && mo.length >= 1) {
@@ -899,6 +1094,7 @@ function OpenYearMonthField({
             value={yearStr}
             onChangeText={(t) => {
               const cleaned = t.replace(/[^0-9]/g, '').slice(0, 4);
+              setYearStr(cleaned);
               emit(cleaned, monthStr);
             }}
             placeholder="2022"
@@ -909,9 +1105,10 @@ function OpenYearMonthField({
         </View>
         <View style={{ flex: 1 }}>
           <FormInput
-            value={monthStr.replace(/^0/, '') /* 표시는 1자리 우선 */}
+            value={monthStr}
             onChangeText={(t) => {
               const cleaned = t.replace(/[^0-9]/g, '').slice(0, 2);
+              setMonthStr(cleaned);
               emit(yearStr, cleaned);
             }}
             placeholder="3"

@@ -1,4 +1,4 @@
-import { useRouter } from 'expo-router';
+import { useRouter } from '@/lib/router';
 import React from 'react';
 import {
   ActivityIndicator,

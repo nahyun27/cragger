@@ -42,6 +42,8 @@ type SheetProps = {
   noScroll?: boolean;
   /** ScrollView contentContainer 추가 스타일 */
   contentStyle?: StyleProp<ViewStyle>;
+  /** full variant 배경색 override (기본은 bg.primary) */
+  backgroundColor?: string;
   children: ReactNode;
 };
 
@@ -56,6 +58,7 @@ export function Sheet({
   footer,
   noScroll,
   contentStyle,
+  backgroundColor,
   children,
 }: SheetProps) {
   const c = useThemeColors();
@@ -74,7 +77,7 @@ export function Sheet({
         onRequestClose={onClose}
         presentationStyle="pageSheet"
       >
-        <SafeAreaView style={s.fullContainer} edges={['top']}>
+        <SafeAreaView style={[s.fullContainer, backgroundColor && { backgroundColor }]} edges={['top']}>
           {(title || !hideCloseButton) && (
             <SheetHeader
               title={title}

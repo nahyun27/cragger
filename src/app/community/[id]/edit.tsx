@@ -1,7 +1,7 @@
 import { customAlert } from '@/components/ui/custom-alert';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import * as ImagePicker from 'expo-image-picker';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from '@/lib/router';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,

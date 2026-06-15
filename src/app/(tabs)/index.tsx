@@ -1,4 +1,4 @@
-import { useRouter } from 'expo-router';
+import { useRouter } from '@/lib/router';
 import React, { useMemo } from 'react';
 import {
   ActivityIndicator,
@@ -10,18 +10,21 @@ import {
   Text,
   View,
 } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 
-import { useCommunityFeed, type PostRow, POST_TYPE_LABEL, type PostType } from '@/hooks/use-community';
+import { useMyBattles, type Battle, type BattleStatus } from '@/hooks/use-battles';
+import { useCommunityFeed, useMyJoinedMeetups, type PostRow, POST_TYPE_LABEL, type PostType } from '@/hooks/use-community';
 import { useFavoriteGyms } from '@/hooks/use-favorites';
 import { useHomeStats } from '@/hooks/use-home-stats';
 import { useProfile } from '@/hooks/use-profile';
 import { useRecentSessions } from '@/hooks/use-recent-sessions';
 import { useUserStats } from '@/hooks/use-user-stats';
+import { GymThumbnail } from '@/components/gym/gym-thumbnail';
 import { SessionRow } from '@/components/session/session-row';
 import { EmptyState } from '@/components/ui/empty-state';
-import { useThemeColors, useEffectiveScheme, type ThemeColors } from '@/lib/theme';
+import { UserAvatar } from '@/components/ui/user-avatar';
+import { useThemeColors, type ThemeColors } from '@/lib/theme';
 
 const KO_WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
 
@@ -40,12 +43,6 @@ function formatShortDate(iso: string): string {
   return `${m}.${day} (${KO_WEEKDAYS[d.getDay()]})`;
 }
 
-function formatDuration(min: number): string {
-  if (min < 60) return `${min}분`;
-  if (min % 60 === 0) return `${min / 60}시간`;
-  return `${(min / 60).toFixed(1)}시간`;
-}
-
 function formatRelativeTime(iso: string): string {
   const d = new Date(iso);
   const diff = Date.now() - d.getTime();
@@ -62,14 +59,15 @@ function formatRelativeTime(iso: string): string {
 export default function HomeScreen() {
   const router = useRouter();
   const c = useThemeColors();
-  const isDark = useEffectiveScheme() === 'dark';
-  const s = useMemo(() => makeStyles(c, isDark), [c, isDark]);
+  const s = useMemo(() => makeStyles(c), [c]);
   const profileQ = useProfile();
   const weekQ = useHomeStats();
   const recentQ = useRecentSessions(3);
   const userStatsQ = useUserStats();
   const feedQ = useCommunityFeed('all');
   const favGymsQ = useFavoriteGyms();
+  const myBattlesQ = useMyBattles();
+  const myMeetupsQ = useMyJoinedMeetups();
 
   const username = profileQ.data?.username ?? '클라이머';
   const recent = recentQ.data ?? [];
@@ -84,7 +82,9 @@ export default function HomeScreen() {
     recentQ.isRefetching ||
     userStatsQ.isRefetching ||
     feedQ.isRefetching ||
-    favGymsQ.isRefetching;
+    favGymsQ.isRefetching ||
+    myBattlesQ.isRefetching ||
+    myMeetupsQ.isRefetching;
 
   function refetchAll() {
     weekQ.refetch();
@@ -93,6 +93,8 @@ export default function HomeScreen() {
     feedQ.refetch();
     profileQ.refetch();
     favGymsQ.refetch();
+    myBattlesQ.refetch();
+    myMeetupsQ.refetch();
   }
 
   const insets = useSafeAreaInsets();
@@ -147,29 +149,19 @@ export default function HomeScreen() {
         {/* Record Session Banner */}
         <Pressable
           onPress={() => router.push('/session/new')}
-          style={({ pressed }) => [
-            s.recordBannerPressable,
-            pressed && s.recordBannerPressed
-          ]}
+          style={({ pressed }) => [pressed && s.recordBannerPressed]}
         >
           <View style={s.recordBannerCard}>
-            {/* Decorative background shape */}
             <View style={s.recordBannerOverlay} />
-            
             <View style={s.recordBannerLeft}>
-              <View style={s.recordBadge}>
-                <Text style={s.recordBadgeText}>RECORD</Text>
-              </View>
-              <Text style={s.recordBannerTitle}>오늘의 등반 기록하기</Text>
+              <Text style={s.recordBannerTitle}>오늘의 등반 기록</Text>
               <Text style={s.recordBannerSubtitle}>
-                세션 시간, 완등 개수, 최고 난이도를 간편하게 기록하세요
+                색깔별 시도와 결과를 한 화면에서
               </Text>
             </View>
-            
-            <View style={s.recordBannerRight}>
-              <View style={s.recordBannerButton}>
-                <Feather name="plus" size={18} color="#ffffff" />
-              </View>
+            <View style={s.recordBannerCTA}>
+              <Text style={s.recordBannerCTAText}>기록</Text>
+              <Feather name="arrow-right" size={14} color={c.brand.primaryDeep} />
             </View>
           </View>
         </Pressable>
@@ -177,13 +169,8 @@ export default function HomeScreen() {
         {/* Weekly Summary Dashboard Card */}
         <View style={s.dashboardCard}>
           <View style={s.dashboardCardHeader}>
-            <View style={s.dashboardCardHeaderTitleRow}>
-              <View style={s.dashboardCardIconWrap}>
-                <Feather name="trending-up" size={14} color={c.brand.primary} />
-              </View>
-              <Text style={s.dashboardCardTitle}>이번 주 등반 현황</Text>
-            </View>
-            <Text style={s.dashboardCardSubtitle}>월요일 기준 집계</Text>
+            <Text style={s.sectionLabelText}>이번 주</Text>
+            <Text style={s.dashboardCardSubtitle}>월요일 기준</Text>
           </View>
 
           {weekQ.isLoading ? (
@@ -192,43 +179,29 @@ export default function HomeScreen() {
             </View>
           ) : weekQ.data && (weekQ.data.weeklySessions > 0 || weekQ.data.weeklySends > 0) ? (
             <View style={s.metricsGrid}>
-              <View style={s.metricItem}>
-                <Text style={s.metricLabel}>세션</Text>
-                <Text style={[s.metricVal, { color: c.text.primary }]}>
-                  {weekQ.data.weeklySessions}
-                  <Text style={s.metricUnit}> 회</Text>
-                </Text>
-              </View>
+              <HomeMetric icon="calendar" accent="#2563eb" value={weekQ.data.weeklySessions} label="세션" />
               <View style={s.metricGridDivider} />
-              <View style={s.metricItem}>
-                <Text style={s.metricLabel}>완등</Text>
-                <Text style={[s.metricVal, { color: c.brand.primary }]}>
-                  {weekQ.data.weeklySends}
-                  <Text style={s.metricUnit}> 개</Text>
-                </Text>
-              </View>
+              <HomeMetric icon="check-circle" accent="#16a34a" value={weekQ.data.weeklySends} label="완등" />
               <View style={s.metricGridDivider} />
-              <View style={s.metricItem}>
-                <Text style={s.metricLabel}>최고 난이도</Text>
-                <Text style={[s.metricVal, { color: isDark ? '#a78bfa' : '#7c3aed' }]}>
-                  {weekQ.data.maxVGrade ?? '-'}
-                </Text>
-              </View>
+              <HomeMetric icon="award" accent="#7c3aed" value={weekQ.data.maxVGrade ?? '-'} label="최고" />
             </View>
           ) : (
             <EmptyState
               compact
               icon="target"
               tone="muted"
-              title="이번 주에 아직 등반 기록이 없습니다"
+              title="이번 주 등반 기록이 없어요"
               action={{
-                label: '첫 등반 등록하기',
+                label: '첫 등반 기록',
                 icon: 'edit-3',
                 onPress: () => router.push('/session/new'),
               }}
             />
           )}
         </View>
+
+        {/* Upcoming Events (D-day) */}
+        <UpcomingEventsSection />
 
         {/* Favorite Gyms Section */}
         <FavoriteGymsSection />
@@ -261,7 +234,7 @@ export default function HomeScreen() {
         {/* Top gym (conditional) */}
         {topGym && (
           <>
-            <SectionHeader title="나의 단골 암장" />
+            <SectionHeader title="단골 암장" />
             <Pressable
               onPress={() =>
                 router.push({ pathname: '/gym/[id]', params: { id: topGym.gymId } })
@@ -269,17 +242,20 @@ export default function HomeScreen() {
               style={({ pressed }) => [{ opacity: pressed ? 0.85 : 1 }]}
             >
               <View style={s.topGymCard}>
-                <View style={s.topGymIconBg}>
-                  <Feather name="heart" size={16} color={c.brand.primary} fill={c.brand.primary} />
-                </View>
+                <GymThumbnail
+                  name={topGym.name}
+                  branch={topGym.branch ?? null}
+                  size={48}
+                />
                 <View style={{ flex: 1, minWidth: 0 }}>
                   <Text style={s.topGymName} numberOfLines={1}>
                     {topGym.name}
-                    {topGym.branch ? ` ${topGym.branch}` : ''}
+                    {topGym.branch ? <Text style={s.topGymBranch}> {topGym.branch}</Text> : null}
                   </Text>
                   <View style={s.topGymMetaRow}>
                     <View style={s.topGymVisitTag}>
-                      <Text style={s.topGymVisitTagText}>방문 {topGym.visitCount}회</Text>
+                      <Feather name="repeat" size={9} color={c.brand.primaryDeep} />
+                      <Text style={s.topGymVisitTagText}>{topGym.visitCount}회</Text>
                     </View>
                     <Text style={s.topGymLastVisitText}>
                       최근 {formatShortDate(topGym.lastVisitDate)}
@@ -303,7 +279,6 @@ export default function HomeScreen() {
             <View style={s.communityList}>
               {latestPosts.map((p) => {
                 const authorName = p.author?.display_name ?? p.author?.username ?? '익명';
-                const firstChar = authorName.length > 0 ? authorName.charAt(0).toUpperCase() : '?';
                 return (
                   <Pressable
                     key={p.id}
@@ -315,17 +290,12 @@ export default function HomeScreen() {
                     <View style={s.communityCard}>
                       <View style={s.communityCardHeader}>
                         <View style={s.communityAuthorRow}>
-                          <View style={s.compactAvatar}>
-                            {p.author?.avatar_url ? (
-                              <Image
-                                source={{ uri: p.author.avatar_url }}
-                                style={s.compactAvatarImage}
-                                resizeMode="cover"
-                              />
-                            ) : (
-                              <Text style={s.compactAvatarText}>{firstChar}</Text>
-                            )}
-                          </View>
+                          <UserAvatar
+                            userKey={p.author?.id ?? p.author?.username ?? p.id}
+                            username={authorName}
+                            avatarUrl={p.author?.avatar_url}
+                            size={32}
+                          />
                           <View>
                             <Text style={s.communityAuthorName} numberOfLines={1}>{authorName}</Text>
                             <Text style={s.communityTimeText}>{formatRelativeTime(p.created_at)}</Text>
@@ -349,12 +319,12 @@ export default function HomeScreen() {
 
                       <View style={s.communityCardFooter}>
                         <View style={s.communityMetrics}>
-                          <View style={s.communityMetricItem}>
-                            <Feather name="heart" size={12} color={c.text.muted} />
+                          <View style={s.communityMetricChip}>
+                            <Ionicons name="heart-outline" size={14} color={c.text.tertiary} />
                             <Text style={s.communityMetricCount}>{p.like_count}</Text>
                           </View>
-                          <View style={s.communityMetricItem}>
-                            <Feather name="message-circle" size={12} color={c.text.muted} />
+                          <View style={s.communityMetricChip}>
+                            <Feather name="message-circle" size={13} color={c.text.tertiary} />
                             <Text style={s.communityMetricCount}>{p.comment_count}</Text>
                           </View>
                         </View>
@@ -373,11 +343,139 @@ export default function HomeScreen() {
 }
 
 // ─── Sub components ──────────────────────────────────────────
+
+type UpcomingEventItem = {
+  kind: 'battle' | 'meetup';
+  id: string;
+  title: string;
+  date: Date;
+  dday: number;
+  status: BattleStatus | 'upcoming';
+  badge: string;
+  badgeAccent: string;
+  crew: string | null;
+};
+
+function buildEventBadge(b: Battle): { badge: string; accent: string } {
+  return { badge: '크루 대결', accent: '#ef4444' };
+}
+
+function UpcomingEventsSection() {
+  const router = useRouter();
+  const c = useThemeColors();
+  const s = useMemo(() => makeStyles(c), [c]);
+  const battlesQ = useMyBattles();
+  const meetupsQ = useMyJoinedMeetups();
+
+  const events = useMemo<UpcomingEventItem[]>(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const now = Date.now();
+    const result: UpcomingEventItem[] = [];
+
+    for (const b of battlesQ.data ?? []) {
+      if (b.status === 'ended' || b.status === 'declined') continue;
+      const d = new Date(`${b.battle_date}T00:00:00`);
+      if (b.status !== 'active' && d < today) continue;
+      const dday = Math.ceil((d.getTime() - today.getTime()) / 86400000);
+      const { badge, accent } = buildEventBadge(b);
+      result.push({
+        kind: 'battle',
+        id: b.id,
+        title: b.title,
+        date: d,
+        dday,
+        status: b.status,
+        badge,
+        badgeAccent: accent,
+        crew: b.crew?.name ?? null,
+      });
+    }
+
+    for (const m of meetupsQ.data ?? []) {
+      if (!m.meetup_at) continue;
+      const d = new Date(m.meetup_at);
+      if (d.getTime() < now) continue;
+      const meetupDay = new Date(d);
+      meetupDay.setHours(0, 0, 0, 0);
+      const dday = Math.ceil((meetupDay.getTime() - today.getTime()) / 86400000);
+      result.push({
+        kind: 'meetup',
+        id: m.id,
+        title: m.title ?? m.body.slice(0, 30),
+        date: d,
+        dday,
+        status: 'upcoming',
+        badge: m.crew_id ? '크루 모임' : '모임',
+        badgeAccent: m.crew_id ? '#7c3aed' : c.brand.primaryDeep,
+        crew: null,
+      });
+    }
+
+    result.sort((a, b) => {
+      if (a.status === 'active' && b.status !== 'active') return -1;
+      if (b.status === 'active' && a.status !== 'active') return 1;
+      return a.date.getTime() - b.date.getTime();
+    });
+    return result.slice(0, 3);
+  }, [battlesQ.data, meetupsQ.data, c.brand.primaryDeep]);
+
+  if (!events.length) return null;
+
+  return (
+    <>
+      <SectionHeader
+        title="다가오는 일정"
+        actionLabel="전체 보기"
+        onAction={() => router.push('/profile/community')}
+      />
+      <View style={s.eventsList}>
+        {events.map((ev) => (
+          <Pressable
+            key={`${ev.kind}-${ev.id}`}
+            onPress={() =>
+              router.push(
+                ev.kind === 'battle'
+                  ? { pathname: '/battle/[id]', params: { id: ev.id } }
+                  : { pathname: '/community/[id]', params: { id: ev.id } },
+              )
+            }
+            style={({ pressed }) => [{ opacity: pressed ? 0.85 : 1 }]}
+          >
+            <View style={s.eventCard}>
+              <View style={[s.eventBadge, { backgroundColor: ev.badgeAccent + '22' }]}>
+                <Text style={[s.eventBadgeText, { color: ev.badgeAccent }]}>{ev.badge}</Text>
+              </View>
+              <View style={s.eventInfo}>
+                <Text style={s.eventTitle} numberOfLines={1}>{ev.title}</Text>
+                {ev.crew && (
+                  <Text style={s.eventCrew} numberOfLines={1}>{ev.crew}</Text>
+                )}
+              </View>
+              {ev.status === 'active' ? (
+                <View style={[s.ddayChip, { backgroundColor: '#16a34a' }]}>
+                  <Text style={s.ddayText}>진행 중</Text>
+                </View>
+              ) : (
+                <View style={s.ddayChip}>
+                  <Text style={s.ddayText}>
+                    {ev.dday === 0 ? 'D-Day' : `D-${ev.dday}`}
+                  </Text>
+                </View>
+              )}
+              <Feather name="chevron-right" size={14} color={c.border.strong} />
+            </View>
+          </Pressable>
+        ))}
+      </View>
+    </>
+  );
+}
+
 function FavoriteGymsSection() {
   const router = useRouter();
   const c = useThemeColors();
-  const isDark = useEffectiveScheme() === 'dark';
-  const s = useMemo(() => makeStyles(c, isDark), [c, isDark]);
+  const s = useMemo(() => makeStyles(c), [c]);
   const { data: favorites, isLoading } = useFavoriteGyms();
 
   if (isLoading) {
@@ -389,27 +487,22 @@ function FavoriteGymsSection() {
   }
 
   return (
-    <View style={s.favSection}>
-      <View style={s.favHeaderRow}>
-        <Text style={s.favSectionTitle}>즐겨찾는 암장</Text>
-        <Pressable
-          onPress={() => router.push('/(tabs)/gyms')}
-          hitSlop={6}
-          style={({ pressed }) => [{ opacity: pressed ? 0.5 : 1 }]}
-        >
-          <Text style={s.favHeaderAction}>암장 더보기</Text>
-        </Pressable>
-      </View>
+    <View>
+      <SectionHeader
+        title="즐겨찾는 암장"
+        actionLabel="더보기"
+        onAction={() => router.push('/(tabs)/gyms')}
+      />
 
       {!favorites || favorites.length === 0 ? (
         <Pressable
           onPress={() => router.push('/(tabs)/gyms')}
           style={({ pressed }) => [s.favEmptyCard, pressed && { opacity: 0.9 }]}
         >
-          <Feather name="star" size={20} color={c.text.muted} />
+          <MaterialCommunityIcons name="star-outline" size={18} color={c.text.muted} />
           <View style={s.favEmptyTextContainer}>
-            <Text style={s.favEmptyTitle}>자주 가는 암장을 등록해 보세요</Text>
-            <Text style={s.favEmptySubtitle}>암장 탐색에서 별표(★)를 누르면 추가됩니다</Text>
+            <Text style={s.favEmptyTitle}>자주 가는 암장을 등록해보세요</Text>
+            <Text style={s.favEmptySubtitle}>암장 탐색에서 별표(★)를 누르면 추가</Text>
           </View>
           <Feather name="chevron-right" size={16} color={c.border.strong} />
         </Pressable>
@@ -433,25 +526,28 @@ function FavoriteGymsSection() {
                     pressed && { transform: [{ scale: 0.98 }], opacity: 0.95 }
                   ]}
                 >
-                  <View style={s.favGymHeader}>
-                    <Text style={s.favGymLocation} numberOfLines={1}>
-                      {gym.city} {gym.district ?? ''}
-                    </Text>
-                    <MaterialCommunityIcons name="star" size={15} color={c.status.warning} />
-                  </View>
-
+                  <GymThumbnail
+                    name={gym.name}
+                    branch={gym.branch ?? null}
+                    logoUrl={gym.logo_url}
+                    logoBgHex={gym.logo_bg_hex}
+                    size={44}
+                  />
                   <Text style={s.favGymName} numberOfLines={1}>
                     {gym.name}
                   </Text>
-                  
                   <Text style={s.favGymBranch} numberOfLines={1}>
-                    {gym.branch || '본점'}
+                    {gym.branch || gym.city}
                   </Text>
-
                   <View style={s.favGymTags}>
                     {gym.has_boulder && (
                       <View style={s.favGymTag}>
-                        <Text style={s.favGymTagText}>볼더링</Text>
+                        <Text style={s.favGymTagText}>볼더</Text>
+                      </View>
+                    )}
+                    {gym.has_lead && (
+                      <View style={s.favGymTag}>
+                        <Text style={s.favGymTagText}>리드</Text>
                       </View>
                     )}
                     {gym.has_kilter && (
@@ -485,28 +581,61 @@ function SectionHeader({
   onAction?: () => void;
 }) {
   const c = useThemeColors();
-  const isDark = useEffectiveScheme() === 'dark';
-  const s = useMemo(() => makeStyles(c, isDark), [c, isDark]);
+  const s = useMemo(() => makeStyles(c), [c]);
   return (
     <View style={s.sectionHeader}>
       <Text style={s.sectionTitle}>{title}</Text>
       {actionLabel && onAction && (
-        <Pressable
-          onPress={onAction}
-          hitSlop={6}
-          style={({ pressed }) => [{ opacity: pressed ? 0.5 : 1 }]}
-        >
-          <Text style={s.sectionAction}>{actionLabel}</Text>
+        <Pressable onPress={onAction} hitSlop={6}>
+          {({ pressed }) => (
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                opacity: pressed ? 0.5 : 1,
+              }}
+            >
+              <Text style={s.sectionAction} numberOfLines={1}>{actionLabel}</Text>
+              <Feather
+                name="chevron-right"
+                size={14}
+                color={c.text.secondary}
+                style={{ marginLeft: 2 }}
+              />
+            </View>
+          )}
         </Pressable>
       )}
     </View>
   );
 }
 
-
+function HomeMetric({
+  icon,
+  accent,
+  value,
+  label,
+}: {
+  icon: React.ComponentProps<typeof Feather>['name'];
+  accent: string;
+  value: number | string;
+  label: string;
+}) {
+  const c = useThemeColors();
+  const s = useMemo(() => makeStyles(c), [c]);
+  return (
+    <View style={s.metricItem}>
+      <View style={[s.metricIconBox, { backgroundColor: `${accent}15` }]}>
+        <Feather name={icon} size={15} color={accent} />
+      </View>
+      <Text style={[s.metricVal, { color: c.text.primary }]}>{value}</Text>
+      <Text style={s.metricLabel}>{label}</Text>
+    </View>
+  );
+}
 
 // ─── Styles ──────────────────────────────────────────────────
-function makeStyles(c: ThemeColors, isDark: boolean) {
+function makeStyles(c: ThemeColors) {
   return StyleSheet.create({
   container: {
     flex: 1,
@@ -514,7 +643,7 @@ function makeStyles(c: ThemeColors, isDark: boolean) {
   },
   scrollContent: {
     paddingHorizontal: 16,
-    paddingTop: 16,
+    paddingTop: 12,
     paddingBottom: 100,
     gap: 16,
   },
@@ -586,85 +715,66 @@ function makeStyles(c: ThemeColors, isDark: boolean) {
   },
 
   // Record Session Banner Styles
-  recordBannerPressable: {
-    width: '100%',
-  },
   recordBannerPressed: {
     transform: [{ scale: 0.985 }],
     opacity: 0.95,
   },
   recordBannerCard: {
-    backgroundColor: isDark ? '#1e293b' : '#0f172a',
-    borderRadius: 24,
-    padding: 20,
+    backgroundColor: c.brand.primary,
+    borderRadius: 20,
+    paddingHorizontal: 18,
+    paddingVertical: 18,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     position: 'relative',
     overflow: 'hidden',
-    shadowColor: c.shadow.color,
-    shadowOpacity: c.shadow.opacity,
-    shadowRadius: 15,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 6,
+    shadowColor: c.brand.primary,
+    shadowOpacity: 0.18,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 4,
   },
   recordBannerOverlay: {
     position: 'absolute',
-    right: -30,
-    top: -30,
-    width: 150,
-    height: 150,
-    borderRadius: 75,
-    backgroundColor: 'rgba(99, 102, 241, 0.15)',
+    right: -40,
+    top: -20,
+    width: 160,
+    height: 160,
+    borderRadius: 80,
+    backgroundColor: c.brand.onPrimary + '1f',
   },
   recordBannerLeft: {
     flex: 1,
     marginRight: 12,
-    gap: 6,
-  },
-  recordBadge: {
-    alignSelf: 'flex-start',
-    backgroundColor: 'rgba(99, 102, 241, 0.2)',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: 'rgba(99, 102, 241, 0.3)',
-  },
-  recordBadgeText: {
-    color: '#a5b4fc',
-    fontSize: 10,
-    fontWeight: '800',
-    letterSpacing: 1,
+    gap: 4,
   },
   recordBannerTitle: {
-    color: '#ffffff',
-    fontSize: 18,
-    fontWeight: '800',
+    color: c.brand.onPrimary,
+    fontSize: 17,
+    fontWeight: '900',
     letterSpacing: -0.4,
   },
   recordBannerSubtitle: {
-    color: '#94a3b8',
-    fontSize: 11,
+    color: c.brand.onPrimary + 'd1',
+    fontSize: 12,
     fontWeight: '600',
-    lineHeight: 15,
+    lineHeight: 16,
   },
-  recordBannerRight: {
-    justifyContent: 'center',
+  recordBannerCTA: {
+    flexDirection: 'row',
     alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 999,
+    backgroundColor: c.brand.onPrimary,
   },
-  recordBannerButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: c.shadow.color,
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 2,
+  recordBannerCTAText: {
+    color: c.brand.primaryDeep,
+    fontSize: 12,
+    fontWeight: '900',
+    letterSpacing: -0.2,
   },
 
   // Weekly Summary Dashboard Card
@@ -672,42 +782,27 @@ function makeStyles(c: ThemeColors, isDark: boolean) {
     backgroundColor: c.bg.card,
     borderWidth: 1,
     borderColor: c.border.subtle,
-    borderRadius: 24,
-    padding: 20,
-    shadowColor: c.shadow.color,
-    shadowOpacity: c.shadow.opacity,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 1,
+    borderRadius: 20,
+    paddingHorizontal: 18,
+    paddingTop: 18,
+    paddingBottom: 14,
+    gap: 12,
   },
   dashboardCardHeader: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'baseline',
     justifyContent: 'space-between',
-    marginBottom: 20,
   },
-  dashboardCardHeaderTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  dashboardCardIconWrap: {
-    width: 28,
-    height: 28,
-    borderRadius: 8,
-    backgroundColor: c.bg.accent,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  dashboardCardTitle: {
-    fontSize: 15,
-    fontWeight: '800',
-    color: c.text.primary,
-    letterSpacing: -0.2,
+  sectionLabelText: {
+    fontSize: 11,
+    fontWeight: '900',
+    color: c.text.tertiary,
+    letterSpacing: 0.6,
+    textTransform: 'uppercase',
   },
   dashboardCardSubtitle: {
-    fontSize: 11,
-    fontWeight: '600',
+    fontSize: 10,
+    fontWeight: '700',
     color: c.text.muted,
   },
   metricsGrid: {
@@ -718,15 +813,23 @@ function makeStyles(c: ThemeColors, isDark: boolean) {
   metricItem: {
     flex: 1,
     alignItems: 'center',
+    gap: 4,
+  },
+  metricIconBox: {
+    width: 30,
+    height: 30,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 2,
   },
   metricLabel: {
     fontSize: 11,
-    fontWeight: '600',
-    color: c.text.tertiary,
-    marginBottom: 6,
+    fontWeight: '700',
+    color: c.text.muted,
   },
   metricVal: {
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: '900',
     letterSpacing: -0.5,
   },
@@ -740,36 +843,13 @@ function makeStyles(c: ThemeColors, isDark: boolean) {
     height: 36,
     backgroundColor: c.bg.subtle,
   },
-  dashboardEmpty: {
-    alignItems: 'center',
-    paddingVertical: 12,
-  },
-  dashboardEmptyText: {
-    fontSize: 13,
-    color: c.text.tertiary,
-    fontWeight: '600',
-    marginTop: 10,
-    marginBottom: 14,
-  },
-  dashboardEmptyBtn: {
-    backgroundColor: c.brand.primary,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 10,
-  },
-  dashboardEmptyBtnText: {
-    color: c.brand.onPrimary,
-    fontSize: 12,
-    fontWeight: '800',
-  },
-
   // Section Headers
   sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginTop: 12,
-    marginBottom: 4,
+    marginTop: 8,
+    marginBottom: -4,    // 카드 자체 paddingTop(14)이 추가 호흡을 만들어줌 — 음수로 보정
     paddingHorizontal: 4,
   },
   sectionTitle: {
@@ -781,7 +861,7 @@ function makeStyles(c: ThemeColors, isDark: boolean) {
   sectionAction: {
     fontSize: 12,
     fontWeight: '700',
-    color: c.brand.primary,
+    color: c.text.secondary,
   },
   loaderWrap: {
     paddingVertical: 24,
@@ -903,51 +983,47 @@ function makeStyles(c: ThemeColors, isDark: boolean) {
   topGymCard: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 12,
     backgroundColor: c.bg.card,
     borderWidth: 1,
     borderColor: c.border.subtle,
     borderRadius: 20,
-    padding: 16,
-    shadowColor: c.shadow.color,
-    shadowOpacity: c.shadow.opacity,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 1,
-  },
-  topGymIconBg: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    backgroundColor: c.bg.accent,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 12,
+    padding: 14,
   },
   topGymName: {
-    fontSize: 14,
-    fontWeight: '800',
+    fontSize: 15,
+    fontWeight: '900',
     color: c.text.primary,
+    letterSpacing: -0.3,
+  },
+  topGymBranch: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: c.text.secondary,
   },
   topGymMetaRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    marginTop: 6,
+    marginTop: 5,
   },
   topGymVisitTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
     backgroundColor: c.bg.accent,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 6,
+    paddingHorizontal: 7,
+    paddingVertical: 2.5,
+    borderRadius: 999,
   },
   topGymVisitTagText: {
     fontSize: 10,
-    fontWeight: '800',
+    fontWeight: '900',
     color: c.brand.primaryDeep,
   },
   topGymLastVisitText: {
-    fontSize: 11,
-    fontWeight: '600',
+    fontSize: 10.5,
+    fontWeight: '700',
     color: c.text.tertiary,
   },
 
@@ -959,19 +1035,14 @@ function makeStyles(c: ThemeColors, isDark: boolean) {
     backgroundColor: c.bg.card,
     borderWidth: 1,
     borderColor: c.border.subtle,
-    borderRadius: 20,
-    padding: 16,
-    shadowColor: c.shadow.color,
-    shadowOpacity: c.shadow.opacity,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 1,
+    borderRadius: 18,
+    padding: 14,
+    gap: 8,
   },
   communityCardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 12,
   },
   communityAuthorRow: {
     flexDirection: 'row',
@@ -1008,74 +1079,111 @@ function makeStyles(c: ThemeColors, isDark: boolean) {
     marginTop: 1,
   },
   communityBadge: {
-    backgroundColor: c.bg.subtle,
+    backgroundColor: c.bg.accent,
     paddingHorizontal: 8,
     paddingVertical: 3,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: c.border.subtle,
+    borderRadius: 999,
   },
   communityBadgeText: {
-    fontSize: 9,
-    fontWeight: '800',
-    color: c.text.secondary,
+    fontSize: 9.5,
+    fontWeight: '900',
+    color: c.brand.primaryDeep,
+    letterSpacing: 0.2,
   },
   communityCardTitle: {
     fontSize: 14,
-    fontWeight: '800',
+    fontWeight: '900',
     color: c.text.primary,
-    marginBottom: 6,
+    letterSpacing: -0.3,
+    marginTop: 2,
   },
   communityCardBody: {
-    fontSize: 12,
+    fontSize: 12.5,
     color: c.text.secondary,
     lineHeight: 18,
-    marginBottom: 12,
   },
   communityCardFooter: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    paddingTop: 6,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: c.border.subtle,
   },
   communityMetrics: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 6,
   },
-  communityMetricItem: {
+  communityMetricChip: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 999,
+    backgroundColor: c.bg.subtle,
   },
   communityMetricCount: {
     fontSize: 11,
-    fontWeight: '700',
-    color: c.text.tertiary,
+    fontWeight: '800',
+    color: c.text.secondary,
   },
 
-  // Favorite Gyms Styles
-  favSection: {
-    marginTop: 8,
-    marginBottom: 4,
+  // Upcoming Events
+  eventsList: {
+    gap: 8,
   },
-  favHeaderRow: {
+  eventCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 10,
-    paddingHorizontal: 4,
+    gap: 10,
+    backgroundColor: c.bg.card,
+    borderWidth: 1,
+    borderColor: c.border.subtle,
+    borderRadius: 16,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
   },
-  favSectionTitle: {
-    fontSize: 16,
+  eventBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  eventBadgeText: {
+    fontSize: 10.5,
+    fontWeight: '900',
+    letterSpacing: 0.2,
+  },
+  eventInfo: {
+    flex: 1,
+    minWidth: 0,
+    gap: 2,
+  },
+  eventTitle: {
+    fontSize: 14,
     fontWeight: '800',
     color: c.text.primary,
     letterSpacing: -0.2,
   },
-  favHeaderAction: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: c.brand.primary,
+  eventCrew: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: c.text.tertiary,
   },
+  ddayChip: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 999,
+    backgroundColor: c.brand.primary,
+  },
+  ddayText: {
+    fontSize: 11,
+    fontWeight: '900',
+    color: c.brand.onPrimary,
+  },
+
+  // Favorite Gyms Styles
   favLoaderWrap: {
     paddingVertical: 20,
     alignItems: 'center',
@@ -1111,48 +1219,31 @@ function makeStyles(c: ThemeColors, isDark: boolean) {
   },
   favScrollContent: {
     paddingHorizontal: 4,
-    paddingBottom: 8,
+    paddingTop: 16,        // sectionHeader 음수 marginBottom 보정 + 카드와 시각적 거리 통일
     gap: 10,
   },
   favGymCard: {
-    width: 155,
-    minHeight: 132,
+    width: 148,
+    minHeight: 150,
     backgroundColor: c.bg.card,
     borderWidth: 1,
     borderColor: c.border.subtle,
-    borderRadius: 20,
-    padding: 14,
-    shadowColor: c.shadow.color,
-    shadowOpacity: c.shadow.opacity,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 1,
-  },
-  favGymHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 8,
-  },
-  favGymLocation: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: c.text.muted,
-    flex: 1,
-    marginRight: 4,
+    borderRadius: 18,
+    padding: 12,
+    gap: 4,
   },
   favGymName: {
-    fontSize: 15,
-    fontWeight: '800',
+    fontSize: 14,
+    fontWeight: '900',
     color: c.text.primary,
     letterSpacing: -0.3,
+    marginTop: 8,
   },
   favGymBranch: {
-    fontSize: 12,
-    fontWeight: '600',
+    fontSize: 11,
+    fontWeight: '700',
     color: c.text.tertiary,
-    marginTop: 2,
-    marginBottom: 10,
+    marginBottom: 6,
   },
   favGymTags: {
     flexDirection: 'row',
@@ -1164,11 +1255,11 @@ function makeStyles(c: ThemeColors, isDark: boolean) {
     backgroundColor: c.bg.subtle,
     paddingHorizontal: 6,
     paddingVertical: 2,
-    borderRadius: 6,
+    borderRadius: 999,
   },
   favGymTagText: {
-    fontSize: 9,
-    fontWeight: '700',
+    fontSize: 9.5,
+    fontWeight: '800',
     color: c.text.tertiary,
   },
   favGymTagAccent: {

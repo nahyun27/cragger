@@ -1,5 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Link } from 'expo-router';
+import { Link } from '@/lib/router';
 import React, { useMemo, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import {
@@ -91,7 +91,7 @@ export default function SignUpScreen() {
           <View style={s.hero}>
             <View style={s.logoWrap}>
               <Image
-                source={require('../../../assets/logo.png')}
+                source={require('../../../assets/images/splash-icon.png')}
                 style={{ width: 80, height: 80, borderRadius: 20 }}
                 resizeMode="cover"
               />

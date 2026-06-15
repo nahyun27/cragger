@@ -4,7 +4,7 @@
  * 마이페이지 strip 에서 "전체 보기" → 여기로 진입.
  * 카테고리별 그룹 + 미획득 잠금 상태 표시 + 대표 뱃지 토글.
  */
-import { useRouter } from 'expo-router';
+import { useRouter } from '@/lib/router';
 import React from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';

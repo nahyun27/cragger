@@ -1,6 +1,6 @@
 import { customAlert } from '@/components/ui/custom-alert';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useRouter } from 'expo-router';
+import { useRouter } from '@/lib/router';
 import React from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import {

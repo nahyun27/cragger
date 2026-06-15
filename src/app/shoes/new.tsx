@@ -1,5 +1,5 @@
 import { customAlert } from '@/components/ui/custom-alert';
-import { useRouter } from 'expo-router';
+import { useRouter } from '@/lib/router';
 import React, { useState, useMemo} from 'react';
 import {
   ActivityIndicator,
@@ -50,6 +50,7 @@ export default function NewShoeScreen() {
         usages: form.usages,
         fitFeatures: form.fitFeatures,
         isPrimary: form.isPrimary,
+        imageUrl: form.imageUrl,
         ratingOverall: form.ratings.overall,
         ratingEdging: form.ratings.edging,
         ratingSmearing: form.ratings.smearing,

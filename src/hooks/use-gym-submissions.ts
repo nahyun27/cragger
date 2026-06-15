@@ -26,11 +26,14 @@ export type GymChanges = {
   has_moonboard?: boolean;
   has_kilter?: boolean;
   has_tension?: boolean;
+  has_spray_wall?: boolean;
   has_shower?: boolean;
   has_locker?: boolean;
   has_parking?: boolean;
   logo_url?: string;
   logo_bg_hex?: string | null;  // '#000000' | '#ffffff' | 기타 hex | null = 기본 카드 배경
+  // 스프레이월 사진 — 승인 시 spray_wall_photos 에 INSERT
+  spray_wall_photos?: string[];
   // 색깔 구성 — 승인 시 gym_color_schemes 에 INSERT/DELETE
   add_colors?: string[];
   remove_colors?: string[];
@@ -206,6 +209,7 @@ export function useApproveGymSubmission() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['gym-submissions'] });
       queryClient.invalidateQueries({ queryKey: ['gyms'] });
+      queryClient.invalidateQueries({ queryKey: ['spray-wall'] });
     },
   });
 }

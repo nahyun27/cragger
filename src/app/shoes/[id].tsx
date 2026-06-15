@@ -1,5 +1,5 @@
 import { customAlert } from '@/components/ui/custom-alert';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from '@/lib/router';
 import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -51,6 +51,7 @@ export default function EditShoeScreen() {
       usages: s.usages ?? [],
       fitFeatures: s.fit_features ?? [],
       isPrimary: s.is_primary,
+      imageUrl: s.image_url,
       ratings: {
         overall: s.rating_overall,
         edging: s.rating_edging,
@@ -89,6 +90,7 @@ export default function EditShoeScreen() {
         usages: form.usages,
         fitFeatures: form.fitFeatures,
         isPrimary: form.isPrimary,
+        imageUrl: form.imageUrl,
         ratingOverall: form.ratings.overall,
         ratingEdging: form.ratings.edging,
         ratingSmearing: form.ratings.smearing,

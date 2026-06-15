@@ -1,11 +1,13 @@
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useMemo } from 'react';
+import { useLocalSearchParams, useRouter } from '@/lib/router';
+import { useFocusEffect } from '@react-navigation/native';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Image,
   Linking,
   Pressable,
   ScrollView,
+  Share,
   StyleSheet,
   Text,
   View,
@@ -21,6 +23,7 @@ import {
 import { GymThumbnail } from '@/components/gym/gym-thumbnail';
 import { useFavoriteGymIds, useToggleFavorite } from '@/hooks/use-favorites';
 import { useGymDetail, type ColorScheme, type ColorStat, type GymDetail } from '@/hooks/use-gym-detail';
+import { useSprayWallPhotos, useSprayWallProblems } from '@/hooks/use-spray-wall';
 import { useMySessionsAtGym } from '@/hooks/use-session';
 import { useThemeColors, type ThemeColors } from '@/lib/theme';
 import { BottomCTA } from '@/components/ui/bottom-cta';
@@ -32,7 +35,10 @@ export default function GymDetailScreen() {
 
   const c = useThemeColors();  const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
-  const { data, isLoading, error } = useGymDetail(id);
+  const { data, isLoading, error, refetch } = useGymDetail(id);
+
+  useFocusEffect(useCallback(() => { refetch(); }, [refetch]));
+
   const { data: favoriteIds } = useFavoriteGymIds();
   const toggleFavorite = useToggleFavorite();
   const favorited = !!id && !!favoriteIds?.has(id);
@@ -84,24 +90,46 @@ export default function GymDetailScreen() {
         title="암장 정보"
         onBack={() => router.back()}
         rightSlot={
-          <Pressable
-            onPress={() => {
-              if (!id) return;
-              toggleFavorite.mutate({ gymId: id, currentlyFavorite: favorited });
-            }}
-            hitSlop={8}
-            style={({ pressed }) => ({
-              width: 40, height: 40, borderRadius: 12,
-              alignItems: 'center', justifyContent: 'center',
-              opacity: pressed ? 0.6 : 1,
-            })}
-          >
-            <MaterialCommunityIcons
-              name={favorited ? 'star' : 'star-outline'}
-              size={26}
-              color={favorited ? '#f59e0b' : '#94a3b8'}
-            />
-          </Pressable>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+            <Pressable
+              onPress={async () => {
+                const gymName = `${data.name}${data.branch ? ` ${data.branch}` : ''}`;
+                const lines = [
+                  `🏟 ${gymName}`,
+                  ...(location ? [`📍 ${location}${data.address ? ` ${data.address}` : ''}`] : []),
+                  '',
+                  '크래거에서 암장 정보 확인해보세요!',
+                ];
+                try { await Share.share({ message: lines.join('\n') }); } catch { /* cancelled */ }
+              }}
+              hitSlop={8}
+              style={({ pressed }) => ({
+                width: 40, height: 40, borderRadius: 12,
+                alignItems: 'center', justifyContent: 'center',
+                opacity: pressed ? 0.6 : 1,
+              })}
+            >
+              <Feather name="share-2" size={20} color={c.text.secondary} />
+            </Pressable>
+            <Pressable
+              onPress={() => {
+                if (!id) return;
+                toggleFavorite.mutate({ gymId: id, currentlyFavorite: favorited });
+              }}
+              hitSlop={8}
+              style={({ pressed }) => ({
+                width: 40, height: 40, borderRadius: 12,
+                alignItems: 'center', justifyContent: 'center',
+                opacity: pressed ? 0.6 : 1,
+              })}
+            >
+              <MaterialCommunityIcons
+                name={favorited ? 'star' : 'star-outline'}
+                size={26}
+                color={favorited ? '#f59e0b' : '#94a3b8'}
+              />
+            </Pressable>
+          </View>
         }
       />
 
@@ -168,6 +196,11 @@ export default function GymDetailScreen() {
         {/* 트레이닝 보드 (문보드/킬터/텐션) */}
         {(data.has_moonboard || data.has_kilter || data.has_tension) && (
           <TrainingBoardsSection gym={data} />
+        )}
+
+        {/* 스프레이월 */}
+        {data.has_spray_wall && (
+          <SprayWallSection gymId={data.id} router={router} c={c} />
         )}
 
         {/* 편의시설 */}
@@ -792,6 +825,125 @@ function MySessionsAtGymSection({ gymId }: { gymId: string }) {
         ))}
       </View>
     </View>
+  );
+}
+
+/* ──────────────────────────────────────────────────────────── */
+/* SprayWallSection — 스프레이월 미리보기 + 진입 버튼             */
+/* ──────────────────────────────────────────────────────────── */
+function SprayWallSection({
+  gymId,
+  router,
+  c,
+}: {
+  gymId: string;
+  router: ReturnType<typeof useRouter>;
+  c: ThemeColors;
+}) {
+  const photosQ = useSprayWallPhotos(gymId);
+  const problemsQ = useSprayWallProblems(gymId);
+  const firstPhoto = photosQ.data?.[0] ?? null;
+  const problemCount = problemsQ.data?.length ?? 0;
+  const hasPhotos = (photosQ.data?.length ?? 0) > 0;
+  const [imgError, setImgError] = useState(false);
+
+  const showCTA = !photosQ.isLoading && (!hasPhotos || imgError);
+
+  return (
+    <Section title="스프레이월" icon="grid">
+      {showCTA ? (
+        /* 사진 없음 — 제보 CTA */
+        <View
+          style={{
+            padding: 20, borderRadius: 14, gap: 12,
+            borderWidth: StyleSheet.hairlineWidth,
+            borderColor: c.border.subtle,
+            backgroundColor: c.bg.card,
+            alignItems: 'center',
+          }}
+        >
+          <View
+            style={{
+              width: 44, height: 44, borderRadius: 22,
+              backgroundColor: '#7c3aed15',
+              alignItems: 'center', justifyContent: 'center',
+            }}
+          >
+            <Feather name="camera" size={20} color="#7c3aed" />
+          </View>
+          <View style={{ alignItems: 'center', gap: 4 }}>
+            <Text style={{ fontSize: 13.5, fontWeight: '900', color: c.text.primary }}>
+              스프레이월 사진이 없어요
+            </Text>
+            <Text style={{ fontSize: 12, color: c.text.tertiary, fontWeight: '600', textAlign: 'center' }}>
+              스프레이월 사진을 알고 계신다면{'\n'}제보해주세요!
+            </Text>
+          </View>
+          <Pressable
+            onPress={() => router.push({ pathname: '/gym/[id]/suggest', params: { id: gymId, section: 'spray_wall' } } as never)}
+          >
+            {({ pressed }) => (
+              <View style={{
+                flexDirection: 'row', alignItems: 'center', gap: 6,
+                paddingHorizontal: 16, paddingVertical: 9, borderRadius: 24,
+                backgroundColor: '#7c3aed',
+                opacity: pressed ? 0.8 : 1,
+              }}>
+                <Feather name="camera" size={13} color="#ffffff" />
+                <Text style={{ fontSize: 13, fontWeight: '800', color: '#ffffff' }}>사진 제보하기</Text>
+              </View>
+            )}
+          </Pressable>
+        </View>
+      ) : (
+        /* 사진 있음 — 미리보기 + 자세히 보기 */
+        <Pressable
+          onPress={() => router.push({ pathname: '/gym/[id]/spray-wall', params: { id: gymId } } as never)}
+          style={({ pressed }) => ({ opacity: pressed ? 0.85 : 1 })}
+        >
+          <View
+            style={{
+              borderRadius: 14, overflow: 'hidden',
+              borderWidth: StyleSheet.hairlineWidth,
+              borderColor: c.border.subtle,
+              backgroundColor: c.bg.subtle,
+            }}
+          >
+            {firstPhoto && (
+              <Image
+                source={{ uri: firstPhoto.photo_url }}
+                style={{ width: '100%', height: 140 }}
+                resizeMode="cover"
+                onError={() => setImgError(true)}
+              />
+            )}
+            <View
+              style={{
+                flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+                paddingHorizontal: 12, paddingVertical: 10,
+              }}
+            >
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <View style={{ paddingHorizontal: 8, paddingVertical: 3, borderRadius: 999, backgroundColor: '#7c3aed22' }}>
+                  <Text style={{ fontSize: 11, fontWeight: '800', color: '#7c3aed' }}>
+                    {problemCount > 0 ? `문제 ${problemCount}개` : '문제 없음'}
+                  </Text>
+                </View>
+                {(photosQ.data?.length ?? 0) > 1 && (
+                  <Text style={{ fontSize: 11, color: c.text.tertiary, fontWeight: '700' }}>
+                    사진 {photosQ.data!.length}장
+                  </Text>
+                )}
+              </View>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                <Text style={{ fontSize: 12, color: c.brand.primary, fontWeight: '800' }}>자세히 보기</Text>
+                <Feather name="chevron-right" size={14} color={c.brand.primary} />
+              </View>
+            </View>
+          </View>
+        </Pressable>
+      )}
+    </Section>
   );
 }
 

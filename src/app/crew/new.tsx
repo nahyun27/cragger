@@ -1,6 +1,6 @@
 import { customAlert } from '@/components/ui/custom-alert';
-import { useRouter } from 'expo-router';
-import React, { useMemo, useState } from 'react';
+import { useRouter } from '@/lib/router';
+import React, { useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -14,12 +14,11 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 
-import { GymPickerModal } from '@/components/session/gym-picker-modal';
+import { GymPickerField } from '@/components/gym/gym-picker-field';
 import { Section } from '@/components/ui/section';
-import { FormInput, FormPressable } from '@/components/ui/form';
+import { FormInput } from '@/components/ui/form';
 import { BottomCTA } from '@/components/ui/bottom-cta';
 import { CREW_REGION_OPTIONS, useCreateCrew, type CrewRegion } from '@/hooks/use-crews';
-import { useGyms } from '@/hooks/use-gyms';
 import { useThemeColors } from '@/lib/theme';
 
 const NAME_MAX = 30;
@@ -30,18 +29,11 @@ export default function NewCrewScreen() {
   const c = useThemeColors();  const router = useRouter();
   const insets = useSafeAreaInsets();
   const createCrew = useCreateCrew();
-  const { data: allGyms } = useGyms();
 
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [gymId, setGymId] = useState<string | null>(null);
   const [region, setRegion] = useState<CrewRegion | null>(null);
-  const [showGymModal, setShowGymModal] = useState(false);
-
-  const selectedGym = useMemo(
-    () => allGyms?.find((g) => g.id === gymId) ?? null,
-    [allGyms, gymId],
-  );
 
   const canSubmit = name.trim().length > 0 && !createCrew.isPending;
 
@@ -143,28 +135,11 @@ export default function NewCrewScreen() {
           </Section>
 
           <Section title="주 활동 암장" icon="map-pin">
-            <FormPressable
-              onPress={() => setShowGymModal(true)}
-              leadingIcon="search"
+            <GymPickerField
+              value={gymId}
+              onChange={setGymId}
               placeholder="암장 선택 (선택)"
-              value={
-                selectedGym
-                  ? `${selectedGym.name}${selectedGym.branch ? ` ${selectedGym.branch}` : ''}`
-                  : null
-              }
-              trailingNode={
-                selectedGym ? (
-                  <Pressable
-                    onPress={(e) => {
-                      e.stopPropagation();
-                      setGymId(null);
-                    }}
-                    hitSlop={6}
-                  >
-                    <Feather name="x" size={16} color={c.text.muted} />
-                  </Pressable>
-                ) : undefined
-              }
+              clearable
             />
           </Section>
         </ScrollView>
@@ -177,17 +152,6 @@ export default function NewCrewScreen() {
           disabled={!canSubmit}
         />
       </KeyboardAvoidingView>
-
-      <GymPickerModal
-        visible={showGymModal}
-        gyms={allGyms ?? []}
-        selectedId={gymId}
-        onSelect={(id) => {
-          setGymId(id);
-          setShowGymModal(false);
-        }}
-        onClose={() => setShowGymModal(false)}
-      />
     </SafeAreaView>
   );
 }

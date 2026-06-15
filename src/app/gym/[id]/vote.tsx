@@ -6,7 +6,7 @@
  *   - 새 색깔이 필요하면 "정보 제보" 페이지로 우회 안내.
  *   - 한 사용자 = 한 색깔에 한 번만 투표 (재투표 = 덮어쓰기).
  */
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from '@/lib/router';
 import React, { useMemo, useState } from 'react';
 import {
   ActivityIndicator,

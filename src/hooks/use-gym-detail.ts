@@ -25,6 +25,7 @@ export type GymRow = {
   has_moonboard: boolean;
   has_kilter: boolean;
   has_tension: boolean;
+  has_spray_wall: boolean;
   has_shower: boolean;
   has_locker: boolean;
   has_parking: boolean;

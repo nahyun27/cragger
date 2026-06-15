@@ -2,7 +2,7 @@ import '@/global.css';
 
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { Stack, useRouter, useSegments } from 'expo-router';
+import { Stack, useRouter, useSegments } from '@/lib/router';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import { initializeKakaoSDK } from '@react-native-kakao/core';
@@ -25,6 +25,8 @@ export default function RootLayout() {
       .catch((e) => {
         console.warn('[Kakao] SDK init skipped (likely Expo Go / dev):', e?.message ?? e);
       });
+    // Android 알림 채널 등록 (iOS는 no-op)
+    import('@/lib/notifications').then((m) => m.setupNotificationChannel()).catch(() => {});
   }, []);
 
   return (
@@ -35,6 +37,17 @@ export default function RootLayout() {
     </QueryClientProvider>
   );
 }
+
+// Stack 트리 — 한 번만 빌드하고 다크 토글 시 재마운트 안 되도록 모듈 레벨 상수로 분리.
+const NAV_TREE = (
+  <>
+    <Stack screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="(tabs)" />
+      <Stack.Screen name="auth" />
+    </Stack>
+    <SessionRedirector />
+  </>
+);
 
 function ThemedRoot() {
   const scheme = useEffectiveScheme();
@@ -48,10 +61,6 @@ function ThemedRoot() {
     [scheme],
   );
 
-  // Auth 로딩 중에는 Stack 자체를 mount 하지 않음 → useSegments/useRouter 호출 없이 대기.
-  // 이전에 RootStack 안에서 isLoading 체크 + 네비 훅 호출을 같이 했더니
-  // expo-router 초기 mount 와 race 가 나면서 "navigation context 없음" 에러가 가끔 떴음.
-  // → 훅 호출을 SessionRedirector 컴포넌트로 분리해서 Stack 이 실제로 마운트된 뒤에만 평가.
   return (
     <View className={scheme === 'dark' ? 'dark flex-1' : 'flex-1'}>
       <ThemeProvider value={navTheme}>
@@ -61,13 +70,7 @@ function ThemedRoot() {
             <ActivityIndicator />
           </View>
         ) : (
-          <>
-            <Stack screenOptions={{ headerShown: false }}>
-              <Stack.Screen name="(tabs)" />
-              <Stack.Screen name="auth" />
-            </Stack>
-            <SessionRedirector />
-          </>
+          NAV_TREE
         )}
         <CustomAlert />
       </ThemeProvider>

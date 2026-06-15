@@ -1,6 +1,9 @@
 import DateTimePicker from '@react-native-community/datetimepicker';
+import * as ImagePicker from 'expo-image-picker';
 import React, { useEffect, useRef, useState, useMemo} from 'react';
 import {
+  ActivityIndicator,
+  Image,
   Modal,
   Platform,
   Pressable,
@@ -14,9 +17,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 
 import { Section } from '@/components/ui/section';
+import { customAlert } from '@/components/ui/custom-alert';
 import { FormInput } from '@/components/ui/form';
 import { Sheet } from '@/components/ui/sheet';
+import { useAuth } from '@/lib/auth-context';
 import { useThemeColors, type ThemeColors } from '@/lib/theme';
+import { uploadShoeImage } from '@/lib/upload-image';
 import {
   FIT_FEATURE_OPTIONS,
   FIT_PERCEPTION_LABEL,
@@ -51,6 +57,7 @@ export type ShoeFormValue = {
   fitFeatures: string[];
   isPrimary: boolean;
   ratings: Record<RatingKey, number | null>;
+  imageUrl: string | null;
 };
 
 const EMPTY_RATINGS: Record<RatingKey, number | null> = {
@@ -82,6 +89,7 @@ export const EMPTY_SHOE_FORM: ShoeFormValue = {
   fitFeatures: [],
   isPrimary: false,
   ratings: { ...EMPTY_RATINGS },
+  imageUrl: null,
 };
 
 const STATUS_OPTIONS: ShoeStatus[] = ['active', 'resole_pending', 'retired'];
@@ -514,10 +522,10 @@ export function ShoeForm({ value, onChange }: Props) {
       </Pressable>
 
       <Section title="사진" icon="image">
-        <View style={s.photoBanner}>
-          <Feather name="image" size={15} color={c.text.muted} />
-          <Text style={s.photoBannerText}>사진 첨부는 준비 중이에요</Text>
-        </View>
+        <ShoeImagePicker
+          imageUrl={value.imageUrl}
+          onChange={(url) => onChange({ ...value, imageUrl: url })}
+        />
       </Section>
     </ScrollView>
   );
@@ -534,6 +542,139 @@ const BRAND_PRESETS = [
   'Unparallel',
   'So iLL',
 ] as const;
+
+function ShoeImagePicker({
+  imageUrl,
+  onChange,
+}: {
+  imageUrl: string | null;
+  onChange: (url: string | null) => void;
+}) {
+  const c = useThemeColors();
+  const { session: authSession } = useAuth();
+  const userId = authSession?.user.id;
+  const [uploading, setUploading] = useState(false);
+
+  async function pick() {
+    if (uploading || !userId) return;
+    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!perm.granted) {
+      customAlert('권한 필요', '사진 라이브러리 접근 권한이 필요해요');
+      return;
+    }
+    try {
+      const r = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: 'images',
+        quality: 0.85,
+        allowsEditing: true,
+        aspect: [4, 3],
+      });
+      if (r.canceled || !r.assets[0]) return;
+      setUploading(true);
+      const url = await uploadShoeImage(r.assets[0], userId);
+      onChange(url);
+    } catch (e) {
+      customAlert('업로드 실패', e instanceof Error ? e.message : '오류');
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  if (imageUrl) {
+    return (
+      <View style={{ gap: 8 }}>
+        <View
+          style={{
+            width: '100%',
+            aspectRatio: 4 / 3,
+            borderRadius: 14,
+            overflow: 'hidden',
+            backgroundColor: c.bg.subtle,
+          }}
+        >
+          <Image source={{ uri: imageUrl }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
+        </View>
+        <View style={{ flexDirection: 'row', gap: 6 }}>
+          <Pressable onPress={pick} disabled={uploading} style={{ flex: 1 }}>
+            {({ pressed }) => (
+              <View
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 6,
+                  paddingVertical: 10,
+                  borderRadius: 12,
+                  backgroundColor: c.bg.subtle,
+                  opacity: pressed ? 0.8 : 1,
+                }}
+              >
+                {uploading ? (
+                  <ActivityIndicator color={c.text.secondary} size="small" />
+                ) : (
+                  <Feather name="image" size={14} color={c.text.secondary} />
+                )}
+                <Text style={{ fontSize: 13, fontWeight: '800', color: c.text.secondary }}>
+                  사진 변경
+                </Text>
+              </View>
+            )}
+          </Pressable>
+          <Pressable onPress={() => onChange(null)} disabled={uploading}>
+            {({ pressed }) => (
+              <View
+                style={{
+                  paddingHorizontal: 14,
+                  paddingVertical: 10,
+                  borderRadius: 12,
+                  backgroundColor: c.bg.subtle,
+                  opacity: pressed ? 0.8 : 1,
+                }}
+              >
+                <Feather name="trash-2" size={14} color={c.status.danger} />
+              </View>
+            )}
+          </Pressable>
+        </View>
+      </View>
+    );
+  }
+
+  return (
+    <Pressable onPress={pick} disabled={uploading}>
+      {({ pressed }) => (
+        <View
+          style={{
+            width: '100%',
+            aspectRatio: 4 / 3,
+            borderRadius: 14,
+            borderWidth: 1.5,
+            borderStyle: 'dashed',
+            borderColor: c.border.strong,
+            backgroundColor: pressed ? c.bg.subtle : 'transparent',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 6,
+          }}
+        >
+          {uploading ? (
+            <ActivityIndicator color={c.brand.primary} />
+          ) : (
+            <>
+              <Feather name="camera" size={26} color={c.text.muted} />
+              <Text style={{ fontSize: 13, fontWeight: '800', color: c.text.secondary }}>
+                사진 추가
+              </Text>
+              <Text style={{ fontSize: 11, fontWeight: '600', color: c.text.muted }}>
+                탭해서 갤러리에서 선택
+              </Text>
+            </>
+          )}
+        </View>
+      )}
+    </Pressable>
+  );
+}
 
 function BrandPicker({
   value,
@@ -1056,21 +1197,21 @@ function makeStyles(c: ThemeColors) {
     marginTop: 4,
   },
 
-  // Primary toggle
+  // Primary toggle — 다크모드 대응 (theme token 사용)
   primaryToggle: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#fffbeb',
+    backgroundColor: c.status.warningBg,
     borderWidth: 1,
-    borderColor: '#fde68a',
+    borderColor: c.status.warning,
     borderRadius: 14,
     paddingHorizontal: 16,
     paddingVertical: 14,
   },
   primaryToggleLeft: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   primaryToggleStar: { fontSize: 18 },
-  primaryToggleLabel: { fontSize: 14, fontWeight: '800', color: c.text.primary },
+  primaryToggleLabel: { fontSize: 14, fontWeight: '800', color: c.status.warning },
   toggleTrack: {
     width: 44,
     height: 26,

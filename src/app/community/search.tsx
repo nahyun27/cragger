@@ -1,19 +1,22 @@
-import { useRouter } from 'expo-router';
-import React, { useEffect, useMemo, useState } from 'react';
+import { useRouter } from '@/lib/router';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
   Image,
   Keyboard,
+  type LayoutChangeEvent,
   Pressable,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from 'react-native';
+import Animated, { Easing, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { BlurView } from 'expo-blur';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { EmptyState } from '@/components/ui/empty-state';
+import { UserAvatar } from '@/components/ui/user-avatar';
 import { Feather } from '@expo/vector-icons';
 
 import {
@@ -46,19 +49,6 @@ function formatRelativeTime(iso: string): string {
   return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`;
 }
 
-function getAvatarBg(name: string) {
-  const colors = ['#e0f2fe', '#fef3c7', '#dcfce7', '#f3e8ff', '#fee2e2', '#e0e7ff'];
-  let sum = 0;
-  for (let i = 0; i < name.length; i++) sum += name.charCodeAt(i);
-  return colors[sum % colors.length];
-}
-function getAvatarFg(name: string) {
-  const colors = ['#0369a1', '#b45309', '#15803d', '#6b21a8', '#b91c1c', '#4338ca'];
-  let sum = 0;
-  for (let i = 0; i < name.length; i++) sum += name.charCodeAt(i);
-  return colors[sum % colors.length];
-}
-
 function useDebounced<T>(value: T, ms = 300): T {
   const [v, setV] = useState(value);
   useEffect(() => {
@@ -77,6 +67,34 @@ export default function CommunitySearchScreen() {
   const router = useRouter();
   const [input, setInput] = useState('');
   const [tab, setTab] = useState<SearchTab>('posts');
+  const tabLayouts = useRef<{ x: number; y: number; width: number; height: number }[]>([]);
+  const tabX = useSharedValue(0);
+  const tabW = useSharedValue(0);
+  const tabPillTop = useSharedValue(0);
+  const tabPillH = useSharedValue(0);
+  const SLIDE = { duration: 220, easing: Easing.out(Easing.ease) } as const;
+  const tabPillStyle = useAnimatedStyle(() => ({
+    position: 'absolute' as const,
+    top: tabPillTop.value,
+    height: tabPillH.value,
+    left: tabX.value,
+    width: tabW.value,
+    borderRadius: 99,
+    backgroundColor: c.bg.card,
+    shadowColor: '#000',
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
+  }));
+  useEffect(() => {
+    const idx = tab === 'posts' ? 0 : 1;
+    const layout = tabLayouts.current[idx];
+    if (layout) {
+      tabX.value = withTiming(layout.x, SLIDE);
+      tabW.value = withTiming(layout.width, SLIDE);
+    }
+  }, [tab]);
   const term = useDebounced(input.trim(), 300);
   const feed = useCommunityFeed('all', tab === 'posts' ? term : '');
   const posts = useMemo<PostRow[]>(() => feed.data?.pages.flat() ?? [], [feed.data]);
@@ -129,8 +147,19 @@ export default function CommunitySearchScreen() {
         {/* 탭 전환 (Segmented Control Style) */}
         <View style={s.tabBarWrap}>
           <View style={s.tabBar}>
-            {(['posts', 'users'] as SearchTab[]).map((t) => (
-              <Pressable key={t} style={[s.tabItem, tab === t && s.tabItemActive]} onPress={() => setTab(t)}>
+            <Animated.View style={tabPillStyle} />
+            {(['posts', 'users'] as SearchTab[]).map((t, i) => (
+              <Pressable
+                key={t}
+                style={s.tabItem}
+                onPress={() => setTab(t)}
+                onLayout={(e: LayoutChangeEvent) => {
+                  const { x, y, width, height } = e.nativeEvent.layout;
+                  tabLayouts.current[i] = { x, y, width, height };
+                  if (tabPillH.value === 0) { tabPillTop.value = y; tabPillH.value = height; }
+                  if (tab === t) { tabX.value = x; tabW.value = width; }
+                }}
+              >
                 <Text style={[s.tabText, tab === t && s.tabTextActive]}>
                   {t === 'posts' ? '글 검색' : '사람 찾기'}
                 </Text>
@@ -246,7 +275,6 @@ function ResultCard({
   const s = useMemo(() => makeStyles(c), [c]);
 
   const authorName = post.author?.display_name ?? post.author?.username ?? '익명';
-  const firstChar = authorName[0]?.toUpperCase() ?? '?';
   const avatarUrl = post.author?.avatar_url;
   const badge = BADGE_COLORS[post.post_type] ?? BADGE_COLORS.general;
   const label =
@@ -282,13 +310,12 @@ function ResultCard({
 
           {/* Author footer */}
           <View style={s.authorFooter}>
-            <View style={[s.avatar, { backgroundColor: getAvatarBg(authorName) }]}>
-              {avatarUrl ? (
-                <Image source={{ uri: avatarUrl }} style={s.avatarImage} />
-              ) : (
-                <Text style={[s.avatarText, { color: getAvatarFg(authorName) }]}>{firstChar}</Text>
-              )}
-            </View>
+            <UserAvatar
+              userKey={post.author_id ?? post.author?.username ?? authorName}
+              username={authorName}
+              avatarUrl={avatarUrl}
+              size={28}
+            />
             <Text style={s.authorName} numberOfLines={1}>{authorName}</Text>
             <FeaturedBadgeChip badgeKey={post.author?.featured_badge_key} size={11} />
           </View>
@@ -349,19 +376,17 @@ function UserSearchRow({ user, onPress }: { user: SearchUser; onPress: () => voi
   const s = useMemo(() => makeStyles(c), [c]);
   const name = user.display_name || user.username;
   const hasDisplayName = !!user.display_name && user.display_name !== user.username;
-  const firstChar = name.length > 0 ? name.charAt(0).toUpperCase() : '?';
-  const bg = getAvatarBg(name);
-  const fg = getAvatarFg(name);
   return (
     <Pressable onPress={onPress}>
       {({ pressed }) => (
         <View style={[s.userRow, pressed && { backgroundColor: c.bg.subtle }]}>
-          <View style={[s.userAvatar, { backgroundColor: bg }]}>
-            {user.avatar_url ? (
-              <Image source={{ uri: user.avatar_url }} style={s.userAvatarImg} />
-            ) : (
-              <Text style={[s.userAvatarText, { color: fg }]}>{firstChar}</Text>
-            )}
+          <View style={{ marginRight: 12 }}>
+            <UserAvatar
+              userKey={user.id}
+              username={name}
+              avatarUrl={user.avatar_url}
+              size={48}
+            />
           </View>
           <View style={s.userInfo}>
             <View style={s.userNameRow}>
@@ -477,7 +502,7 @@ function makeStyles(c: ThemeColors) {
     gap: 12,
     paddingHorizontal: 20,
     paddingVertical: 12,
-    backgroundColor: c.bg.card,
+    // bg 제거 — 외부 BlurView 효과가 보이도록 투명 유지
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: c.border.subtle,
   },
@@ -485,16 +510,11 @@ function makeStyles(c: ThemeColors) {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: c.bg.card,
+    backgroundColor: c.bg.subtle,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
     borderColor: c.border.subtle,
-    shadowColor: '#000',
-    shadowOpacity: 0.05,
-    shadowRadius: 5,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 2,
   },
   searchBox: {
     flex: 1,
@@ -503,15 +523,10 @@ function makeStyles(c: ThemeColors) {
     gap: 10,
     paddingHorizontal: 16,
     height: 44,
-    backgroundColor: c.bg.card,
+    backgroundColor: c.bg.subtle,
     borderRadius: 99,
     borderWidth: 1,
     borderColor: c.border.subtle,
-    shadowColor: '#000',
-    shadowOpacity: 0.03,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 1,
   },
   searchInput: {
     flex: 1,

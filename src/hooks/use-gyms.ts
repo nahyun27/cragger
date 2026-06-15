@@ -46,7 +46,7 @@ export function useGyms() {
     queryKey: ['gyms'],
     queryFn: async (): Promise<GymListItem[]> => {
       const [gymsRes, popRes] = await Promise.all([
-        supabase.from('gyms').select(LIST_COLUMNS),
+        supabase.from('gyms').select(LIST_COLUMNS).is('closed_at', null),
         supabase.from('gym_popularity').select('gym_id, favorite_count'),
       ]);
       if (gymsRes.error) throw new Error(gymsRes.error.message);

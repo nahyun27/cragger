@@ -173,7 +173,7 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', minHeight: 40, position: 'relative' },
   leftCol: { flexDirection: 'row', alignItems: 'center' },
   rightCol: { flexDirection: 'row', alignItems: 'center' },
-  rightActions: { flexDirection: 'row', alignItems: 'center' },
+  rightActions: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   centerAbsolute: {
     position: 'absolute',
     left: 0, right: 0, top: 0, bottom: 0,

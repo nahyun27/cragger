@@ -2,7 +2,7 @@ import { BadgeIcon } from '@/components/ui/badge-icon';
 import { EmptyState } from '@/components/ui/empty-state';
 import { InstagramIcon } from '@/components/ui/instagram-icon';
 import { customAlert } from '@/components/ui/custom-alert';
-import { useGlobalSearchParams, useRouter } from 'expo-router';
+import { useGlobalSearchParams, useRouter } from '@/lib/router';
 import React, { useState } from 'react';
 import {
   ActivityIndicator,
@@ -49,6 +49,7 @@ import {
   type ClimbingShoe,
   type ShoeStatus,
 } from '@/hooks/use-shoes';
+import { UsePassSheet } from '@/components/membership/use-pass-sheet';
 import { useUnreadCount } from '@/hooks/use-notifications';
 import { useUserStats } from '@/hooks/use-user-stats';
 import {
@@ -116,12 +117,21 @@ export default function ProfileScreen() {
     badgeCheck.mutate(undefined, {
       onSuccess: ({ newlyEarned }) => {
         if (newlyEarned.length === 0) return;
-        const msg = newlyEarned
-          .map((b) => `${b.icon}  ${b.name}`)
-          .join('\n');
+        const first = newlyEarned[0];
+        const title =
+          newlyEarned.length === 1
+            ? '새 뱃지 획득!'
+            : `새 뱃지 ${newlyEarned.length}개 획득!`;
+        const msg =
+          newlyEarned.length === 1
+            ? first.name
+            : newlyEarned.map((b) => `· ${b.name}`).join('\n');
         customAlert(
-          newlyEarned.length === 1 ? '🏅 새 뱃지 획득!' : `🏅 새 뱃지 ${newlyEarned.length}개!`,
+          title,
           msg,
+          undefined,
+          undefined,
+          <BadgeIcon icon={first.icon} color={first.color} size={44} />,
         );
       },
     });
@@ -263,8 +273,8 @@ export default function ProfileScreen() {
                   />
                   <View style={s.metricDivider} />
                   <SummaryMetric
-                    label="활동 일수"
-                    value={stats.activityDays}
+                    label="최고"
+                    value={stats.maxVGrade ?? '-'}
                     icon="award"
                   />
                 </View>
@@ -389,7 +399,7 @@ function NotificationBell() {
 const METRIC_ACCENT: Record<string, string> = {
   calendar: '#2563eb',       // 세션 — 파랑
   'check-circle': '#16a34a', // 완등 — 초록
-  award: '#d97706',          // 활동 일수 — 앰버
+  award: '#7c3aed',          // 최고 V — 보라 (홈과 톤 통일)
 };
 
 function SummaryMetric({
@@ -398,7 +408,7 @@ function SummaryMetric({
   icon,
 }: {
   label: string;
-  value: number;
+  value: number | string;
   icon: 'calendar' | 'check-circle' | 'award';
 }) {
   const c = useThemeColors();
@@ -964,36 +974,30 @@ function MembershipCard({
   const isDark = useEffectiveScheme() === 'dark';
   const router = useRouter();
   const usePass = useUsePass();
-  const gymLabel = membership.gym
-    ? `${membership.gym.name}${membership.gym.branch ? ` ${membership.gym.branch}` : ''}`
+  const gymCount = membership.gym_ids?.length ?? (membership.gym_id ? 1 : 0);
+  const isMultiGym = gymCount > 1;
+  // 표시 우선순위: 사용자 지정 이름 > 다중("X 외 N곳") > 단일 암장 라벨
+  const gymLabel = membership.name?.trim()
+    ? membership.name.trim()
+    : membership.gym
+    ? isMultiGym
+      ? `${membership.gym.name}${membership.gym.branch ? ` ${membership.gym.branch}` : ''} 외 ${gymCount - 1}곳`
+      : `${membership.gym.name}${membership.gym.branch ? ` ${membership.gym.branch}` : ''}`
     : '암장 미선택';
   const expSoon = !expired && isExpiringSoon(membership);
+  const [showUsePassSheet, setShowUsePassSheet] = React.useState(false);
 
   function handleUsePass() {
-    customAlert(
-      '1회 사용',
-      `1회 차감할까요? ${membership.used_passes} → ${membership.used_passes + 1}회`,
-      [
-        { text: '취소', style: 'cancel' },
-        {
-          text: '차감',
-          onPress: () => {
-            usePass
-              .mutateAsync({ id: membership.id, current: membership.used_passes })
-              .catch((e) =>
-                customAlert('차감 실패', e instanceof Error ? e.message : '오류'),
-              );
-          },
-        },
-      ],
-    );
+    setShowUsePassSheet(true);
   }
 
   const total = membership.total_passes ?? 0;
   const remaining = Math.max(0, total - membership.used_passes);
 
   const isPasses = membership.membership_type === 'passes';
-  const iconName = isPasses ? 'layers' : 'calendar';
+  // 다중 암장이면 hexagon, 그 외는 패스/기간으로 layers/calendar.
+  const iconName: React.ComponentProps<typeof Feather>['name'] =
+    isMultiGym ? 'hexagon' : isPasses ? 'layers' : 'calendar';
 
   const cardStyle = [
     s.mCard,
@@ -1054,6 +1058,7 @@ function MembershipCard({
   // 카드 전체를 Pressable로 — Pressable의 함수형 style 배열이 내부 row
   // layout을 자꾸 무너뜨려서 children-as-function 패턴으로 옮김.
   return (
+    <>
     <Pressable
       onPress={() =>
         router.push({ pathname: '/membership/[id]', params: { id: membership.id } })
@@ -1146,6 +1151,12 @@ function MembershipCard({
         </View>
       )}
     </Pressable>
+    <UsePassSheet
+      visible={showUsePassSheet}
+      membership={showUsePassSheet ? membership : null}
+      onClose={() => setShowUsePassSheet(false)}
+    />
+    </>
   );
 }
 
@@ -1294,7 +1305,15 @@ function ShoeCard({ shoe }: { shoe: ClimbingShoe }) {
       <View style={s.shoeCard}>
         <View style={s.shoeCardTop}>
           <View style={s.shoeThumb}>
-            <Feather name="package" size={20} color={c.text.muted} />
+            {shoe.image_url ? (
+              <Image
+                source={{ uri: shoe.image_url }}
+                style={{ width: '100%', height: '100%', borderRadius: 12 }}
+                resizeMode="cover"
+              />
+            ) : (
+              <Feather name="package" size={20} color={c.text.muted} />
+            )}
           </View>
           <View style={s.shoeCardBody}>
             {shoe.brand && <Text style={s.shoeBrand}>{shoe.brand}</Text>}
@@ -2064,7 +2083,6 @@ function makeStyles(c: ThemeColors) {
     borderRadius: 18,
     paddingVertical: 18,
     paddingHorizontal: 14,
-    marginBottom: 16,
     shadowColor: c.shadow.color,
     shadowOpacity: 0.05,
     shadowRadius: 12,

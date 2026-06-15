@@ -4,7 +4,7 @@
  *   - "새 문의 보내기" 폼 (카테고리, 제목, 본문, 답변받을 이메일 옵션)
  *   - 내가 보낸 문의 목록 (상태 뱃지 + 본문 펼치기 + 관리자 응답)
  */
-import { useRouter } from 'expo-router';
+import { useRouter } from '@/lib/router';
 import React, { useMemo, useState } from 'react';
 import {
   ActivityIndicator,

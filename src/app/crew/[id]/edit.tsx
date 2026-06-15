@@ -1,5 +1,5 @@
 import { customAlert } from '@/components/ui/custom-alert';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from '@/lib/router';
 import * as ImagePicker from 'expo-image-picker';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
@@ -17,10 +17,10 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 
-import { GymPickerModal } from '@/components/session/gym-picker-modal';
+import { GymPickerField } from '@/components/gym/gym-picker-field';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { Section } from '@/components/ui/section';
-import { FormInput, FormPressable } from '@/components/ui/form';
+import { FormInput } from '@/components/ui/form';
 import { BottomCTA } from '@/components/ui/bottom-cta';
 import { useAuth } from '@/lib/auth-context';
 import {
@@ -29,7 +29,6 @@ import {
   useUpdateCrew,
   type CrewRegion,
 } from '@/hooks/use-crews';
-import { useGyms } from '@/hooks/use-gyms';
 import { uploadCrewLogo } from '@/lib/upload-image';
 import { useThemeColors, type ThemeColors } from '@/lib/theme';
 
@@ -45,7 +44,6 @@ export default function EditCrewScreen() {
   const insets = useSafeAreaInsets();
   const { session: authSession } = useAuth();
   const { data: crew, isLoading } = useCrewDetail(id);
-  const { data: allGyms } = useGyms();
   const updateCrew = useUpdateCrew();
 
   const [name, setName] = useState('');
@@ -54,7 +52,6 @@ export default function EditCrewScreen() {
   const [region, setRegion] = useState<CrewRegion | null>(null);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [isRecruiting, setIsRecruiting] = useState(false);
-  const [showGymModal, setShowGymModal] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [prefilled, setPrefilled] = useState(false);
 
@@ -68,11 +65,6 @@ export default function EditCrewScreen() {
     setIsRecruiting(crew.is_recruiting);
     setPrefilled(true);
   }, [crew, prefilled]);
-
-  const selectedGym = useMemo(
-    () => allGyms?.find((g) => g.id === gymId) ?? null,
-    [allGyms, gymId],
-  );
 
   const canSubmit =
     prefilled && name.trim().length > 0 && !updateCrew.isPending && !uploading;
@@ -155,14 +147,16 @@ export default function EditCrewScreen() {
           <View style={s.logoBlock}>
             <Pressable onPress={handlePickImage} disabled={uploading}>
               {({ pressed }) => (
-                <View style={[s.logoRing, pressed && { opacity: 0.85 }]}>
-                  {imageUrl ? (
-                    <Image source={{ uri: imageUrl }} style={s.logoImage} resizeMode="cover" />
-                  ) : (
-                    <View style={s.logoPlaceholder}>
-                      <Feather name="users" size={28} color={c.text.muted} />
-                    </View>
-                  )}
+                <View style={[s.logoOuter, pressed && { opacity: 0.85 }]}>
+                  <View style={s.logoRing}>
+                    {imageUrl ? (
+                      <Image source={{ uri: imageUrl }} style={s.logoImage} resizeMode="cover" />
+                    ) : (
+                      <View style={s.logoPlaceholder}>
+                        <Feather name="users" size={28} color={c.text.muted} />
+                      </View>
+                    )}
+                  </View>
                   <View style={s.logoCameraBadge}>
                     {uploading ? (
                       <ActivityIndicator color="#ffffff" size="small" />
@@ -234,28 +228,11 @@ export default function EditCrewScreen() {
           </Section>
 
           <Section title="주 활동 암장" icon="map-pin">
-            <FormPressable
-              onPress={() => setShowGymModal(true)}
-              leadingIcon="search"
+            <GymPickerField
+              value={gymId}
+              onChange={setGymId}
               placeholder="암장 선택 (선택)"
-              value={
-                selectedGym
-                  ? `${selectedGym.name}${selectedGym.branch ? ` ${selectedGym.branch}` : ''}`
-                  : null
-              }
-              trailingNode={
-                selectedGym ? (
-                  <Pressable
-                    onPress={(e) => {
-                      e.stopPropagation();
-                      setGymId(null);
-                    }}
-                    hitSlop={6}
-                  >
-                    <Feather name="x" size={16} color={c.text.muted} />
-                  </Pressable>
-                ) : undefined
-              }
+              clearable
             />
           </Section>
 
@@ -287,17 +264,6 @@ export default function EditCrewScreen() {
           disabled={!canSubmit}
         />
       </KeyboardAvoidingView>
-
-      <GymPickerModal
-        visible={showGymModal}
-        gyms={allGyms ?? []}
-        selectedId={gymId}
-        onSelect={(gid) => {
-          setGymId(gid);
-          setShowGymModal(false);
-        }}
-        onClose={() => setShowGymModal(false)}
-      />
     </SafeAreaView>
   );
 }
@@ -328,6 +294,10 @@ function makeStyles(c: ThemeColors) {
   headerTitle: { fontSize: 17, fontWeight: '700', color: c.text.primary },
   scrollContent: { padding: 18, paddingBottom: 40, gap: 16 },
   logoBlock: { alignItems: 'center', gap: 8 },
+  logoOuter: {
+    width: 96,
+    height: 96,
+  },
   logoRing: {
     width: 96,
     height: 96,

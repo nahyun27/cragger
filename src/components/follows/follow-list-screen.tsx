@@ -1,4 +1,4 @@
-import { useRouter } from 'expo-router';
+import { useRouter } from '@/lib/router';
 import React from 'react';
 import {
   ActivityIndicator,
@@ -14,37 +14,62 @@ import { Feather } from '@expo/vector-icons';
 
 import { EmptyState } from '@/components/ui/empty-state';
 import { FeaturedBadgeChip } from '@/components/ui/featured-badge-chip';
+import { UserAvatar } from '@/components/ui/user-avatar';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { useFollowers, useFollowing, type FollowUserMini } from '@/hooks/use-follows';
 import { useThemeColors, type ThemeColors } from '@/lib/theme';
 
-type Mode = 'followers' | 'following';
+type Tab = 'followers' | 'following';
 
-export function FollowListScreen({ userId, mode }: { userId: string | undefined; mode: Mode }) {
+export function FollowListScreen({ userId, initialTab = 'followers' }: { userId: string | undefined; initialTab?: Tab }) {
   const c = useThemeColors();
   const s = React.useMemo(() => makeStyles(c), [c]);
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const followersQ = useFollowers(mode === 'followers' ? userId : undefined);
-  const followingQ = useFollowing(mode === 'following' ? userId : undefined);
-  const query = mode === 'followers' ? followersQ : followingQ;
-  const title = mode === 'followers' ? '팔로워' : '팔로잉';
+  const [tab, setTab] = React.useState<Tab>(initialTab);
+
+  const followersQ = useFollowers(userId);
+  const followingQ = useFollowing(userId);
+
+  const query = tab === 'followers' ? followersQ : followingQ;
   const count = query.data?.length ?? 0;
 
   return (
     <SafeAreaView style={s.container} edges={['left', 'right']}>
       <ScreenHeader
-        title={title}
+        title={tab === 'followers' ? '팔로워' : '팔로잉'}
         count={count}
         onBack={() => router.back()}
       />
 
+      {/* Tab bar */}
+      <View style={s.tabBar}>
+        <Pressable onPress={() => setTab('followers')} style={{ flex: 1 }}>
+          {({ pressed }) => (
+            <View style={[s.tabItem, tab === 'followers' && s.tabItemActive, pressed && { opacity: 0.7 }]}>
+              <Text style={[s.tabText, tab === 'followers' && s.tabTextActive]}>
+                팔로워{followersQ.data ? ` · ${followersQ.data.length}` : ''}
+              </Text>
+            </View>
+          )}
+        </Pressable>
+        <Pressable onPress={() => setTab('following')} style={{ flex: 1 }}>
+          {({ pressed }) => (
+            <View style={[s.tabItem, tab === 'following' && s.tabItemActive, pressed && { opacity: 0.7 }]}>
+              <Text style={[s.tabText, tab === 'following' && s.tabTextActive]}>
+                팔로잉{followingQ.data ? ` · ${followingQ.data.length}` : ''}
+              </Text>
+            </View>
+          )}
+        </Pressable>
+      </View>
+
       <ScrollView
+        key={tab}
         contentContainerStyle={[s.list, { paddingBottom: insets.bottom + 12 }]}
         contentInsetAdjustmentBehavior="never"
         automaticallyAdjustContentInsets={false}
         showsVerticalScrollIndicator={false}
-        refreshControl={undefined}
       >
         {query.isLoading && (
           <View style={s.loaderWrap}>
@@ -65,9 +90,9 @@ export function FollowListScreen({ userId, mode }: { userId: string | undefined;
           <EmptyState
             icon="users"
             tone="muted"
-            title={mode === 'followers' ? '아직 팔로워가 없어요' : '아직 팔로우한 사용자가 없어요'}
+            title={tab === 'followers' ? '아직 팔로워가 없어요' : '아직 팔로우한 사용자가 없어요'}
             description={
-              mode === 'followers'
+              tab === 'followers'
                 ? '활동을 꾸준히 올리면 새 팔로워가 생겨요'
                 : '관심 있는 클라이머를 팔로우 해보세요'
             }
@@ -95,7 +120,6 @@ function UserRow({ user, isLast }: { user: FollowUserMini; isLast: boolean }) {
   const s = React.useMemo(() => makeStyles(c), [c]);
   const router = useRouter();
   const name = user.display_name || user.username;
-  const firstChar = name.length > 0 ? name.charAt(0).toUpperCase() : '?';
 
   return (
     <Pressable
@@ -103,13 +127,12 @@ function UserRow({ user, isLast }: { user: FollowUserMini; isLast: boolean }) {
     >
       {({ pressed }) => (
         <View style={[s.row, isLast && s.rowLast, pressed && { opacity: 0.7 }]}>
-          <View style={s.avatarWrap}>
-            {user.avatar_url ? (
-              <Image source={{ uri: user.avatar_url }} style={s.avatarImg} resizeMode="cover" />
-            ) : (
-              <Text style={s.avatarFallback}>{firstChar}</Text>
-            )}
-          </View>
+          <UserAvatar
+            userKey={user.id}
+            username={name}
+            avatarUrl={user.avatar_url}
+            size={44}
+          />
           <View style={s.userTextCol}>
             <View style={s.userNameRow}>
               <Text style={s.userName} numberOfLines={1}>{name}</Text>
@@ -130,6 +153,23 @@ function UserRow({ user, isLast }: { user: FollowUserMini; isLast: boolean }) {
 function makeStyles(c: ThemeColors) {
   return StyleSheet.create({
     container: { flex: 1, backgroundColor: c.bg.primary },
+    tabBar: {
+      flexDirection: 'row',
+      paddingHorizontal: 18,
+      paddingTop: 14,
+      paddingBottom: 12,
+      gap: 6,
+    },
+    tabItem: {
+      flex: 1,
+      paddingVertical: 9,
+      borderRadius: 12,
+      alignItems: 'center',
+      backgroundColor: c.bg.subtle,
+    },
+    tabItemActive: { backgroundColor: c.brand.primary },
+    tabText: { fontSize: 13, fontWeight: '800', color: c.text.secondary, letterSpacing: -0.2 },
+    tabTextActive: { color: c.brand.onPrimary, fontWeight: '900' },
     list: { padding: 18, gap: 16 },
     loaderWrap: { paddingVertical: 32, alignItems: 'center' },
 

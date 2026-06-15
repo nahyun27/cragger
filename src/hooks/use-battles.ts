@@ -6,7 +6,8 @@ import { supabase } from '@/lib/supabase';
 
 export type BattleType = 'crew_internal' | 'crew_internal_team' | 'crew_vs_crew';
 export type BattleStatus = 'scheduled' | 'active' | 'ended' | 'declined';
-export type TeamSide = 'a' | 'b';
+// 팀전 — multi-team 지원 후로 'a' | 'b' 외에 'c'~'f' 까지 허용.
+export type TeamSide = string;
 export type ScoreVisibility = 'live' | 'after_end';
 
 // 호스트가 색깔별 점수를 지정 — 순서 = 난이도 순(쉬운 것부터)
@@ -52,6 +53,7 @@ export type Battle = {
   score_visibility: ScoreVisibility;
   team_a_name: string | null;
   team_b_name: string | null;
+  team_configs: { key: string; name: string }[] | null;
   created_by: string;
   created_at: string;
   crew: BattleCrewMini | null;
@@ -60,7 +62,16 @@ export type Battle = {
 };
 
 const BATTLE_COLS =
-  'id, battle_type, title, crew_id, opponent_crew_id, gym_id, battle_date, status, scoring_rules, color_grades, score_visibility, team_a_name, team_b_name, created_by, created_at, crew:crews!battles_crew_id_fkey(id, name), opponent_crew:crews!battles_opponent_crew_id_fkey(id, name), gym:gyms!battles_gym_id_fkey(id, name, branch)';
+  'id, battle_type, title, crew_id, opponent_crew_id, gym_id, battle_date, status, scoring_rules, color_grades, score_visibility, team_a_name, team_b_name, team_configs, created_by, created_at, crew:crews!battles_crew_id_fkey(id, name), opponent_crew:crews!battles_opponent_crew_id_fkey(id, name), gym:gyms!battles_gym_id_fkey(id, name, branch)';
+
+// 팀 구성 읽기 — team_configs 우선, 없으면 레거시 team_a_name/team_b_name 사용.
+export function resolveTeamConfigs(b: Pick<Battle, 'team_configs' | 'team_a_name' | 'team_b_name'>): { key: string; name: string }[] {
+  if (b.team_configs && b.team_configs.length > 0) return b.team_configs;
+  return [
+    { key: 'a', name: b.team_a_name ?? 'A팀' },
+    { key: 'b', name: b.team_b_name ?? 'B팀' },
+  ];
+}
 
 // 호스트가 수동으로 status 를 바꿈. 날짜는 기록용이라 자동 전환 없음.
 export function effectiveStatus(b: Battle): BattleStatus {
@@ -186,6 +197,7 @@ export type BattleScoreEntry = {
   team: TeamSide | null;
   score: number;
   send_count: number;
+  color_sends: { color: string; count: number }[];   // 완등 색깔별 카운트 (desc)
 };
 
 export type TeamTotal = { team: TeamSide; name: string; score: number; send_count: number };
@@ -279,8 +291,11 @@ export function useBattleRanking(battleId: string | undefined, opts?: { refetchI
           team: p.team,
           score: 0,
           send_count: 0,
+          color_sends: [],
         });
       }
+      // 사용자별 색깔 카운트 누적용 — 마지막에 array 로 직렬화.
+      const colorCountByUser = new Map<string, Map<string, number>>();
 
       if (sessionRows.length > 0) {
         const { data: attempts, error: aErr } = await supabase
@@ -323,6 +338,11 @@ export function useBattleRanking(battleId: string | undefined, opts?: { refetchI
           const entry = scoreMap.get(uid);
           if (!entry) continue;
           entry.send_count += 1;
+          if (color) {
+            if (!colorCountByUser.has(uid)) colorCountByUser.set(uid, new Map());
+            const m = colorCountByUser.get(uid)!;
+            m.set(color, (m.get(color) ?? 0) + 1);
+          }
           // 1순위: 호스트가 정한 직접 점수
           if (color && cgMap[color] != null) {
             entry.score += cgMap[color];
@@ -335,6 +355,14 @@ export function useBattleRanking(battleId: string | undefined, opts?: { refetchI
         }
       }
 
+      // 색깔별 카운트 직렬화
+      for (const [uid, m] of colorCountByUser) {
+        const entry = scoreMap.get(uid);
+        if (!entry) continue;
+        entry.color_sends = Array.from(m.entries())
+          .map(([color, count]) => ({ color, count }))
+          .sort((x, y) => y.count - x.count);
+      }
       const individuals = Array.from(scoreMap.values()).sort((a, b) => b.score - a.score);
 
       // 크루별 합산
@@ -362,21 +390,21 @@ export function useBattleRanking(battleId: string | undefined, opts?: { refetchI
         send_count: v.send_count,
       }));
 
-      // 팀별 합산 (crew_internal_team 일 때만 의미 있음)
-      const teamMap: Record<TeamSide, { score: number; send_count: number }> = {
-        a: { score: 0, send_count: 0 },
-        b: { score: 0, send_count: 0 },
-      };
+      // 팀별 합산 (crew_internal_team 일 때만 의미 있음). team_configs 우선.
+      const configs = resolveTeamConfigs(battle);
+      const teamMap: Record<string, { score: number; send_count: number }> = {};
+      for (const t of configs) teamMap[t.key] = { score: 0, send_count: 0 };
       for (const p of individuals) {
-        if (p.team === 'a' || p.team === 'b') {
+        if (p.team && teamMap[p.team]) {
           teamMap[p.team].score += p.score;
           teamMap[p.team].send_count += p.send_count;
         }
       }
-      const teamTotals: TeamTotal[] = [
-        { team: 'a', name: battle.team_a_name ?? 'A팀', ...teamMap.a },
-        { team: 'b', name: battle.team_b_name ?? 'B팀', ...teamMap.b },
-      ];
+      const teamTotals: TeamTotal[] = configs.map((t) => ({
+        team: t.key,
+        name: t.name,
+        ...teamMap[t.key],
+      }));
 
       return { individuals, crewTotals, teamTotals };
     },
@@ -446,10 +474,12 @@ export function useMyBattleSends(battleId: string | undefined) {
 }
 
 function emptyTeamTotals(battle: Battle): TeamTotal[] {
-  return [
-    { team: 'a', name: battle.team_a_name ?? 'A팀', score: 0, send_count: 0 },
-    { team: 'b', name: battle.team_b_name ?? 'B팀', score: 0, send_count: 0 },
-  ];
+  return resolveTeamConfigs(battle).map((t) => ({
+    team: t.key,
+    name: t.name,
+    score: 0,
+    send_count: 0,
+  }));
 }
 
 function emptyCrewTotals(battle: Battle) {
@@ -481,8 +511,8 @@ export type CreateBattleArgs = {
   scoringRules: ScoringRules;
   colorGrades: ColorGrades;         // {"red": 5, "yellow": 3.5, ...}
   scoreVisibility: ScoreVisibility;
-  teamAName?: string;              // crew_internal_team 일 때
-  teamBName?: string;
+  // crew_internal_team 일 때 — 팀 구성 + 초기 멤버 배정 (옵션, 나중에 추가 가능)
+  teamConfigs?: { key: string; name: string; memberIds: string[] }[];
 };
 
 export function useCreateBattle() {
@@ -492,6 +522,8 @@ export function useCreateBattle() {
     mutationFn: async (args: CreateBattleArgs): Promise<{ id: string }> => {
       const userId = authSession?.user.id;
       if (!userId) throw new Error('Not authenticated');
+      const teamConfigs = args.teamConfigs ?? [];
+      const teamConfigsJson = teamConfigs.map((t) => ({ key: t.key, name: t.name }));
       const { data, error } = await supabase
         .from('battles')
         .insert({
@@ -505,14 +537,31 @@ export function useCreateBattle() {
           scoring_rules: args.scoringRules,
           color_grades: args.colorGrades,
           score_visibility: args.scoreVisibility,
-          team_a_name: args.teamAName ?? null,
-          team_b_name: args.teamBName ?? null,
+          // 레거시 호환 — 첫 2팀만 team_a_name/team_b_name 에도 채움.
+          team_a_name: teamConfigs[0]?.name ?? null,
+          team_b_name: teamConfigs[1]?.name ?? null,
+          team_configs: teamConfigsJson,
           created_by: userId,
         })
         .select('id')
         .single();
       if (error) throw new Error(error.message);
-      return data as { id: string };
+      const battleId = (data as { id: string }).id;
+
+      // 초기 팀 배정 (있으면). 미배정 멤버는 나중에 추가 가능.
+      const participants: { battle_id: string; user_id: string; team: string }[] = [];
+      for (const t of teamConfigs) {
+        for (const uid of t.memberIds) {
+          participants.push({ battle_id: battleId, user_id: uid, team: t.key });
+        }
+      }
+      if (participants.length > 0) {
+        const { error: pErr } = await supabase
+          .from('battle_participants')
+          .insert(participants);
+        if (pErr) throw new Error(pErr.message);
+      }
+      return { id: battleId };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['battles'] });
@@ -665,6 +714,33 @@ export function useLeaveBattle() {
     onSuccess: (_d, battleId) => {
       queryClient.invalidateQueries({ queryKey: ['battles', 'participants', battleId] });
       queryClient.invalidateQueries({ queryKey: ['battles', 'ranking', battleId] });
+    },
+  });
+}
+
+// ── 내가 참가한 대결 전체 ─────────────────────────────────────
+// 홈 D-day 섹션 + 프로필 이력에서 사용.
+export function useMyBattles() {
+  const { session: authSession } = useAuth();
+  const userId = authSession?.user.id;
+  return useQuery({
+    queryKey: ['battles', 'my-battles', userId] as const,
+    enabled: !!userId,
+    queryFn: async (): Promise<Battle[]> => {
+      const { data: pRows, error: pErr } = await supabase
+        .from('battle_participants')
+        .select('battle_id')
+        .eq('user_id', userId!);
+      if (pErr) throw new Error(pErr.message);
+      const battleIds = ((pRows ?? []) as Array<{ battle_id: string }>).map((r) => r.battle_id);
+      if (battleIds.length === 0) return [];
+      const { data, error } = await supabase
+        .from('battles')
+        .select(BATTLE_COLS)
+        .in('id', battleIds)
+        .order('battle_date', { ascending: false });
+      if (error) throw new Error(error.message);
+      return (data ?? []) as unknown as Battle[];
     },
   });
 }

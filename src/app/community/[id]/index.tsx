@@ -1,8 +1,9 @@
 import { customAlert } from '@/components/ui/custom-alert';
 import { ActionMenu, type ActionMenuItem } from '@/components/ui/action-menu';
 import { FeaturedBadgeChip } from '@/components/ui/featured-badge-chip';
+import { UserAvatar } from '@/components/ui/user-avatar';
 import { ScreenHeader } from '@/components/ui/screen-header';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from '@/lib/router';
 import React, { useState, useMemo} from 'react';
 import {
   ActivityIndicator,
@@ -236,9 +237,17 @@ export default function PostDetailScreen() {
       icon: 'share-2', label: '공유',
       onPress: async () => {
         try {
-          await Share.share({
-            message: `${post.title ?? '커뮤니티 글'}\n\n${post.body.slice(0, 120)}`,
-          });
+          const lines: string[] = [];
+          if (post.title) lines.push(post.title);
+          if (post.post_type === 'meetup') {
+            const parts: string[] = [];
+            if (post.meetup_at) parts.push(formatMeetupAbsolute(post.meetup_at));
+            if (post.gym) parts.push(`${post.gym.name}${post.gym.branch ? ` ${post.gym.branch}` : ''}`);
+            if (parts.length) lines.push(parts.join(' · '));
+          }
+          if (post.body) lines.push(post.body.slice(0, 120) + (post.body.length > 120 ? '…' : ''));
+          lines.push('\n크래거 앱에서 함께 등반해요 🧗');
+          await Share.share({ message: lines.join('\n') });
         } catch { /* user cancelled */ }
       },
     },
@@ -508,8 +517,6 @@ function PostHeader({ post }: { post: PostRow }) {
 
   const authorName = post.author?.display_name ?? post.author?.username ?? '익명';
   const label = POST_TYPE_LABEL[post.post_type];
-  const avatarBg = getAvatarBgColor(authorName);
-  const avatarText = getAvatarTextColor(authorName);
   const avatarUrl = post.author?.avatar_url;
   const badge = BADGE_COLORS[post.post_type] || BADGE_COLORS.general;
   const authorId = post.author_id;
@@ -524,14 +531,13 @@ function PostHeader({ post }: { post: PostRow }) {
     <View style={s.postHeader}>
       <Pressable onPress={goToProfile} hitSlop={4}>
         {({ pressed }) => (
-          <View style={[s.avatar, { backgroundColor: avatarBg, opacity: pressed ? 0.7 : 1 }]}>
-            {avatarUrl ? (
-              <Image source={{ uri: avatarUrl }} style={s.avatarImage} resizeMode="cover" />
-            ) : (
-              <Text style={[s.avatarTextVal, { color: avatarText }]}>
-                {(authorName[0] ?? '?').toUpperCase()}
-              </Text>
-            )}
+          <View style={{ opacity: pressed ? 0.7 : 1 }}>
+            <UserAvatar
+              userKey={authorId}
+              username={authorName}
+              avatarUrl={avatarUrl}
+              size={40}
+            />
           </View>
         )}
       </Pressable>
@@ -570,10 +576,10 @@ function MeetupInfoCard({ post, isMine }: { post: PostRow; isMine: boolean }) {
   if (post.meetup_at) countdown = describeMeetupCountdown(post.meetup_at);
 
   const toneStyle: Record<string, { bg: string; fg: string }> = {
-    urgent: { bg: '#fee2e2', fg: '#dc2626' },
-    soon:   { bg: '#ffedd5', fg: '#c2410c' },
-    far:    { bg: '#e0f2fe', fg: '#0369a1' },
-    past:   { bg: '#f1f5f9', fg: '#64748b' },
+    urgent: { bg: c.status.dangerBg, fg: c.status.danger },
+    soon:   { bg: c.status.warningBg, fg: c.status.warning },
+    far:    { bg: c.bg.accent, fg: c.brand.primaryDeep },
+    past:   { bg: c.bg.subtle, fg: c.text.tertiary },
   };
 
   const participantsQ = useMeetupParticipants(post.id);
@@ -614,7 +620,7 @@ function MeetupInfoCard({ post, isMine }: { post: PostRow; isMine: boolean }) {
     <View style={s.meetupCard}>
       <View style={s.meetupCardHeaderRow}>
         <View style={s.meetupCardTitleRow}>
-          <Feather name="calendar" size={14} color="#b45309" />
+          <Feather name="calendar" size={14} color={c.status.warning} />
           <Text style={s.meetupCardTitle}>모임 정보</Text>
         </View>
         {countdown && (
@@ -627,7 +633,7 @@ function MeetupInfoCard({ post, isMine }: { post: PostRow; isMine: boolean }) {
       </View>
 
       <View style={s.meetupCardRow}>
-        <Feather name="clock" size={14} color="#92400e" />
+        <Feather name="clock" size={14} color={c.status.warning} />
         <Text style={s.meetupCardRowText}>
           {post.meetup_at ? formatMeetupAbsolute(post.meetup_at) : '날짜 미정'}
         </Text>
@@ -635,13 +641,13 @@ function MeetupInfoCard({ post, isMine }: { post: PostRow; isMine: boolean }) {
 
       {location && (
         <View style={s.meetupCardRow}>
-          <Feather name="map-pin" size={14} color="#92400e" />
+          <Feather name="map-pin" size={14} color={c.status.warning} />
           <Text style={s.meetupCardRowText}>{location}</Text>
         </View>
       )}
 
       <View style={s.meetupCardRow}>
-        <Feather name="users" size={14} color="#92400e" />
+        <Feather name="users" size={14} color={c.status.warning} />
         <Text style={s.meetupCardRowText}>
           {cap != null
             ? `${post.participant_count} / ${cap}명`
@@ -657,7 +663,7 @@ function MeetupInfoCard({ post, isMine }: { post: PostRow; isMine: boolean }) {
       <View style={{ marginTop: 4 }}>
         {isMine ? (
           <View style={s.meetupHostPill}>
-            <Feather name="star" size={12} color="#b45309" />
+            <Feather name="star" size={12} color={c.status.warning} />
             <Text style={s.meetupHostPillText}>내가 주최한 모임</Text>
           </View>
         ) : isPast ? (
@@ -676,10 +682,10 @@ function MeetupInfoCard({ post, isMine }: { post: PostRow; isMine: boolean }) {
             ]}
           >
             {busy ? (
-              <ActivityIndicator size="small" color="#b45309" />
+              <ActivityIndicator size="small" color={c.status.warning} />
             ) : (
               <>
-                <Feather name="check-circle" size={14} color="#b45309" />
+                <Feather name="check-circle" size={14} color={c.status.warning} />
                 <Text style={s.meetupJoinBtnSecondaryText}>참가 중 · 취소하기</Text>
               </>
             )}
@@ -720,7 +726,7 @@ function MeetupInfoCard({ post, isMine }: { post: PostRow; isMine: boolean }) {
           </Text>
         </Text>
         {participantsQ.isLoading ? (
-          <ActivityIndicator size="small" color="#b45309" style={{ marginVertical: 4 }} />
+          <ActivityIndicator size="small" color={c.status.warning} style={{ marginVertical: 4 }} />
         ) : participantsQ.data && participantsQ.data.length > 0 ? (
           <View style={s.meetupParticipantsList}>
             {participantsQ.data.map((p) => (
@@ -746,24 +752,19 @@ function ParticipantChip({
   const s = useMemo(() => makeStyles(c), [c]);
 
   const name = participant.user?.display_name ?? participant.user?.username ?? '익명';
-  const avatarBg = getAvatarBgColor(name);
-  const avatarFg = getAvatarTextColor(name);
   const avatarUrl = participant.user?.avatar_url;
   return (
     <View style={s.participantChip}>
-      <View style={[s.participantAvatar, { backgroundColor: avatarBg }]}>
-        {avatarUrl ? (
-          <Image source={{ uri: avatarUrl }} style={s.participantAvatarImage} resizeMode="cover" />
-        ) : (
-          <Text style={[s.participantAvatarText, { color: avatarFg }]}>
-            {(name[0] ?? '?').toUpperCase()}
-          </Text>
-        )}
-      </View>
+      <UserAvatar
+        userKey={participant.user_id}
+        username={name}
+        avatarUrl={avatarUrl}
+        size={24}
+      />
       <Text style={s.participantName} numberOfLines={1}>{name}</Text>
       {isHost && (
         <View style={s.participantHostDot}>
-          <Feather name="star" size={9} color="#b45309" />
+          <Feather name="star" size={9} color={c.status.warning} />
         </View>
       )}
     </View>
@@ -802,8 +803,6 @@ function CommentItem({
   const router = useRouter();
 
   const authorName = comment.author?.display_name ?? comment.author?.username ?? '익명';
-  const avatarBg = getAvatarBgColor(authorName);
-  const avatarText = getAvatarTextColor(authorName);
   const avatarUrl = comment.author?.avatar_url;
   const canSaveEdit = editingBody.trim().length > 0 && !savingEdit;
   const authorId = comment.author_id;
@@ -818,14 +817,13 @@ function CommentItem({
     <View style={[s.commentItem, isReply && s.commentItemReply]}>
       <Pressable onPress={goToProfile} hitSlop={4}>
         {({ pressed }) => (
-          <View style={[s.avatarSmall, { backgroundColor: avatarBg, opacity: pressed ? 0.7 : 1 }]}>
-            {avatarUrl ? (
-              <Image source={{ uri: avatarUrl }} style={s.avatarSmallImage} resizeMode="cover" />
-            ) : (
-              <Text style={[s.avatarTextValSmall, { color: avatarText }]}>
-                {(authorName[0] ?? '?').toUpperCase()}
-              </Text>
-            )}
+          <View style={{ opacity: pressed ? 0.7 : 1 }}>
+            <UserAvatar
+              userKey={authorId}
+              username={authorName}
+              avatarUrl={avatarUrl}
+              size={28}
+            />
           </View>
         )}
       </Pressable>
@@ -1480,7 +1478,7 @@ function makeStyles(c: ThemeColors) {
     paddingHorizontal: 12,
   },
   meetupJoinBtnPrimary: {
-    backgroundColor: '#d97706',
+    backgroundColor: c.status.warning,
   },
   meetupJoinBtnPrimaryText: {
     color: '#ffffff',
@@ -1488,12 +1486,12 @@ function makeStyles(c: ThemeColors) {
     fontWeight: '800',
   },
   meetupJoinBtnSecondary: {
-    backgroundColor: '#fef3c7',
+    backgroundColor: c.status.warningBg,
     borderWidth: 1,
-    borderColor: '#fde68a',
+    borderColor: c.status.warning + '33',
   },
   meetupJoinBtnSecondaryText: {
-    color: '#b45309',
+    color: c.status.warning,
     fontSize: 14,
     fontWeight: '800',
   },
@@ -1514,12 +1512,12 @@ function makeStyles(c: ThemeColors) {
     gap: 6,
     height: 40,
     borderRadius: 10,
-    backgroundColor: '#fef3c7',
+    backgroundColor: c.status.warningBg,
     borderWidth: 1,
-    borderColor: '#fde68a',
+    borderColor: c.status.warning + '33',
   },
   meetupHostPillText: {
-    color: '#b45309',
+    color: c.status.warning,
     fontSize: 13,
     fontWeight: '800',
   },
@@ -1529,16 +1527,16 @@ function makeStyles(c: ThemeColors) {
     marginTop: 12,
     paddingTop: 12,
     borderTopWidth: 1,
-    borderColor: '#fde68a',
+    borderColor: c.status.warning + '33',
     gap: 8,
   },
   meetupParticipantsTitle: {
     fontSize: 13,
     fontWeight: '800',
-    color: '#b45309',
+    color: c.status.warning,
   },
   meetupParticipantsCount: {
-    color: '#92400e',
+    color: c.status.warning,
   },
   meetupParticipantsEmpty: {
     fontSize: 11,
@@ -1561,7 +1559,7 @@ function makeStyles(c: ThemeColors) {
     borderRadius: 999,
     backgroundColor: c.bg.card,
     borderWidth: 1,
-    borderColor: '#fde68a',
+    borderColor: c.status.warning + '33',
   },
   participantAvatar: {
     width: 22,

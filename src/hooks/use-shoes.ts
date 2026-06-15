@@ -197,6 +197,7 @@ export type ShoeInput = {
   usages: string[];
   fitFeatures: string[];
   isPrimary: boolean;
+  imageUrl: string | null;
   ratingOverall: number | null;
   ratingEdging: number | null;
   ratingSmearing: number | null;
@@ -216,6 +217,7 @@ function toRow(args: ShoeInput) {
     size: args.size?.trim() || null,
     status: args.status,
     purchased_at: args.purchasedAt,
+    image_url: args.imageUrl ?? null,
     note: args.note?.trim() || null,
     ownership_status: args.ownershipStatus,
     wanted_fit: args.wantedFit,

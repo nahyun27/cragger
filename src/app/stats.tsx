@@ -1,4 +1,4 @@
-import { useRouter } from 'expo-router';
+import { useRouter } from '@/lib/router';
 import React, { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
@@ -152,7 +152,7 @@ export default function StatsScreen() {
                 <Divider />
                 <SummaryMetric label="완등" value={stats.totalSends} icon="check-circle" />
                 <Divider />
-                <SummaryMetric label="활동 일수" value={stats.activityDays} icon="award" />
+                <SummaryMetric label="최고" value={stats.maxVGrade ?? '-'} icon="award" />
               </View>
             </View>
 
@@ -598,21 +598,31 @@ function AnchorPicker({
   );
 }
 
+// profile.tsx 와 동일 톤 — 세션:파랑 / 완등:초록 / 최고:보라
+const METRIC_ACCENT: Record<string, string> = {
+  calendar: '#2563eb',
+  'check-circle': '#16a34a',
+  award: '#7c3aed',
+};
+
 function SummaryMetric({
   label,
   value,
   icon,
 }: {
   label: string;
-  value: number;
+  value: number | string;
   icon: React.ComponentProps<typeof Feather>['name'];
 }) {
   const c = useThemeColors();
   const s = useMemo(() => makeStyles(c), [c]);
+  const accent = METRIC_ACCENT[icon] ?? c.text.secondary;
 
   return (
     <View style={s.metricCol}>
-      <Feather name={icon} size={14} color={c.text.secondary} />
+      <View style={[s.metricIconBox, { backgroundColor: `${accent}15` }]}>
+        <Feather name={icon} size={16} color={accent} />
+      </View>
       <Text style={s.metricVal}>{value}</Text>
       <Text style={s.metricLabel}>{label}</Text>
     </View>
@@ -738,6 +748,14 @@ function makeStyles(c: ThemeColors) {
     alignItems: 'center',
   },
   metricCol: { flex: 1, alignItems: 'center', gap: 4 },
+  metricIconBox: {
+    width: 30,
+    height: 30,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 2,
+  },
   metricVal: { fontSize: 22, fontWeight: '900', color: c.text.primary },
   metricLabel: { fontSize: 11, fontWeight: '700', color: c.text.muted },
   divider: { width: 1, alignSelf: 'stretch', backgroundColor: '#e2e8f0' },

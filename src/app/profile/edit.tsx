@@ -2,7 +2,7 @@ import { customAlert } from '@/components/ui/custom-alert';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as ImagePicker from 'expo-image-picker';
-import { useRouter } from 'expo-router';
+import { useRouter } from '@/lib/router';
 import React, { useEffect, useMemo, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import {
@@ -45,8 +45,8 @@ const schema = z.object({
   instagramHandle: z
     .string()
     .trim()
-    .max(30, '최대 30자')
-    .regex(/^[a-zA-Z0-9._]*$/, '영문·숫자·_·. 만 가능 (@ 빼고)')
+    .max(31, '최대 30자')
+    .regex(/^@?[a-zA-Z0-9._]*$/, '영문·숫자·_·. 만 가능')
     .optional()
     .or(z.literal('')),
   heightCm: z
@@ -144,7 +144,7 @@ export default function ProfileEditScreen() {
     if (profile) {
       reset({
         username: profile.username,
-        instagramHandle: profile.instagram_handle ?? '',
+        instagramHandle: profile.instagram_handle ? `@${profile.instagram_handle}` : '',
         heightCm: profile.height_cm != null ? String(profile.height_cm) : '',
         reachCm: profile.reach_cm != null ? String(profile.reach_cm) : '',
         weightKg: profile.weight_kg != null ? String(profile.weight_kg) : '',
@@ -206,7 +206,7 @@ export default function ProfileEditScreen() {
 
   async function onSubmit(values: FormValues) {
     if (!profile) return;
-    const cleanedInsta = (values.instagramHandle ?? '').replace(/^@/, '').trim();
+    const cleanedInsta = (values.instagramHandle ?? '').replace(/@/g, '').trim();
     const usernameChanged = values.username.trim() !== profile.username;
 
     // Resolve avatar update first — upload if pending, clear if removing.
@@ -368,13 +368,12 @@ export default function ProfileEditScreen() {
               render={({ field: { onChange, value } }) => (
                 <FormField label="Instagram" error={errors.instagramHandle?.message}>
                   <FormInput
-                    leadingText="@"
-                    placeholder="your_handle"
+                    placeholder="@your_handle"
                     value={value ?? ''}
-                    onChangeText={(t) => onChange(t.replace(/^@+/, ''))}
+                    onChangeText={onChange}
                     autoCapitalize="none"
                     autoCorrect={false}
-                    maxLength={30}
+                    maxLength={31}
                   />
                 </FormField>
               )}

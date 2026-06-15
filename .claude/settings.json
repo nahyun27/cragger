@@ -1,4 +1,40 @@
 {
+  "permissions": {
+    "allow": [
+      "Bash(git remote *)",
+      "Bash(tee /tmp/expo-router-files.txt)",
+      "Bash(supabase gen *)",
+      "Bash(awk 'NR>=1060 && NR<=1162' /Users/kimnahyun/github/climbing-app/src/app/\\\\\\(tabs\\\\\\)/profile.tsx)",
+      "Bash(node -e \"require\\('@babel/parser'\\).parse\\(require\\('fs'\\).readFileSync\\('/Users/kimnahyun/github/climbing-app/src/app/\\(tabs\\)/profile.tsx', 'utf8'\\), { sourceType: 'module', plugins: ['typescript', 'jsx'] }\\)\")",
+      "Bash(awk 'NR==554,NR==764 || NR==1408,NR==1581' \"src/app/community/[id]/index.tsx\")",
+      "Bash(python3 -)",
+      "Bash(awk '/^function makeStyles/{flag=1} flag{print NR\": \"$0} /^}/{if\\(flag && NR>510\\) exit}' 'src/app/\\(tabs\\)/index.tsx')",
+      "Bash(/usr/bin/env node *)",
+      "Bash(ls /opt/homebrew/bin/node 2>/dev/null || ls ~/.nvm/versions/node/*/bin/node 2>/dev/null | head -3)",
+      "Read(//opt/homebrew/bin/**)",
+      "Bash(~/.nvm/versions/node/v20.18.3/bin/node ~/.nvm/versions/node/v20.18.3/bin/npx tsc --noEmit)",
+      "Bash(~/.nvm/versions/node/v20.18.3/bin/node --version)",
+      "Bash(sed -n '210,240p' /Users/kimnahyun/github/climbing-app/src/app/battle/\\\\[id\\\\].tsx)",
+      "Bash(sed -n '80,100p' \"/Users/kimnahyun/github/climbing-app/src/app/gym/[id]/index.tsx\")",
+      "Bash(sed -n '1,15p' \"/Users/kimnahyun/github/climbing-app/src/app/community/[id]/index.tsx\")",
+      "Bash(sed -n '1,20p' /Users/kimnahyun/github/climbing-app/src/app/battle/\\\\[id\\\\].tsx)",
+      "Bash(sed -n '1,30p' \"/Users/kimnahyun/github/climbing-app/src/app/gym/[id]/index.tsx\")",
+      "Bash(node -e \"const r = require\\('/Users/kimnahyun/github/climbing-app/node_modules/expo-router'\\); console.log\\('useFocusEffect' in r\\);\")",
+      "Bash(mkdir -p /Users/kimnahyun/github/climbing-app/src/app/gym/\\\\[id\\\\]/spray-wall)",
+      "Bash(~/.nvm/versions/node/v20.18.3/bin/npx tsc *)",
+      "Bash(node_modules/.bin/tsc --noEmit)",
+      "Bash(npx supabase *)",
+      "Bash(which supabase *)",
+      "Read(//opt/homebrew/Cellar/supabase/2.100.0/bin/**)",
+      "Bash(git -C /Users/kimnahyun/github/climbing-app log --oneline -5)",
+      "Bash(git -C /Users/kimnahyun/github/climbing-app add supabase/migrations/20260607000000_session_plans.sql supabase/migrations/20260607010000_gyms_closed_at.sql supabase/migrations/20260607020000_battles_multi_team.sql supabase/migrations/20260607030000_battle_participants_host_insert.sql supabase/migrations/20260608000000_session_categories.sql supabase/migrations/20260608010000_gym_id_nullable.sql supabase/migrations/20260608020000_memberships_multi_gym.sql supabase/migrations/20260608030000_board_endurance.sql supabase/migrations/20260615000000_spray_wall.sql supabase/migrations/20260615010000_apply_submission_add_spray_wall.sql supabase/migrations/20260615020000_gym_photos_bucket.sql supabase/migrations/20260615030000_apply_submission_spray_wall_photos.sql supabase/migrations/20260615040000_spray_wall_holds.sql supabase/migrations/20260615050000_spray_wall_color.sql supabase/migrations/20260615060000_spray_wall_problem_type_and_attempts.sql supabase/migrations/20260615070000_spray_wall_hold_notes.sql supabase/migrations/20260615080000_spray_wall_problem_name.sql supabase/migrations/20260615090000_fix_attempts_spray_wall_constraint.sql)",
+      "Bash(git -C /Users/kimnahyun/github/climbing-app commit -m ' *)",
+      "Bash(git -C /Users/kimnahyun/github/climbing-app add src/app/gym/[id]/spray-wall.tsx src/app/gym/[id]/spray-wall/ src/hooks/use-spray-wall.ts src/components/ui/user-avatar.tsx src/components/ui/category-chip.tsx)"
+    ],
+    "additionalDirectories": [
+      "/Users/kimnahyun/github/climbing-app/src/app/gym/[id]"
+    ]
+  },
   "enabledPlugins": {
     "expo@claude-plugins-official": true
   }

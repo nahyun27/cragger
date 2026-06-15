@@ -1,10 +1,11 @@
 import { customAlert } from '@/components/ui/custom-alert';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useState, useMemo} from 'react';
+import { useLocalSearchParams, useRouter } from '@/lib/router';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
   Image,
+  type LayoutChangeEvent,
   Modal,
   Pressable,
   ScrollView,
@@ -15,9 +16,10 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
+import Animated, { Easing, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import * as Clipboard from 'expo-clipboard';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Feather, Ionicons } from '@expo/vector-icons';
+import { Feather, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 
 import { useAuth } from '@/lib/auth-context';
 import {
@@ -48,7 +50,14 @@ import {
   useCrewHomeStats,
   type CrewActiveMember,
 } from '@/hooks/use-crew-stats';
-import { effectiveStatus, useBattles, useMyBattleSends, type Battle } from '@/hooks/use-battles';
+import {
+  effectiveStatus,
+  resolveTeamConfigs,
+  useBattleRanking,
+  useBattles,
+  type Battle,
+  type BattleRanking,
+} from '@/hooks/use-battles';
 import { resolveColorHex, resolveColorLabel } from '@/constants/climb-colors';
 import { EmptyState } from '@/components/ui/empty-state';
 import {
@@ -62,6 +71,7 @@ import {
 import { FeaturedBadgeChip } from '@/components/ui/featured-badge-chip';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { Sheet } from '@/components/ui/sheet';
+import { UserAvatar } from '@/components/ui/user-avatar';
 import { useThemeColors, type ThemeColors } from '@/lib/theme';
 
 function getAvatarBg(name: string) {
@@ -114,6 +124,26 @@ export default function CrewDetailScreen() {
       ? initialTab
       : 'home';
   const [activeTab, setActiveTab] = useState<TabState>(validInitial);
+  const tabItemLayouts = useRef<{ x: number; width: number }[]>([]);
+  const crewTabX = useSharedValue(0);
+  const crewIndicatorStyle = useAnimatedStyle(() => ({
+    position: 'absolute' as const,
+    bottom: 0,
+    height: 3,
+    width: 24,
+    left: crewTabX.value,
+    backgroundColor: '#06b6d4',
+    borderRadius: 2,
+  }));
+  useEffect(() => {
+    const idxMap = { home: 0, news: 1, activity: 2, members: 3 } as const;
+    const idx = idxMap[activeTab];
+    const layout = tabItemLayouts.current[idx];
+    if (layout) {
+      const center = layout.x + layout.width / 2;
+      crewTabX.value = withTiming(center - 12, { duration: 220, easing: Easing.out(Easing.ease) });
+    }
+  }, [activeTab]);
 
   if (isLoading) {
     return (
@@ -313,16 +343,27 @@ export default function CrewDetailScreen() {
         {/* Tab Bar — 멤버 전용 */}
         {isMember && (
           <View style={s.tabBarContainer}>
-            {(['home', 'news', 'activity', 'members'] as TabState[]).map((tab) => {
+            {(['home', 'news', 'activity', 'members'] as TabState[]).map((tab, i) => {
                const labels: Record<TabState, string> = { home: '홈', news: '소식', activity: '활동', members: '멤버' };
                const isActive = activeTab === tab;
                return (
-                 <Pressable key={tab} style={s.tabItem} onPress={() => setActiveTab(tab)}>
+                 <Pressable
+                   key={tab}
+                   style={s.tabItem}
+                   onPress={() => setActiveTab(tab)}
+                   onLayout={(e: LayoutChangeEvent) => {
+                     const { x, width } = e.nativeEvent.layout;
+                     tabItemLayouts.current[i] = { x, width };
+                     if (activeTab === tab) {
+                       crewTabX.value = x + width / 2 - 12;
+                     }
+                   }}
+                 >
                    <Text style={[s.tabText, isActive && s.tabTextActive]}>{labels[tab]}</Text>
-                   {isActive && <View style={s.tabIndicator} />}
                  </Pressable>
                );
             })}
+            <Animated.View style={crewIndicatorStyle} />
           </View>
         )}
 
@@ -718,16 +759,25 @@ function CrewBattlesSection({ crewId }: { crewId: string }) {
 function BattleCard({ battle, crewId, past }: { battle: Battle; crewId: string; past?: boolean }) {
   const c = useThemeColors();
   const s = useMemo(() => makeStyles(c), [c]);
+  const { session: authSession } = useAuth();
+  const meId = authSession?.user.id;
 
   const router = useRouter();
   const status = effectiveStatus(battle);
   const isCrewVs = battle.battle_type === 'crew_vs_crew';
+  const isTeam = battle.battle_type === 'crew_internal_team';
   const isHome = battle.crew_id === crewId;
   const opponent = isHome ? battle.opponent_crew : battle.crew;
 
-  // 종료된 대결이면 내 색깔별 완등 수 같이 보여줌. 종료 외엔 hook 호출 자체 skip.
-  const mySends = useMyBattleSends(past ? battle.id : undefined);
+  // 종료된 대결만 ranking fetch (다른 페이지와 cache 공유).
+  const rankingQ = useBattleRanking(past ? battle.id : undefined);
+  const outcome = useMemo(
+    () => (past && rankingQ.data && meId ? computeOutcome(battle, rankingQ.data, meId, isHome) : null),
+    [past, rankingQ.data, meId, battle, isHome],
+  );
+  const myEntry = rankingQ.data?.individuals.find((p) => p.user_id === meId) ?? null;
 
+  const typeLabel = isCrewVs ? '크루전' : isTeam ? '팀전' : '개인전';
   const statusMeta = ({
     scheduled: { bg: '#fff7ed', fg: '#c2410c', label: '예정' },
     active: { bg: '#ecfeff', fg: '#0e7490', label: '진행 중' },
@@ -745,28 +795,48 @@ function BattleCard({ battle, crewId, past }: { battle: Battle; crewId: string; 
       {({ pressed }) => (
         <View style={[
           s.battleCard,
-          past && { opacity: 0.85 },
+          past && s.battleCardPast,
           pressed && s.cardPressed
         ]}>
+          {/* 상단 행 — 상태/타입 + (결과칩 우측) + chevron */}
           <View style={s.battleCardHeader}>
-            <View style={s.rowCenterGap}>
+            <View style={[s.rowCenterGap, { flex: 1, minWidth: 0 }]}>
               <View style={[s.battleStatusTag, { backgroundColor: statusMeta.bg }]}>
                 <Text style={[s.battleStatusText, { color: statusMeta.fg }]}>
                   {statusMeta.label}
                 </Text>
               </View>
-              <Text style={s.battleTypeText}>
-                {isCrewVs ? '크루전' : '개인전'}
-              </Text>
+              <Text style={s.battleTypeText}>{typeLabel}</Text>
             </View>
+            {outcome && <OutcomeChip outcome={outcome} c={c} s={s} />}
             <Feather name="chevron-right" size={15} color={c.border.strong} />
           </View>
 
-          <Text style={s.battleTitleText} numberOfLines={1}>
+          {/* 제목 */}
+          <Text style={s.battleTitleText} numberOfLines={2}>
             {battle.title}
           </Text>
 
-          {isCrewVs && opponent && (
+          {/* 결과 상세 — 승패의 경우 점수 비교 한 줄 */}
+          {outcome && outcome.kind === 'win_loss' && (
+            <View style={s.outcomeScoreLine}>
+              <Text style={s.outcomeScoreName} numberOfLines={1}>
+                {outcome.myLabel}
+              </Text>
+              <Text style={s.outcomeScoreVal}>{outcome.myScore}</Text>
+              <Text style={s.outcomeScoreVs}>vs</Text>
+              <Text style={s.outcomeScoreValMuted}>{outcome.opponentScore}</Text>
+              <Text
+                style={[s.outcomeScoreName, { textAlign: 'right', color: c.text.tertiary }]}
+                numberOfLines={1}
+              >
+                {outcome.opponentLabel}
+              </Text>
+            </View>
+          )}
+
+          {/* 상대 크루 (진행/예정 크루전 — 결과 칩 없을 때만) */}
+          {isCrewVs && opponent && !outcome && (
             <View style={s.battleVSContainer}>
               <Text style={s.battleVSTag}>VS</Text>
               <Text style={s.battleOpponentText} numberOfLines={1}>
@@ -775,6 +845,7 @@ function BattleCard({ battle, crewId, past }: { battle: Battle; crewId: string; 
             </View>
           )}
 
+          {/* 날짜 + 암장 */}
           <View style={s.battleDateRow}>
             <Feather name="calendar" size={10} color={c.text.muted} />
             <Text style={s.battleDateText}>
@@ -783,11 +854,12 @@ function BattleCard({ battle, crewId, past }: { battle: Battle; crewId: string; 
             </Text>
           </View>
 
-          {past && mySends.data && mySends.data.total > 0 && (
+          {/* 내 색깔별 완등 */}
+          {past && myEntry && myEntry.send_count > 0 && (
             <View style={s.myResultRow}>
               <Text style={s.myResultLabel}>내 완등</Text>
-              <Text style={s.myResultCount}>{mySends.data.total}</Text>
-              {mySends.data.byColor.slice(0, 4).map((entry) => (
+              <Text style={s.myResultCount}>{myEntry.send_count}</Text>
+              {myEntry.color_sends.slice(0, 4).map((entry) => (
                 <View key={entry.color} style={s.myResultColorChip}>
                   <View
                     style={[
@@ -798,8 +870,8 @@ function BattleCard({ battle, crewId, past }: { battle: Battle; crewId: string; 
                   <Text style={s.myResultColorCount}>×{entry.count}</Text>
                 </View>
               ))}
-              {mySends.data.byColor.length > 4 && (
-                <Text style={s.myResultMore}>+{mySends.data.byColor.length - 4}</Text>
+              {myEntry.color_sends.length > 4 && (
+                <Text style={s.myResultMore}>+{myEntry.color_sends.length - 4}</Text>
               )}
             </View>
           )}
@@ -807,6 +879,131 @@ function BattleCard({ battle, crewId, past }: { battle: Battle; crewId: string; 
       )}
     </Pressable>
   );
+}
+
+// 결과 칩 — 헤더 우측에 작게 배치.
+function OutcomeChip({
+  outcome,
+  c,
+  s,
+}: {
+  outcome: BattleOutcome;
+  c: ThemeColors;
+  s: ReturnType<typeof makeStyles>;
+}) {
+  if (outcome.kind === 'win_loss') {
+    const { result } = outcome;
+    const iconName =
+      result === 'win' ? 'trophy' : result === 'lose' ? 'medal' : 'equal';
+    const iconColor =
+      result === 'win' ? '#15803d' : result === 'lose' ? '#b91c1c' : '#a16207';
+    const label = result === 'win' ? '승' : result === 'lose' ? '패' : '무';
+    const bgStyle =
+      result === 'win'
+        ? s.chipBgWin
+        : result === 'lose'
+        ? s.chipBgLose
+        : s.chipBgDraw;
+    return (
+      <View style={[s.outcomeChip, bgStyle]}>
+        <MaterialCommunityIcons name={iconName} size={11} color={iconColor} />
+        <Text style={[s.outcomeChipLabel, { color: iconColor }]}>{label}</Text>
+      </View>
+    );
+  }
+  // rank
+  const iconName =
+    outcome.rank === 1
+      ? 'trophy'
+      : outcome.rank === 2
+      ? 'medal'
+      : outcome.rank === 3
+      ? 'medal-outline'
+      : 'flag-outline';
+  return (
+    <View style={[s.outcomeChip, s.chipBgRank]}>
+      <MaterialCommunityIcons name={iconName as any} size={11} color={c.brand.primaryDeep} />
+      <Text style={[s.outcomeChipLabel, { color: c.brand.primaryDeep }]}>
+        {outcome.rank}
+        <Text style={{ fontSize: 9, fontWeight: '700', color: c.text.tertiary }}>
+          /{outcome.total}
+        </Text>
+      </Text>
+    </View>
+  );
+}
+
+// 지난 대결의 결과 — 크루전 / 2팀전 / 1:1 개인전 → 승패, 그 외 → 등수.
+type BattleOutcome =
+  | { kind: 'win_loss'; result: 'win' | 'lose' | 'draw'; myLabel: string; opponentLabel: string; myScore: number; opponentScore: number }
+  | { kind: 'rank'; rank: number; total: number };
+
+function computeOutcome(
+  battle: Battle,
+  ranking: BattleRanking,
+  meId: string,
+  isHome: boolean,
+): BattleOutcome | null {
+  const isCrewVs = battle.battle_type === 'crew_vs_crew';
+  const isTeam = battle.battle_type === 'crew_internal_team';
+
+  // 1) 크루 vs 크루 — 항상 승패
+  if (isCrewVs && ranking.crewTotals.length >= 2) {
+    const myCrewId = isHome ? battle.crew_id : battle.opponent_crew_id;
+    const oppCrewId = isHome ? battle.opponent_crew_id : battle.crew_id;
+    if (!myCrewId || !oppCrewId) return null;
+    const my = ranking.crewTotals.find((c) => c.crew_id === myCrewId);
+    const opp = ranking.crewTotals.find((c) => c.crew_id === oppCrewId);
+    if (!my || !opp) return null;
+    return {
+      kind: 'win_loss',
+      result: my.score === opp.score ? 'draw' : my.score > opp.score ? 'win' : 'lose',
+      myLabel: my.crew_name || '우리 크루',
+      opponentLabel: opp.crew_name || '상대 크루',
+      myScore: my.score,
+      opponentScore: opp.score,
+    };
+  }
+
+  // 2) 2팀 팀전 — 승패
+  if (isTeam) {
+    const configs = resolveTeamConfigs(battle);
+    if (configs.length === 2) {
+      const me = ranking.individuals.find((p) => p.user_id === meId);
+      if (!me || !me.team) return null;
+      const myTeam = ranking.teamTotals.find((t) => t.team === me.team);
+      const opp = ranking.teamTotals.find((t) => t.team !== me.team);
+      if (!myTeam || !opp) return null;
+      return {
+        kind: 'win_loss',
+        result: myTeam.score === opp.score ? 'draw' : myTeam.score > opp.score ? 'win' : 'lose',
+        myLabel: myTeam.name,
+        opponentLabel: opp.name,
+        myScore: myTeam.score,
+        opponentScore: opp.score,
+      };
+    }
+  }
+
+  // 3) 1:1 개인전 — 승패
+  if (!isCrewVs && !isTeam && ranking.individuals.length === 2) {
+    const me = ranking.individuals.find((p) => p.user_id === meId);
+    const opp = ranking.individuals.find((p) => p.user_id !== meId);
+    if (!me || !opp) return null;
+    return {
+      kind: 'win_loss',
+      result: me.score === opp.score ? 'draw' : me.score > opp.score ? 'win' : 'lose',
+      myLabel: '나',
+      opponentLabel: opp.display_name || opp.username,
+      myScore: me.score,
+      opponentScore: opp.score,
+    };
+  }
+
+  // 4) 그 외 — 등수
+  const rank = ranking.individuals.findIndex((p) => p.user_id === meId);
+  if (rank < 0) return null;
+  return { kind: 'rank', rank: rank + 1, total: ranking.individuals.length };
 }
 
 const KO_WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
@@ -1124,8 +1321,6 @@ function MemberRow({
   const router = useRouter();
   const kick = useKickMember();
   const name = member.user?.display_name || member.user?.username || '익명';
-  const avatarBg = getAvatarBg(name);
-  const avatarFg = getAvatarFg(name);
   const avatarUrl = member.user?.avatar_url;
   const showKick = isOwnerView && !isMe && member.role !== 'owner';
 
@@ -1166,15 +1361,12 @@ function MemberRow({
     <Pressable onPress={goToProfile}>
       {({ pressed }) => (
         <View style={[s.memberRow, !isLast && s.memberRowBorder, pressed && { opacity: 0.6 }]}>
-          <View style={[s.memberAvatar, { backgroundColor: avatarBg }]}>
-            {avatarUrl ? (
-              <Image source={{ uri: avatarUrl }} style={s.emblemImage} resizeMode="cover" />
-            ) : (
-              <Text style={[s.memberAvatarText, { color: avatarFg }]}>
-                {(name[0] ?? '?').toUpperCase()}
-              </Text>
-            )}
-          </View>
+          <UserAvatar
+            userKey={member.user_id}
+            username={name}
+            avatarUrl={avatarUrl}
+            size={40}
+          />
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, flex: 1 }}>
             <Text style={s.memberNameText} numberOfLines={1}>
               {name}
@@ -1380,13 +1572,12 @@ function JoinRequestRow({ request, isLast, crewId }: { request: CrewJoinRequest;
         }
         style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}
       >
-        <View style={s.memberAvatar}>
-          {request.user?.avatar_url ? (
-            <Image source={{ uri: request.user.avatar_url }} style={s.memberAvatarImg} />
-          ) : (
-            <Text style={s.memberAvatarText}>{firstChar}</Text>
-          )}
-        </View>
+        <UserAvatar
+          userKey={request.user_id}
+          username={name}
+          avatarUrl={request.user?.avatar_url}
+          size={40}
+        />
         <View style={{ flex: 1, gap: 2 }}>
           <Text style={s.memberName} numberOfLines={1}>{name}</Text>
           {request.message ? (
@@ -1491,7 +1682,6 @@ function ActiveMemberChip({ member, crewId }: { member: CrewActiveMember; crewId
   const s = useMemo(() => makeStyles(c), [c]);
   const router = useRouter();
   const name = member.display_name || member.username;
-  const firstChar = name.length > 0 ? name.charAt(0).toUpperCase() : '?';
   const isOwner = member.role === 'owner';
 
   return (
@@ -1504,12 +1694,13 @@ function ActiveMemberChip({ member, crewId }: { member: CrewActiveMember; crewId
     >
       <View style={s.activeMembersMore}>
         <View style={s.activeMemberAvatarContainer}>
-          <View style={[s.activeMemberAvatar, isOwner && s.activeMemberAvatarOwner]}>
-            {member.avatar_url ? (
-              <Image source={{ uri: member.avatar_url }} style={s.activeMemberAvatarImg} resizeMode="cover" />
-            ) : (
-              <Text style={s.activeMemberAvatarText}>{firstChar}</Text>
-            )}
+          <View style={isOwner ? s.activeMemberAvatarOwnerRing : undefined}>
+            <UserAvatar
+              userKey={member.user_id}
+              username={name}
+              avatarUrl={member.avatar_url}
+              size={56}
+            />
           </View>
           {isOwner && (
             <View style={s.activeMemberOwnerBadge}>
@@ -2467,6 +2658,10 @@ function makeStyles(c: ThemeColors) {
     shadowOffset: { width: 0, height: 4 },
     elevation: 1,
   },
+  battleCardPast: {
+    // 배경은 그대로 유지 (가독성). '종료' 뱃지 + 결과 칩으로 충분히 구분됨.
+    borderColor: c.border.subtle,
+  },
   battleCardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -2487,10 +2682,62 @@ function makeStyles(c: ThemeColors) {
     fontWeight: '800',
   },
   battleTitleText: {
-    fontSize: 14,
-    fontWeight: '800',
+    fontSize: 15,
+    fontWeight: '900',
     color: c.text.primary,
+    letterSpacing: -0.3,
+    lineHeight: 20,
+  },
+
+  // 결과 칩 (헤더 우측)
+  outcomeChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: 999,
+    marginRight: 4,
+  },
+  outcomeChipLabel: {
+    fontSize: 11,
+    fontWeight: '900',
     letterSpacing: -0.2,
+  },
+  chipBgWin: { backgroundColor: '#dcfce7' },
+  chipBgLose: { backgroundColor: '#fee2e2' },
+  chipBgDraw: { backgroundColor: '#fef3c7' },
+  chipBgRank: { backgroundColor: c.bg.accent },
+
+  // 결과 점수 라인 (제목 아래 한 줄, 승패만)
+  outcomeScoreLine: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 4,
+  },
+  outcomeScoreName: {
+    flex: 1,
+    fontSize: 11.5,
+    fontWeight: '700',
+    color: c.text.secondary,
+    letterSpacing: -0.2,
+  },
+  outcomeScoreVal: {
+    fontSize: 13,
+    fontWeight: '900',
+    color: c.text.primary,
+  },
+  outcomeScoreValMuted: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: c.text.tertiary,
+  },
+  outcomeScoreVs: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: c.text.muted,
+    letterSpacing: 0.5,
   },
   battleVSContainer: {
     flexDirection: 'row',
@@ -2943,30 +3190,13 @@ function makeStyles(c: ThemeColors) {
   },
   activeMemberAvatarContainer: {
     position: 'relative',
-    width: 50,
-    height: 50,
+    width: 56,
+    height: 56,
   },
-  activeMemberAvatar: {
-    width: '100%',
-    height: '100%',
-    borderRadius: 25,
-    backgroundColor: c.bg.subtle,
-    alignItems: 'center',
-    justifyContent: 'center',
-    overflow: 'hidden',
-  },
-  activeMemberAvatarOwner: {
-    borderWidth: 2,
-    borderColor: c.brand.primary,
-  },
-  activeMemberAvatarImg: {
-    width: '100%',
-    height: '100%',
-  },
-  activeMemberAvatarText: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: c.text.secondary,
+  activeMemberAvatarOwnerRing: {
+    borderRadius: 999,
+    padding: 2,
+    backgroundColor: c.brand.primary,
   },
   activeMemberOwnerBadge: {
     position: 'absolute',

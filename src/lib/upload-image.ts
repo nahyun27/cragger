@@ -67,6 +67,23 @@ export async function uploadGymLogoSuggestion(
   return publicUrl;
 }
 
+export async function uploadSprayWallPhoto(
+  asset: ImagePicker.ImagePickerAsset,
+  userId: string,
+): Promise<string> {
+  const { publicUrl } = await uploadImage(asset, 'gym-photos', userId);
+  return publicUrl;
+}
+
+export async function uploadShoeImage(
+  asset: ImagePicker.ImagePickerAsset,
+  userId: string,
+): Promise<string> {
+  // shoe-images 버킷 사용 (없으면 avatars 재활용도 OK).
+  const { publicUrl } = await uploadImage(asset, 'avatars', userId);
+  return publicUrl;
+}
+
 // Best-effort delete of an avatar by its public URL.
 // Errors are swallowed — orphaned files are harmless and we never block the UX.
 export async function deleteAvatarByUrl(publicUrl: string | null): Promise<void> {

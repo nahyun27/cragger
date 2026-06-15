@@ -90,8 +90,9 @@ export function useFavoriteGyms() {
         .from('gym_favorites')
         .select(`
           gyms (
-            id, name, branch, city, district, size_pyeong, 
-            has_boulder, has_lead, has_top_rope, has_moonboard, has_kilter, has_tension
+            id, name, branch, city, district, size_pyeong,
+            has_boulder, has_lead, has_top_rope, has_moonboard, has_kilter, has_tension,
+            logo_url, logo_bg_hex
           )
         `)
         .eq('user_id', userId!)

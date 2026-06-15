@@ -1,11 +1,12 @@
 import { customAlert } from '@/components/ui/custom-alert';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import React from 'react';
+import { useLocalSearchParams, useRouter } from '@/lib/router';
+import React, { useState } from 'react';
 import {
   ActivityIndicator,
   Image,
   Pressable,
   ScrollView,
+  Share,
   Text,
   View,
 } from 'react-native';
@@ -14,6 +15,7 @@ import { Feather } from '@expo/vector-icons';
 
 import { FeaturedBadgeChip } from '@/components/ui/featured-badge-chip';
 import { ScreenHeader } from '@/components/ui/screen-header';
+import { UserAvatar } from '@/components/ui/user-avatar';
 import { EmptyState } from '@/components/ui/empty-state';
 import { CLIMB_COLOR_HEX, CLIMB_COLOR_LABEL, resolveColorHex, resolveColorLabel } from '@/constants/climb-colors';
 import { useAuth } from '@/lib/auth-context';
@@ -27,6 +29,7 @@ import {
   useBattleRanking,
   useChangeBattleTeam,
   useDeclineBattle,
+  resolveTeamConfigs,
   useDeleteBattle,
   useEndBattle,
   useJoinBattle,
@@ -205,16 +208,30 @@ export default function BattleDetailScreen() {
     ? `${battle.gym.name}${battle.gym.branch ? ` ${battle.gym.branch}` : ''}`
     : '암장 미지정';
 
+  async function handleShare() {
+    if (!battle) return;
+    const typeLabel = isCrewVs ? '크루 vs 크루' : isTeam ? '크루 내 팀전' : '크루 내 개인전';
+    const lines = [
+      `⚔️ ${battle.title}`,
+      `${typeLabel} · ${formatDate(battle.battle_date)}`,
+      ...(battle.gym ? [`📍 ${gymLabel}`] : []),
+      '',
+      '크래거에서 대결을 구경해보세요!',
+    ];
+    try {
+      await Share.share({ message: lines.join('\n') });
+    } catch { /* user cancelled */ }
+  }
+
   return (
     <SafeAreaView className="flex-1 bg-background-primary" edges={['left', 'right']}>
       <ScreenHeader
         title="대결"
         onBack={() => router.back()}
-        rightActions={
-          isCreator
-            ? [{ icon: 'trash-2', tone: 'danger', onPress: handleDelete }]
-            : undefined
-        }
+        rightActions={[
+          { icon: 'share-2', onPress: handleShare },
+          ...(isCreator ? [{ icon: 'trash-2' as const, tone: 'danger' as const, onPress: handleDelete }] : []),
+        ]}
       />
 
       <ScrollView
@@ -228,7 +245,7 @@ export default function BattleDetailScreen() {
           <View className="flex-row items-center gap-2">
             <StatusPill status={status} />
             <Text className="text-text-tertiary text-xs font-bold">
-              {isCrewVs ? '크루 vs 크루' : '크루 내 개인전'}
+              {isCrewVs ? '크루 vs 크루' : isTeam ? '크루 내 팀전' : '크루 내 개인전'}
             </Text>
           </View>
           <Text className="text-text-primary text-2xl font-extrabold">{battle.title}</Text>
@@ -310,18 +327,26 @@ export default function BattleDetailScreen() {
             {isTeam ? (
               <View className="gap-2">
                 <Text className="text-text-tertiary text-xs font-bold">참가하려면 팀 선택</Text>
-                <View className="flex-row gap-2">
-                  <TeamPickBtn
-                    label={battle.team_a_name ?? 'A팀'}
-                    active={myTeam === 'a'}
-                    onPress={() => handleSelectTeam('a')}
-                  />
-                  <TeamPickBtn
-                    label={battle.team_b_name ?? 'B팀'}
-                    active={myTeam === 'b'}
-                    onPress={() => handleSelectTeam('b')}
-                  />
-                </View>
+                {(() => {
+                  const configs = resolveTeamConfigs(battle);
+                  const cols = configs.length <= 2 ? 2 : 3;
+                  return (
+                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -4 }}>
+                      {configs.map((t) => (
+                        <View
+                          key={t.key}
+                          style={{ width: `${100 / cols}%`, padding: 4 }}
+                        >
+                          <TeamPickBtn
+                            label={t.name}
+                            active={myTeam === t.key}
+                            onPress={() => handleSelectTeam(t.key)}
+                          />
+                        </View>
+                      ))}
+                    </View>
+                  );
+                })()}
                 {isMeJoined && (
                   <Pressable
                     onPress={handleJoinToggle}
@@ -478,19 +503,104 @@ export default function BattleDetailScreen() {
               <ActivityIndicator color={c.brand.primary} />
             </View>
           ) : rankingQ.data && rankingQ.data.individuals.length > 0 ? (
-            <View className="bg-background-card border border-border-subtle rounded-2xl overflow-hidden">
-              {rankingQ.data.individuals.map((p, i, arr) => (
-                <ParticipantRow
-                  key={p.user_id}
-                  participant={p}
-                  rank={i + 1}
-                  isMe={p.user_id === meId}
-                  isLast={i === arr.length - 1}
-                  isWinner={isEnded && i === 0 && p.score > 0}
-                  hideScore={hideScores && p.user_id !== meId}
-                />
-              ))}
-            </View>
+            isTeam ? (
+              (() => {
+                const configs = resolveTeamConfigs(battle);
+                const byTeam = new Map<string, typeof rankingQ.data.individuals>();
+                for (const t of configs) byTeam.set(t.key, []);
+                const unassigned: typeof rankingQ.data.individuals = [];
+                for (const p of rankingQ.data.individuals) {
+                  if (p.team && byTeam.has(p.team)) byTeam.get(p.team)!.push(p);
+                  else unassigned.push(p);
+                }
+                const totalsByKey = new Map(
+                  rankingQ.data.teamTotals.map((t) => [t.team, t]),
+                );
+                return (
+                  <View className="gap-3">
+                    {configs.map((cfg) => {
+                      const members = byTeam.get(cfg.key) ?? [];
+                      const total = totalsByKey.get(cfg.key);
+                      return (
+                        <View
+                          key={cfg.key}
+                          className="bg-background-card border border-border-subtle rounded-2xl overflow-hidden"
+                        >
+                          <View className="flex-row items-center justify-between px-4 py-2.5 bg-background-secondary border-b border-border-subtle">
+                            <View className="flex-row items-center gap-2">
+                              <Text className="text-text-primary text-sm font-extrabold">
+                                {cfg.name}
+                              </Text>
+                              <Text className="text-text-tertiary text-[11px] font-bold">
+                                {members.length}명
+                              </Text>
+                            </View>
+                            {!hideScores && total && (
+                              <Text className="text-brand-primary text-sm font-extrabold">
+                                {total.score}점 · 완등 {total.send_count}
+                              </Text>
+                            )}
+                          </View>
+                          {members.length === 0 ? (
+                            <View className="px-4 py-4">
+                              <Text className="text-text-tertiary text-xs font-semibold text-center">
+                                아직 참가자가 없어요
+                              </Text>
+                            </View>
+                          ) : (
+                            members.map((p, i, arr) => (
+                              <ParticipantRow
+                                key={p.user_id}
+                                participant={p}
+                                rank={i + 1}
+                                isMe={p.user_id === meId}
+                                isLast={i === arr.length - 1}
+                                isWinner={false}
+                                hideScore={hideScores && p.user_id !== meId}
+                              />
+                            ))
+                          )}
+                        </View>
+                      );
+                    })}
+                    {unassigned.length > 0 && (
+                      <View className="bg-background-card border border-border-subtle rounded-2xl overflow-hidden">
+                        <View className="px-4 py-2.5 bg-background-secondary border-b border-border-subtle">
+                          <Text className="text-text-tertiary text-xs font-extrabold">
+                            팀 미정
+                          </Text>
+                        </View>
+                        {unassigned.map((p, i, arr) => (
+                          <ParticipantRow
+                            key={p.user_id}
+                            participant={p}
+                            rank={i + 1}
+                            isMe={p.user_id === meId}
+                            isLast={i === arr.length - 1}
+                            isWinner={false}
+                            hideScore={hideScores && p.user_id !== meId}
+                          />
+                        ))}
+                      </View>
+                    )}
+                  </View>
+                );
+              })()
+            ) : (
+              <View className="bg-background-card border border-border-subtle rounded-2xl overflow-hidden">
+                {rankingQ.data.individuals.map((p, i, arr) => (
+                  <ParticipantRow
+                    key={p.user_id}
+                    participant={p}
+                    rank={i + 1}
+                    isMe={p.user_id === meId}
+                    isLast={i === arr.length - 1}
+                    isWinner={isEnded && i === 0 && p.score > 0}
+                    hideScore={hideScores && p.user_id !== meId}
+                  />
+                ))}
+              </View>
+            )
           ) : (
             <EmptyState
               compact
@@ -509,11 +619,14 @@ function TeamPickBtn({ label, active, onPress }: { label: string; active: boolea
   return (
     <Pressable
       onPress={onPress}
-      className={`flex-1 py-3 rounded-xl items-center justify-center ${
+      className={`w-full py-3 rounded-xl items-center justify-center ${
         active ? 'bg-brand-primary' : 'bg-background-card border border-border-subtle'
       }`}
     >
-      <Text className={`text-sm font-extrabold ${active ? 'text-background-primary' : 'text-text-primary'}`}>
+      <Text
+        className={`text-sm font-extrabold ${active ? 'text-background-primary' : 'text-text-primary'}`}
+        numberOfLines={1}
+      >
         {label}{active && ' ✓'}
       </Text>
     </Pressable>
@@ -789,46 +902,104 @@ function ParticipantRow({ participant, rank, isMe, isLast, isWinner, hideScore }
 }) {
   const c = useThemeColors();
   const name = participant.display_name || participant.username;
+  const [expanded, setExpanded] = useState(false);
+  const canExpand = !hideScore && participant.color_sends.length > 0;
+
   return (
-    <View
-      className={`flex-row items-center gap-2.5 px-3.5 py-3 ${isMe ? 'bg-brand-primary/10' : 'bg-background-card'}`}
-      style={{ borderBottomWidth: isLast ? 0 : 1, borderColor: c.border.subtle }}
-    >
-      <View className="w-7 items-center justify-center">
-        {hideScore ? (
-          <Feather name="lock" size={13} color={c.text.muted} />
-        ) : isWinner ? (
-          <Text className="text-lg">👑</Text>
-        ) : (
-          <Text className={`text-sm font-black ${rank <= 3 ? 'text-brand-primaryDeep' : 'text-text-muted'}`}>
-            {rank}
-          </Text>
+    <View style={{ borderBottomWidth: isLast ? 0 : 1, borderColor: c.border.subtle }}>
+      <Pressable
+        onPress={() => canExpand && setExpanded((v) => !v)}
+        disabled={!canExpand}
+      >
+        {({ pressed }) => (
+          <View
+            className={`flex-row items-center gap-2.5 px-3.5 py-3 ${isMe ? 'bg-brand-primary/10' : 'bg-background-card'}`}
+            style={pressed && canExpand ? { opacity: 0.7 } : undefined}
+          >
+            <View className="w-7 items-center justify-center">
+              {hideScore ? (
+                <Feather name="lock" size={13} color={c.text.muted} />
+              ) : isWinner ? (
+                <Text className="text-lg">👑</Text>
+              ) : (
+                <Text className={`text-sm font-black ${rank <= 3 ? 'text-brand-primaryDeep' : 'text-text-muted'}`}>
+                  {rank}
+                </Text>
+              )}
+            </View>
+            <UserAvatar
+              userKey={participant.user_id}
+              username={name}
+              avatarUrl={participant.avatar_url}
+              size={32}
+            />
+            <View className="flex-1 min-w-0">
+              <View className="flex-row items-center gap-1">
+                <Text className={`text-[13px] ${isMe ? 'font-black' : 'font-bold'} text-text-primary`} numberOfLines={1}>
+                  {name}
+                  {isMe && <Text className="text-[11px] font-bold text-brand-primaryDeep"> (나)</Text>}
+                </Text>
+                <FeaturedBadgeChip badgeKey={participant.featured_badge_key} size={11} />
+              </View>
+              <Text className="text-[11px] font-semibold text-text-muted mt-0.5">
+                {hideScore ? '비공개' : `완등 ${participant.send_count}`}
+              </Text>
+            </View>
+            <Text className="text-lg font-black text-text-primary tracking-tight">
+              {hideScore ? '—' : participant.score}
+            </Text>
+            {canExpand && (
+              <Feather
+                name={expanded ? 'chevron-up' : 'chevron-down'}
+                size={16}
+                color={c.text.muted}
+                style={{ marginLeft: 4 }}
+              />
+            )}
+          </View>
         )}
-      </View>
-      <View className="w-8 h-8 rounded-full bg-background-subtle items-center justify-center overflow-hidden">
-        {participant.avatar_url ? (
-          <Image source={{ uri: participant.avatar_url }} className="w-full h-full" resizeMode="cover" />
-        ) : (
-          <Text className="text-[11px] font-extrabold text-text-tertiary">
-            {(name[0] ?? '?').toUpperCase()}
-          </Text>
-        )}
-      </View>
-      <View className="flex-1 min-w-0">
-        <View className="flex-row items-center gap-1">
-          <Text className={`text-[13px] ${isMe ? 'font-black' : 'font-bold'} text-text-primary`} numberOfLines={1}>
-            {name}
-            {isMe && <Text className="text-[11px] font-bold text-brand-primaryDeep"> (나)</Text>}
-          </Text>
-          <FeaturedBadgeChip badgeKey={participant.featured_badge_key} size={11} />
+      </Pressable>
+      {expanded && canExpand && (
+        <View
+          className="px-3.5 pb-3 pt-1 bg-background-subtle"
+          style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}
+        >
+          {participant.color_sends.map((cs) => {
+            const hex = resolveColorHex(cs.color);
+            const label = resolveColorLabel(cs.color);
+            return (
+              <View
+                key={cs.color}
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 5,
+                  paddingHorizontal: 8,
+                  paddingVertical: 4,
+                  borderRadius: 999,
+                  backgroundColor: c.bg.card,
+                  borderWidth: 1,
+                  borderColor: c.border.subtle,
+                }}
+              >
+                <View
+                  style={{
+                    width: 10,
+                    height: 10,
+                    borderRadius: 5,
+                    backgroundColor: hex,
+                    borderWidth: 1,
+                    borderColor: cs.color === 'white' ? c.border.strong : 'transparent',
+                  }}
+                />
+                <Text style={{ fontSize: 11, fontWeight: '700', color: c.text.secondary }}>
+                  {label} {cs.count}
+                </Text>
+              </View>
+            );
+          })}
         </View>
-        <Text className="text-[11px] font-semibold text-text-muted mt-0.5">
-          {hideScore ? '비공개' : `완등 ${participant.send_count}`}
-        </Text>
-      </View>
-      <Text className="text-lg font-black text-text-primary tracking-tight">
-        {hideScore ? '—' : participant.score}
-      </Text>
+      )}
     </View>
   );
 }

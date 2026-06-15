@@ -1,4 +1,4 @@
-import { useRouter } from 'expo-router';
+import { useRouter } from '@/lib/router';
 import { Feather } from '@expo/vector-icons';
 import { useMemo } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -19,10 +19,21 @@ function getTypeIcon(type: string, c: ThemeColors): {
   color: string;
   bg: string;
 } {
-  if (type === 'crew_announcement') {
-    return { name: 'volume-2', color: c.brand.primaryDeep, bg: c.brand.primaryLight };
+  switch (type) {
+    case 'post_comment':    return { name: 'message-circle',    color: c.brand.primaryDeep, bg: c.brand.primaryLight };
+    case 'post_like':       return { name: 'heart',             color: c.status.danger,      bg: c.status.dangerBg };
+    case 'comment_reply':   return { name: 'corner-down-right', color: c.brand.primaryDeep,  bg: c.brand.primaryLight };
+    case 'follow':          return { name: 'user-plus',         color: c.status.success,     bg: c.status.successBg };
+    case 'crew_announcement': return { name: 'volume-2',        color: c.brand.primaryDeep,  bg: c.brand.primaryLight };
+    case 'crew_join_request': return { name: 'user-check',      color: c.status.warning,     bg: c.status.warningBg };
+    case 'crew_join_result':  return { name: 'check-circle',    color: c.status.success,     bg: c.status.successBg };
+    case 'crew_meetup':     return { name: 'calendar',          color: c.brand.primaryDeep,  bg: c.brand.primaryLight };
+    case 'crew_battle':     return { name: 'zap',               color: c.status.warning,     bg: c.status.warningBg };
+    case 'gym_submission_result': return { name: 'edit-3',      color: c.status.success,     bg: c.status.successBg };
+    case 'badge_earned':    return { name: 'award',             color: c.status.warning,     bg: c.status.warningBg };
+    case 'gym_submission_new':    return { name: 'inbox',       color: c.brand.primaryDeep,  bg: c.brand.primaryLight };
+    default:                return { name: 'bell',              color: c.text.secondary,    bg: c.bg.subtle };
   }
-  return { name: 'bell', color: c.text.secondary, bg: c.bg.subtle };
 }
 
 function formatRelative(iso: string): string {

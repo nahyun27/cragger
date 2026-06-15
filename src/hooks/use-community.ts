@@ -41,6 +41,7 @@ export type PostRow = {
   title: string | null;
   body: string;
   gym_id: string | null;
+  crew_id: string | null;
   image_urls: string[];
   like_count: number;
   comment_count: number;
@@ -55,7 +56,7 @@ export type PostRow = {
 };
 
 const POST_SELECT_COLS =
-  'id, author_id, post_type, title, body, gym_id, image_urls, like_count, comment_count, created_at, meetup_at, meetup_capacity, meetup_location, participant_count, author:profiles!posts_author_id_fkey(id, username, display_name, avatar_url, featured_badge_key), gym:gyms(id, name, branch)';
+  'id, author_id, post_type, title, body, gym_id, crew_id, image_urls, like_count, comment_count, created_at, meetup_at, meetup_capacity, meetup_location, participant_count, author:profiles!posts_author_id_fkey(id, username, display_name, avatar_url, featured_badge_key), gym:gyms(id, name, branch)';
 
 const PAGE_SIZE = 20;
 
@@ -600,6 +601,33 @@ export function useJoinMeetup() {
       queryClient.invalidateQueries({ queryKey: ['community', 'meetup-my-status', postId] });
       queryClient.invalidateQueries({ queryKey: ['community', 'feed'] });
       checkBadgesAndNotify();
+    },
+  });
+}
+
+// 내가 참가(joined)한 모임 전체 — 홈 D-day 섹션 + 프로필 이력에서 사용.
+export function useMyJoinedMeetups() {
+  const { session: authSession } = useAuth();
+  const userId = authSession?.user.id;
+  return useQuery({
+    queryKey: ['community', 'my-joined-meetups', userId] as const,
+    enabled: !!userId,
+    queryFn: async (): Promise<PostRow[]> => {
+      const { data: pRows, error: pErr } = await supabase
+        .from('meetup_participants')
+        .select('post_id')
+        .eq('user_id', userId!)
+        .eq('status', 'joined');
+      if (pErr) throw new Error(pErr.message);
+      const postIds = ((pRows ?? []) as Array<{ post_id: string }>).map((r) => r.post_id);
+      if (postIds.length === 0) return [];
+      const { data, error } = await supabase
+        .from('posts')
+        .select(POST_SELECT_COLS)
+        .in('id', postIds)
+        .order('meetup_at', { ascending: true, nullsFirst: false });
+      if (error) throw new Error(error.message);
+      return (data ?? []) as unknown as PostRow[];
     },
   });
 }

@@ -1,6 +1,6 @@
 import { customAlert } from '@/components/ui/custom-alert';
 import { Feather } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useRouter } from '@/lib/router';
 import React, { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
@@ -16,7 +16,7 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { GymPickerModal } from '@/components/session/gym-picker-modal';
+import { MultiGymPickerField } from '@/components/gym/multi-gym-picker-field';
 import { Section } from '@/components/ui/section';
 import { FormInput } from '@/components/ui/form';
 import { BottomCTA } from '@/components/ui/bottom-cta';
@@ -61,8 +61,8 @@ export default function NewMembershipScreen() {
   const iconColor = isDark ? '#f8fafc' : '#0f172a';
 
   const [startChoice, setStartChoice] = useState<StartDateChoice>('today');
-  const [gymId, setGymId] = useState<string | null>(null);
-  const [showGymModal, setShowGymModal] = useState(false);
+  const [gymIds, setGymIds] = useState<string[]>([]);
+  const [name, setName] = useState<string>('');
   const [type, setType] = useState<MembershipType>('period');
   const [durationMonths, setDurationMonths] = useState<number>(1);
   const [totalPasses, setTotalPasses] = useState<string>('10');
@@ -78,10 +78,6 @@ export default function NewMembershipScreen() {
   const { data: recentGyms } = useRecentGyms();
   const { data: allGyms } = useGyms();
   const { data: favoriteIds } = useFavoriteGymIds();
-  const selectedGym = useMemo(
-    () => allGyms?.find((g) => g.id === gymId) ?? null,
-    [allGyms, gymId],
-  );
 
   // 즐겨찾기한 최근 암장 우선 정렬.
   const sortedRecentGyms = useMemo(() => {
@@ -104,7 +100,7 @@ export default function NewMembershipScreen() {
   }, [type, startDate, durationMonths]);
 
   const canSubmit = useMemo(() => {
-    if (!gymId) return false;
+    if (gymIds.length === 0) return false;
     if (type === 'passes') {
       const n = parseInt(totalPasses, 10);
       if (!Number.isFinite(n) || n < 1) return false;
@@ -112,14 +108,26 @@ export default function NewMembershipScreen() {
       if (!Number.isFinite(u) || u < 0 || u > n) return false;
     }
     return true;
-  }, [gymId, type, totalPasses, usedPasses]);
+  }, [gymIds, type, totalPasses, usedPasses]);
 
   async function handleSubmit() {
-    if (!gymId || !canSubmit || createMembership.isPending) return;
+    if (!canSubmit || createMembership.isPending) return;
     try {
       const priceNum = price.trim() ? parseInt(price.replace(/[^\d]/g, ''), 10) : null;
+      // 알림 본문: 사용자 지정 이름 우선 / 1개면 그 암장 / 여러 개면 첫 암장 + 외 N
+      const firstGym = allGyms?.find((g) => g.id === gymIds[0]);
+      const firstGymLabel = firstGym
+        ? `${firstGym.name}${firstGym.branch ? ` ${firstGym.branch}` : ''}`
+        : '암장';
+      const gymName = name.trim()
+        ? name.trim()
+        : gymIds.length > 1
+        ? `${firstGymLabel} 외 ${gymIds.length - 1}곳`
+        : firstGymLabel;
       await createMembership.mutateAsync({
-        gymId,
+        gymIds,
+        gymName,
+        name: name.trim() || null,
         membershipType: type,
         startDate,
         endDate: type === 'period' ? computedEndDate : null,
@@ -160,26 +168,25 @@ export default function NewMembershipScreen() {
           contentInsetAdjustmentBehavior="never"
           automaticallyAdjustContentInsets={false}
         >
-          {/* Gym Section */}
+          {/* 이름 (옵션) — T-pass 같은 연합 패스 별칭 */}
+          <Section title="이름" icon="tag">
+            <Text className="text-text-tertiary text-[11px] font-semibold mb-2">
+              선택 — 연합 패스나 별칭이 있을 때 (예: T-pass)
+            </Text>
+            <FormInput
+              placeholder="예: T-pass"
+              value={name}
+              onChangeText={(t) => setName(t.slice(0, 30))}
+              maxLength={30}
+            />
+          </Section>
+
+          {/* Gym Section — 다중 선택 */}
           <Section title="암장" required icon="map-pin">
-            <Pressable
-              onPress={() => setShowGymModal(true)}
-              className="flex-row items-center justify-between border border-border-subtle bg-background-secondary rounded-xl py-3 px-4 active:bg-background-tertiary"
-            >
-              <View className="flex-row items-center gap-2">
-                <Feather name="search" size={16} color={c.text.tertiary} />
-                <Text
-                  className={`text-base ${
-                    selectedGym ? 'text-text-primary font-semibold' : 'text-text-muted'
-                  }`}
-                >
-                  {selectedGym
-                    ? `${selectedGym.name}${selectedGym.branch ? ` ${selectedGym.branch}` : ''}`
-                    : '암장을 선택해주세요'}
-                </Text>
-              </View>
-              <Feather name="chevron-down" size={16} color={c.text.tertiary} />
-            </Pressable>
+            <Text className="text-text-tertiary text-[11px] font-semibold mb-2">
+              여러 지점 이용 가능한 패스면 모두 추가하세요
+            </Text>
+            <MultiGymPickerField value={gymIds} onChange={setGymIds} />
 
             {sortedRecentGyms && sortedRecentGyms.length > 0 && (
               <View className="mt-3 gap-1.5">
@@ -192,11 +199,17 @@ export default function NewMembershipScreen() {
                   contentContainerClassName="gap-2"
                 >
                   {sortedRecentGyms.map((g) => {
-                    const isSelected = gymId === g.id;
+                    const isSelected = gymIds.includes(g.id);
                     return (
                       <Pressable
                         key={g.id}
-                        onPress={() => setGymId(g.id)}
+                        onPress={() =>
+                          setGymIds(
+                            isSelected
+                              ? gymIds.filter((id) => id !== g.id)
+                              : [...gymIds, g.id],
+                          )
+                        }
                         className={`px-3.5 py-2 rounded-full border ${
                           isSelected
                             ? 'border-brand-primary bg-brand-primary/10'
@@ -434,18 +447,7 @@ export default function NewMembershipScreen() {
           disabled={!canSubmit}
         />
       </KeyboardAvoidingView>
-
-    <GymPickerModal
-      visible={showGymModal}
-      gyms={allGyms ?? []}
-      selectedId={gymId}
-      onSelect={(id) => {
-        setGymId(id);
-        setShowGymModal(false);
-      }}
-      onClose={() => setShowGymModal(false)}
-    />
-  </SafeAreaView>
+    </SafeAreaView>
 );
 }
 

@@ -1,8 +1,11 @@
-import { useRouter } from 'expo-router';
+import { useRouter } from '@/lib/router';
 import React, { useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 
+import { CategoryChip } from '@/components/ui/category-chip';
+import { CLIMB_COLOR_HEX } from '@/constants/climb-colors';
+import type { SessionCategory } from '@/constants/session-category';
 import { useThemeColors, type ThemeColors } from '@/lib/theme';
 
 function formatDuration(min: number): string {
@@ -20,6 +23,9 @@ export type SessionSummary = {
   send_count: number;
   discipline?: 'boulder' | 'lead' | 'mixed' | 'empty';
   max_lead_grade?: string | null;
+  color_sends?: { color: string; count: number }[];
+  lead_sends?: { grade: string; count: number }[];
+  category?: SessionCategory | null;
 };
 
 export function SessionRow({ session }: { session: SessionSummary }) {
@@ -29,10 +35,14 @@ export function SessionRow({ session }: { session: SessionSummary }) {
   const gymName = session.gym?.name || '암장 미선택';
   const branchName = session.gym?.branch ? ` ${session.gym.branch}` : '';
   const hasSends = session.send_count > 0;
+  const hasColorViz = !!session.color_sends && session.color_sends.length > 0;
+  const hasLeadViz = !!session.lead_sends && session.lead_sends.length > 0;
+  const isLead = session.discipline === 'lead' && !!session.max_lead_grade;
 
   const dateObj = new Date(`${session.session_date}T00:00:00`);
   const day = dateObj.getDate();
   const month = dateObj.getMonth() + 1;
+  const weekday = ['일', '월', '화', '수', '목', '금', '토'][dateObj.getDay()];
 
   return (
     <Pressable
@@ -41,34 +51,77 @@ export function SessionRow({ session }: { session: SessionSummary }) {
     >
       <View style={s.sessionCard}>
         <View style={s.sessionDateBadge}>
-          <Text style={s.sessionDateMonth}>{month}월</Text>
-          <Text style={s.sessionDateDay}>{day}</Text>
+          <Text style={s.sessionDateTop}>{month}월 {day}일</Text>
+          <Text style={s.sessionDateWeekday}>{weekday}</Text>
         </View>
         <View style={s.sessionInfo}>
-          <Text style={s.sessionGymName} numberOfLines={1}>
-            {gymName}
-            {branchName}
-          </Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <Text style={[s.sessionGymName, { flexShrink: 1 }]} numberOfLines={1}>
+              {gymName}
+              {branchName}
+            </Text>
+            {session.category && <CategoryChip category={session.category} size="xs" />}
+          </View>
+
+          {/* 1순위: 색깔 시각화 (boulder + 색 기록 있을 때) */}
+          {hasColorViz && (
+            <View style={s.colorSendRow}>
+              {session.color_sends!.slice(0, 6).map((cs) => {
+                const hex = CLIMB_COLOR_HEX[cs.color as keyof typeof CLIMB_COLOR_HEX] ?? c.text.muted;
+                const isLightHue = cs.color === 'white' || cs.color === 'yellow' || cs.color === 'lime';
+                return (
+                  <View
+                    key={cs.color}
+                    style={[
+                      s.colorPill,
+                      { backgroundColor: hex },
+                      isLightHue && { borderWidth: 1, borderColor: c.border.subtle },
+                    ]}
+                  >
+                    <Text
+                      style={[s.colorPillCount, isLightHue ? s.colorPillCountDark : null]}
+                    >
+                      {cs.count}
+                    </Text>
+                  </View>
+                );
+              })}
+              {session.color_sends!.length > 6 && (
+                <Text style={s.colorMore}>+{session.color_sends!.length - 6}</Text>
+              )}
+            </View>
+          )}
+
+          {/* 리드 그레이드별 알약 — 어려운 그레이드 먼저 */}
+          {hasLeadViz && (
+            <View style={s.colorSendRow}>
+              {session.lead_sends!.slice(0, 5).map((ls) => (
+                <View key={ls.grade} style={s.leadPill}>
+                  <Text style={s.leadPillGrade}>{ls.grade}</Text>
+                  <Text style={s.leadPillCount}>×{ls.count}</Text>
+                </View>
+              ))}
+              {session.lead_sends!.length > 5 && (
+                <Text style={s.colorMore}>+{session.lead_sends!.length - 5}</Text>
+              )}
+            </View>
+          )}
+
+          {/* 메타: 시간 · (시각화 없을 때만 완등 N) */}
           <View style={s.sessionMetaRow}>
             <Feather name="clock" size={10} color={c.text.muted} />
             <Text style={s.sessionMetaText}>
               {session.duration_min != null ? formatDuration(session.duration_min) : '기록 없음'}
             </Text>
+            {!hasColorViz && !hasLeadViz && hasSends && (
+              <>
+                <Text style={s.sessionMetaDot}>·</Text>
+                <Text style={s.sessionMetaText}>완등 {session.send_count}</Text>
+              </>
+            )}
           </View>
         </View>
-        {session.discipline === 'lead' && session.max_lead_grade ? (
-          <View style={[s.sessionBadge, s.sessionBadgeLead]}>
-            <Text style={[s.sessionBadgeText, s.sessionBadgeTextLead]}>
-              {session.max_lead_grade} · {session.send_count}
-            </Text>
-          </View>
-        ) : (
-          <View style={[s.sessionBadge, hasSends ? s.sessionBadgeActive : s.sessionBadgeMuted]}>
-            <Text style={[s.sessionBadgeText, hasSends ? s.sessionBadgeTextActive : s.sessionBadgeTextMuted]}>
-              완등 {session.send_count}
-            </Text>
-          </View>
-        )}
+
         <Feather name="chevron-right" size={16} color={c.border.strong} style={s.chevronRight} />
       </View>
     </Pressable>
@@ -92,24 +145,26 @@ function makeStyles(c: ThemeColors) {
       elevation: 1,
     },
     sessionDateBadge: {
-      width: 44,
-      height: 44,
+      width: 56,
+      height: 56,
       borderRadius: 12,
       backgroundColor: c.bg.subtle,
       alignItems: 'center',
       justifyContent: 'center',
       marginRight: 12,
+      gap: 1,
     },
-    sessionDateMonth: {
-      fontSize: 10,
-      fontWeight: '700',
+    sessionDateTop: {
+      fontSize: 10.5,
+      fontWeight: '800',
       color: c.text.tertiary,
+      letterSpacing: -0.2,
     },
-    sessionDateDay: {
-      fontSize: 16,
+    sessionDateWeekday: {
+      fontSize: 20,
       fontWeight: '900',
       color: c.text.primary,
-      marginTop: 1,
+      letterSpacing: -0.5,
     },
     sessionInfo: {
       flex: 1,
@@ -132,40 +187,71 @@ function makeStyles(c: ThemeColors) {
       fontWeight: '600',
       color: c.text.tertiary,
     },
-    sessionBadge: {
-      paddingHorizontal: 10,
-      paddingVertical: 5,
-      borderRadius: 999,
-      borderWidth: 1,
-      marginRight: 4,
-    },
-    sessionBadgeActive: {
-      backgroundColor: c.bg.accent,
-      borderColor: c.brand.primaryLight,
-    },
-    sessionBadgeMuted: {
-      backgroundColor: c.bg.subtle,
-      borderColor: c.border.subtle,
-    },
-    sessionBadgeText: {
+    sessionMetaDot: {
       fontSize: 11,
       fontWeight: '800',
-    },
-    sessionBadgeTextActive: {
-      color: c.brand.primaryDeep,
-    },
-    sessionBadgeTextMuted: {
       color: c.text.muted,
-    },
-    sessionBadgeLead: {
-      backgroundColor: c.status.warningBg,
-      borderColor: c.status.warning,
-    },
-    sessionBadgeTextLead: {
-      color: c.status.warning,
+      marginHorizontal: 2,
     },
     chevronRight: {
       marginLeft: 2,
+    },
+
+    // 색깔 시각화 — 작은 알약 (배경=색, 텍스트=개수)
+    colorSendRow: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 4,
+      marginTop: 6,
+      marginBottom: 2,
+    },
+    colorPill: {
+      minWidth: 22,
+      paddingHorizontal: 6,
+      paddingVertical: 2.5,
+      borderRadius: 999,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    colorPillCount: {
+      fontSize: 11,
+      fontWeight: '900',
+      color: '#ffffff',
+      letterSpacing: -0.2,
+    },
+    colorPillCountDark: {
+      color: '#0f172a',
+    },
+    colorMore: {
+      fontSize: 11,
+      fontWeight: '800',
+      color: c.text.tertiary,
+      alignSelf: 'center',
+      marginLeft: 2,
+    },
+
+    // 리드 그레이드 알약 — 가로 나열
+    leadPill: {
+      flexDirection: 'row',
+      alignItems: 'baseline',
+      gap: 2,
+      paddingHorizontal: 7,
+      paddingVertical: 2.5,
+      borderRadius: 999,
+      backgroundColor: c.status.warningBg,
+      borderWidth: 1,
+      borderColor: c.status.warning,
+    },
+    leadPillGrade: {
+      fontSize: 11,
+      fontWeight: '900',
+      color: c.status.warning,
+      letterSpacing: -0.3,
+    },
+    leadPillCount: {
+      fontSize: 9.5,
+      fontWeight: '800',
+      color: c.status.warning,
     },
   });
 }

@@ -1,6 +1,6 @@
 import { customAlert } from '@/components/ui/custom-alert';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from '@/lib/router';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -19,13 +19,13 @@ import DraggableFlatList, { type RenderItemParams } from 'react-native-draggable
 import { Feather } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
 
-import { GymPickerModal } from '@/components/session/gym-picker-modal';
+import { CrewMemberPicker } from '@/components/battle/crew-member-picker';
+import { GymPickerField } from '@/components/gym/gym-picker-field';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { Section } from '@/components/ui/section';
 import { FormInput, FormPressable } from '@/components/ui/form';
 import { BottomCTA } from '@/components/ui/bottom-cta';
 import { CLIMB_COLOR_HEX, CLIMB_COLOR_LABEL } from '@/constants/climb-colors';
-import { useGyms } from '@/hooks/use-gyms';
 import { supabase } from '@/lib/supabase';
 import { useThemeColors } from '@/lib/theme';
 import {
@@ -37,27 +37,22 @@ import {
   type ScoreVisibility,
   type ScoringRules,
 } from '@/hooks/use-battles';
+import { useCrewDetail } from '@/hooks/use-crews';
 
 const TITLE_MAX = 40;
 
 type ScoringMode = 'linear' | 'exp' | 'custom';
-
-const V_GRADES = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'] as const;
 
 const DEFAULT_CUSTOM_POINTS: Record<string, number> = {
   '0': 1, '1': 2, '2': 4, '3': 7, '4': 12,
   '5': 20, '6': 32, '7': 50, '8': 75, '9': 100,
 };
 
-function buildScoringRulesFrom(mode: ScoringMode, customPoints: Record<string, string>): ScoringRules {
+function buildScoringRulesFrom(mode: ScoringMode): ScoringRules {
   if (mode === 'linear') return { type: 'linear', base: 1 };
   if (mode === 'exp') return { type: 'exp', base: 1.5 };
-  const v_points: Record<string, number> = {};
-  for (const k of V_GRADES) {
-    const n = parseInt(customPoints[k], 10);
-    if (!Number.isNaN(n)) v_points[k] = n;
-  }
-  return { type: 'custom', v_points };
+  // 'custom' — 색깔별 점수는 호스트가 직접 입력. 자동 배정 기본값으로 DEFAULT_CUSTOM_POINTS 사용.
+  return { type: 'custom', v_points: { ...DEFAULT_CUSTOM_POINTS } };
 }
 
 // 암장에 등록된 색깔 + 크라우드 평균 V (default 추천용)
@@ -94,11 +89,27 @@ export default function NewBattleScreen() {
   const insets = useSafeAreaInsets();
   const { crewId } = useLocalSearchParams<{ crewId: string }>();
   const createBattle = useCreateBattle();
-  const { data: allGyms } = useGyms();
 
   const [battleType, setBattleType] = useState<BattleType>('crew_internal');
-  const [teamAName, setTeamAName] = useState('A팀');
-  const [teamBName, setTeamBName] = useState('B팀');
+
+  // 팀전 — 가변 개수의 팀, 각 팀에 이름 + 멤버 목록 (멤버는 비워둬도 됨)
+  type TeamDraft = { key: string; name: string; memberIds: string[] };
+  const TEAM_KEYS = ['a', 'b', 'c', 'd', 'e', 'f'];
+  const [teams, setTeams] = useState<TeamDraft[]>([
+    { key: 'a', name: 'A팀', memberIds: [] },
+    { key: 'b', name: 'B팀', memberIds: [] },
+  ]);
+  const [memberPicker, setMemberPicker] = useState<{ teamKey: string | null }>({
+    teamKey: null,
+  });
+
+  // 크루 멤버 목록 (팀전에서만 fetch).
+  const crewDetailQ = useCrewDetail(battleType === 'crew_internal_team' ? crewId : undefined);
+  const crewMembersForTeams = crewDetailQ.data?.members ?? [];
+  const assignedUserIds = useMemo(
+    () => teams.flatMap((t) => t.memberIds),
+    [teams],
+  );
   const [title, setTitle] = useState('');
   const [battleDate, setBattleDate] = useState<Date>(() => {
     const d = new Date();
@@ -107,17 +118,11 @@ export default function NewBattleScreen() {
   });
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [gymId, setGymId] = useState<string | null>(null);
-  const [showGymModal, setShowGymModal] = useState(false);
   const [opponentCode, setOpponentCode] = useState('');
   const opponentCodeUpper = opponentCode.trim().toUpperCase();
   const opponentLookup = useLookupCrewForBattle(opponentCodeUpper);
 
   const [scoringMode, setScoringMode] = useState<ScoringMode>('linear');
-  const [customPoints, setCustomPoints] = useState<Record<string, string>>(() => {
-    const m: Record<string, string> = {};
-    for (const k of V_GRADES) m[k] = String(DEFAULT_CUSTOM_POINTS[k]);
-    return m;
-  });
 
   const [scoreVisibility, setScoreVisibility] = useState<ScoreVisibility>('live');
   // 색깔 점수 배열 — 순서 = 호스트가 정한 난이도 순(쉬운→어려운)
@@ -128,7 +133,7 @@ export default function NewBattleScreen() {
 
   const gymColorOptionsQ = useGymColorOptions(gymId);
 
-  const scoringRules = useMemo(() => buildScoringRulesFrom(scoringMode, customPoints), [scoringMode, customPoints]);
+  const scoringRules = useMemo(() => buildScoringRulesFrom(scoringMode), [scoringMode]);
 
   // 암장의 등록 색깔 + 크라우드 평균 V 로 점수 자동 배정. 사용자가 손댄 점수는 유지.
   useEffect(() => {
@@ -162,11 +167,6 @@ export default function NewBattleScreen() {
     });
   }, [gymColorOptionsQ.data, scoringRules]);
 
-  const selectedGym = useMemo(
-    () => allGyms?.find((g) => g.id === gymId) ?? null,
-    [allGyms, gymId],
-  );
-
   const opponentReady =
     battleType !== 'crew_vs_crew' ||
     (opponentLookup.data != null && opponentLookup.data.id !== crewId);
@@ -193,8 +193,14 @@ export default function NewBattleScreen() {
         scoringRules,
         colorGrades,
         scoreVisibility,
-        teamAName: battleType === 'crew_internal_team' ? teamAName.trim() || 'A팀' : undefined,
-        teamBName: battleType === 'crew_internal_team' ? teamBName.trim() || 'B팀' : undefined,
+        teamConfigs:
+          battleType === 'crew_internal_team'
+            ? teams.map((t, i) => ({
+                key: t.key,
+                name: t.name.trim() || `${TEAM_KEYS[i].toUpperCase()}팀`,
+                memberIds: t.memberIds,
+              }))
+            : undefined,
       });
       router.replace({ pathname: '/battle/[id]', params: { id } } as never);
     } catch (e) {
@@ -242,24 +248,61 @@ export default function NewBattleScreen() {
           </Section>
 
           {battleType === 'crew_internal_team' && (
-            <Section title="팀 이름" required icon="users">
-              <View className="flex-row gap-2">
-                <View style={{ flex: 1 }}>
-                  <FormInput
-                    placeholder="A팀"
-                    value={teamAName}
-                    onChangeText={(t) => setTeamAName(t.slice(0, 12))}
-                    maxLength={12}
+            <Section title="팀 구성" required icon="users">
+              <Text className="text-text-tertiary text-[11px] font-semibold mb-3">
+                팀 이름을 정하고 멤버를 배정해요. 팀원은 나중에 추가할 수도 있어요.
+              </Text>
+              <View style={{ gap: 12 }}>
+                {teams.map((team, idx) => (
+                  <TeamCard
+                    key={team.key}
+                    label={`${TEAM_KEYS[idx].toUpperCase()}팀`}
+                    team={team}
+                    crewMembers={crewMembersForTeams}
+                    canRemove={teams.length > 2}
+                    onChangeName={(name) =>
+                      setTeams((prev) =>
+                        prev.map((t) => (t.key === team.key ? { ...t, name } : t)),
+                      )
+                    }
+                    onRemove={() =>
+                      setTeams((prev) => prev.filter((t) => t.key !== team.key))
+                    }
+                    onAddMember={() => setMemberPicker({ teamKey: team.key })}
+                    onRemoveMember={(uid) =>
+                      setTeams((prev) =>
+                        prev.map((t) =>
+                          t.key === team.key
+                            ? { ...t, memberIds: t.memberIds.filter((x) => x !== uid) }
+                            : t,
+                        ),
+                      )
+                    }
                   />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <FormInput
-                    placeholder="B팀"
-                    value={teamBName}
-                    onChangeText={(t) => setTeamBName(t.slice(0, 12))}
-                    maxLength={12}
-                  />
-                </View>
+                ))}
+                {teams.length < TEAM_KEYS.length && (
+                  <Pressable
+                    onPress={() => {
+                      setTeams((prev) => {
+                        const used = new Set(prev.map((t) => t.key));
+                        const nextKey = TEAM_KEYS.find((k) => !used.has(k));
+                        if (!nextKey) return prev;
+                        return [
+                          ...prev,
+                          {
+                            key: nextKey,
+                            name: `${nextKey.toUpperCase()}팀`,
+                            memberIds: [],
+                          },
+                        ];
+                      });
+                    }}
+                    className="flex-row items-center justify-center gap-1.5 py-3 rounded-xl border border-dashed border-border-strong active:opacity-70"
+                  >
+                    <Feather name="plus" size={14} color={c.text.secondary} />
+                    <Text className="text-text-secondary text-xs font-extrabold">팀 추가</Text>
+                  </Pressable>
+                )}
               </View>
             </Section>
           )}
@@ -292,17 +335,30 @@ export default function NewBattleScreen() {
           </Section>
 
           <Section title="암장" required icon="map-pin">
-            <FormPressable
-              onPress={() => setShowGymModal(true)}
-              leadingIcon="map-pin"
-              placeholder="암장 선택"
-              value={
-                selectedGym
-                  ? `${selectedGym.name}${selectedGym.branch ? ` ${selectedGym.branch}` : ''}`
-                  : null
-              }
-              trailingNode={<Feather name="chevron-down" size={16} color={c.text.muted} />}
-            />
+            <GymPickerField value={gymId} onChange={setGymId} />
+          </Section>
+
+          <Section title="점수 규칙" required icon="award">
+            <View className="gap-2">
+              <ScoringModeBtn
+                label="기본 (V그레이드 × 1)"
+                desc="V3 완등 = 3점, V5 완등 = 5점"
+                active={scoringMode === 'linear'}
+                onPress={() => setScoringMode('linear')}
+              />
+              <ScoringModeBtn
+                label="지수형 (어려울수록 가중치 ↑)"
+                desc="V × 1.5^V — V5는 38점, V7은 113점"
+                active={scoringMode === 'exp'}
+                onPress={() => setScoringMode('exp')}
+              />
+              <ScoringModeBtn
+                label="직접 입력"
+                desc="아래 색깔별 점수에서 직접 설정"
+                active={scoringMode === 'custom'}
+                onPress={() => setScoringMode('custom')}
+              />
+            </View>
           </Section>
 
           {gymId && (
@@ -419,48 +475,6 @@ export default function NewBattleScreen() {
             </Section>
           )}
 
-          <Section title="점수 규칙" required icon="award">
-            <View className="gap-2">
-              <ScoringModeBtn
-                label="기본 (V그레이드 × 1)"
-                desc="V3 완등 = 3점, V5 완등 = 5점"
-                active={scoringMode === 'linear'}
-                onPress={() => setScoringMode('linear')}
-              />
-              <ScoringModeBtn
-                label="지수형 (어려울수록 가중치 ↑)"
-                desc="V × 1.5^V — V5는 38점, V7은 113점"
-                active={scoringMode === 'exp'}
-                onPress={() => setScoringMode('exp')}
-              />
-              <ScoringModeBtn
-                label="직접 입력"
-                desc="V그레이드별 점수 직접 설정"
-                active={scoringMode === 'custom'}
-                onPress={() => setScoringMode('custom')}
-              />
-            </View>
-            {scoringMode === 'custom' && (
-              <View className="mt-3 bg-background-secondary rounded-xl p-3 gap-2">
-                <Text className="text-text-tertiary text-xs font-semibold">V그레이드별 점수</Text>
-                <View className="flex-row flex-wrap gap-2">
-                  {V_GRADES.map((v) => (
-                    <View key={v} className="flex-row items-center bg-background-primary rounded-lg px-2 py-1.5 border border-border-subtle">
-                      <Text className="text-text-secondary text-xs font-bold mr-1">V{v}</Text>
-                      <TextInput
-                        value={customPoints[v]}
-                        onChangeText={(t) =>
-                          setCustomPoints((p) => ({ ...p, [v]: t.replace(/[^0-9]/g, '') }))
-                        }
-                        keyboardType="number-pad"
-                        className="text-text-primary text-sm font-bold w-10 text-center"
-                      />
-                    </View>
-                  ))}
-                </View>
-              </View>
-            )}
-          </Section>
         </ScrollView>
 
         <BottomCTA
@@ -471,14 +485,6 @@ export default function NewBattleScreen() {
           disabled={!canSubmit}
         />
       </KeyboardAvoidingView>
-
-      <GymPickerModal
-        visible={showGymModal}
-        gyms={allGyms ?? []}
-        selectedId={gymId}
-        onSelect={(picked) => { setGymId(picked); setShowGymModal(false); }}
-        onClose={() => setShowGymModal(false)}
-      />
 
       <AddColorSheet
         visible={showAddColor}
@@ -500,8 +506,143 @@ export default function NewBattleScreen() {
         }}
         onClose={() => setShowAddColor(false)}
       />
+
+      <CrewMemberPicker
+        visible={memberPicker.teamKey !== null}
+        members={crewMembersForTeams}
+        excludeUserIds={assignedUserIds}
+        onPick={(uid) => {
+          const target = memberPicker.teamKey;
+          if (!target) return;
+          setTeams((prev) =>
+            prev.map((t) =>
+              t.key === target ? { ...t, memberIds: [...t.memberIds, uid] } : t,
+            ),
+          );
+          setMemberPicker({ teamKey: null });
+        }}
+        onClose={() => setMemberPicker({ teamKey: null })}
+      />
     </SafeAreaView>
     </GestureHandlerRootView>
+  );
+}
+
+// ── 팀 카드 ──────────────────────────────────────────────
+type TeamCardProps = {
+  label: string;
+  team: { key: string; name: string; memberIds: string[] };
+  crewMembers: { user_id: string; user: { id: string; username: string; display_name: string | null; avatar_url: string | null } | null }[];
+  canRemove: boolean;
+  onChangeName: (name: string) => void;
+  onRemove: () => void;
+  onAddMember: () => void;
+  onRemoveMember: (uid: string) => void;
+};
+
+function TeamCard({
+  label, team, crewMembers, canRemove, onChangeName, onRemove, onAddMember, onRemoveMember,
+}: TeamCardProps) {
+  const c = useThemeColors();
+  const membersById = useMemo(() => {
+    const m = new Map<string, TeamCardProps['crewMembers'][number]>();
+    for (const cm of crewMembers) m.set(cm.user_id, cm);
+    return m;
+  }, [crewMembers]);
+
+  return (
+    <View
+      style={{
+        borderWidth: 1,
+        borderColor: c.border.subtle,
+        borderRadius: 14,
+        backgroundColor: c.bg.card,
+        padding: 12,
+        gap: 10,
+      }}
+    >
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+        <View
+          style={{
+            paddingHorizontal: 8,
+            paddingVertical: 3,
+            borderRadius: 6,
+            backgroundColor: c.bg.accent,
+          }}
+        >
+          <Text style={{ fontSize: 10, fontWeight: '900', color: c.brand.primaryDeep }}>
+            {label}
+          </Text>
+        </View>
+        <View style={{ flex: 1 }}>
+          <FormInput
+            placeholder={label}
+            value={team.name}
+            onChangeText={(t) => onChangeName(t.slice(0, 12))}
+            maxLength={12}
+          />
+        </View>
+        {canRemove && (
+          <Pressable onPress={onRemove} hitSlop={6}>
+            <Feather name="trash-2" size={16} color={c.text.muted} />
+          </Pressable>
+        )}
+      </View>
+
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+        {team.memberIds.length === 0 && (
+          <Text style={{ fontSize: 11, color: c.text.tertiary, fontWeight: '600', paddingVertical: 4 }}>
+            팀원이 아직 배정되지 않았어요
+          </Text>
+        )}
+        {team.memberIds.map((uid) => {
+          const m = membersById.get(uid);
+          const name = m?.user?.display_name ?? m?.user?.username ?? '익명';
+          return (
+            <View
+              key={uid}
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 4,
+                paddingHorizontal: 10,
+                paddingVertical: 6,
+                borderRadius: 999,
+                backgroundColor: c.bg.subtle,
+                borderWidth: 1,
+                borderColor: c.border.subtle,
+              }}
+            >
+              <Text style={{ fontSize: 12, fontWeight: '700', color: c.text.primary }}>
+                {name}
+              </Text>
+              <Pressable onPress={() => onRemoveMember(uid)} hitSlop={6}>
+                <Feather name="x" size={12} color={c.text.muted} />
+              </Pressable>
+            </View>
+          );
+        })}
+        <Pressable
+          onPress={onAddMember}
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 4,
+            paddingHorizontal: 10,
+            paddingVertical: 6,
+            borderRadius: 999,
+            borderWidth: 1,
+            borderStyle: 'dashed',
+            borderColor: c.brand.primary,
+          }}
+        >
+          <Feather name="user-plus" size={12} color={c.brand.primary} />
+          <Text style={{ fontSize: 12, fontWeight: '800', color: c.brand.primary }}>
+            팀원 추가
+          </Text>
+        </Pressable>
+      </View>
+    </View>
   );
 }
 
@@ -709,21 +850,22 @@ function AddColorSheet({
 function TypeBtn({ label, desc, active, onPress }: {
   label: string; desc: string; active: boolean; onPress: () => void;
 }) {
+  const c = useThemeColors();
   return (
     <Pressable onPress={onPress} style={{ flex: 1 }}>
       {({ pressed }) => (
         <View
           style={{
             paddingVertical: 14, paddingHorizontal: 12, borderRadius: 14,
-            borderWidth: 1.5, borderColor: active ? '#06b6d4' : '#e2e8f0',
-            backgroundColor: active ? '#ecfeff' : '#ffffff',
+            borderWidth: 1.5, borderColor: active ? c.brand.primary : c.border.subtle,
+            backgroundColor: active ? c.bg.accent : c.bg.card,
             opacity: pressed ? 0.85 : 1, gap: 4,
           }}
         >
-          <Text style={{ fontSize: 13, fontWeight: '800', color: active ? '#0e7490' : '#475569' }}>
+          <Text style={{ fontSize: 13, fontWeight: '800', color: active ? c.brand.primaryDeep : c.text.secondary }}>
             {label}
           </Text>
-          <Text style={{ fontSize: 11, fontWeight: '600', color: active ? '#0e7490' : '#94a3b8' }}>
+          <Text style={{ fontSize: 11, fontWeight: '600', color: active ? c.brand.primaryDeep : c.text.muted }}>
             {desc}
           </Text>
         </View>
@@ -735,21 +877,22 @@ function TypeBtn({ label, desc, active, onPress }: {
 function ScoringModeBtn({ label, desc, active, onPress }: {
   label: string; desc: string; active: boolean; onPress: () => void;
 }) {
+  const c = useThemeColors();
   return (
     <Pressable onPress={onPress}>
       {({ pressed }) => (
         <View
           style={{
             paddingVertical: 12, paddingHorizontal: 14, borderRadius: 12,
-            borderWidth: 1.5, borderColor: active ? '#06b6d4' : '#e2e8f0',
-            backgroundColor: active ? '#ecfeff' : '#ffffff',
+            borderWidth: 1.5, borderColor: active ? c.brand.primary : c.border.subtle,
+            backgroundColor: active ? c.bg.accent : c.bg.card,
             opacity: pressed ? 0.85 : 1, gap: 3,
           }}
         >
-          <Text style={{ fontSize: 13, fontWeight: '800', color: active ? '#0e7490' : '#475569' }}>
+          <Text style={{ fontSize: 13, fontWeight: '800', color: active ? c.brand.primaryDeep : c.text.secondary }}>
             {label}
           </Text>
-          <Text style={{ fontSize: 11, fontWeight: '600', color: active ? '#0e7490' : '#94a3b8' }}>
+          <Text style={{ fontSize: 11, fontWeight: '600', color: active ? c.brand.primaryDeep : c.text.muted }}>
             {desc}
           </Text>
         </View>

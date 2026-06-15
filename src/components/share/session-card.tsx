@@ -3,6 +3,7 @@ import { Image, Text, View } from 'react-native';
 
 import { resolveColorHex } from '@/constants/climb-colors';
 import type { SessionDetail } from '@/hooks/use-session';
+import { matchGymStyle } from '@/lib/gym-logos';
 
 const KO_WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
 
@@ -22,9 +23,9 @@ type Props = {
   backgroundColor?: string;
   backgroundImageUri?: string | null;
   backgroundOpacity?: number;
+  showGymLogo?: boolean;
 };
 
-// Custom layout-adjustable Share Card. captureRef target.
 export const SessionShareCard = forwardRef<View, Props>(
   (
     {
@@ -35,17 +36,14 @@ export const SessionShareCard = forwardRef<View, Props>(
       backgroundColor = '#ffffff',
       backgroundImageUri,
       backgroundOpacity = 0.4,
+      showGymLogo = true,
     },
     ref,
   ) => {
-    // Determine card dimensions based on ratio
     let width = size;
     let height = size;
-    if (ratio === '4:5') {
-      height = size * 1.25;
-    } else if (ratio === '9:16') {
-      height = size * 1.777;
-    }
+    if (ratio === '4:5') height = size * 1.25;
+    else if (ratio === '9:16') height = size * 1.777;
 
     const isLead = session.discipline === 'lead';
     const sends = session.color_summary
@@ -53,16 +51,13 @@ export const SessionShareCard = forwardRef<View, Props>(
       .sort((a, b) => b.sends - a.sends);
     const boulderSendsTotal = sends.reduce((acc, c) => acc + c.sends, 0);
 
-    // Lead: 등급 내림차순 (최고 → 최저)
     const leadSorted = [...(session.lead_summary ?? [])]
       .filter((r) => r.sends > 0)
       .reverse();
     const leadSendsTotal = leadSorted.reduce((acc, r) => acc + r.sends, 0);
     const topGrade = leadSorted[0]?.grade ?? null;
-
     const totalSends = isLead ? leadSendsTotal : boulderSendsTotal;
 
-    // Expand sends to individual color dots for Grid Layout (boulder only)
     const dots: { color: string; key: string }[] = [];
     for (const c of sends) {
       for (let i = 0; i < c.sends; i++) {
@@ -73,9 +68,33 @@ export const SessionShareCard = forwardRef<View, Props>(
     const isDarkBg = ['#0f172a', '#0e7490', '#3b0764'].includes(backgroundColor);
     const textColor = isDarkBg ? '#ffffff' : '#0f172a';
     const textMutedColor = isDarkBg ? '#94a3b8' : '#64748b';
-    const textSubtleColor = isDarkBg ? '#64748b' : '#cbd5e1';
     const itemBg = isDarkBg ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.03)';
     const itemBorder = isDarkBg ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.05)';
+    // ── contentScale: 사용 가능 높이 대비 콘텐츠 자연 높이 비율로 스케일 조정 ──
+    const cardPadding = size * 0.08;
+    const headerH = size * 0.035 * 1.3 + 4 + size * 0.056 * 1.3; // date + title (line heights)
+    const contentMarginTop = size * 0.04;
+    const logoRowH = size * 0.04; // 하단 cragger 로고 행
+    const availableH = height - 2 * cardPadding - headerH - contentMarginTop - logoRowH;
+
+    const numItems = isLead ? leadSorted.length : sends.length;
+    let itemScale = 1;
+    if (numItems > 0) {
+      let naturalItemH: number;
+      let naturalGap: number;
+      if (layoutType === 'grid') {
+        naturalItemH = size * 0.08;
+        naturalGap = size * 0.018;
+      } else if (layoutType === 'list') {
+        naturalItemH = size * 0.034 + 2 * size * 0.016;
+        naturalGap = size * 0.012;
+      } else {
+        naturalItemH = size * 0.08;
+        naturalGap = size * 0.025;
+      }
+      const naturalTotal = numItems * naturalItemH + Math.max(0, numItems - 1) * naturalGap;
+      itemScale = naturalTotal > 0 ? Math.min(1, availableH / naturalTotal) : 1;
+    }
 
     const dotSize = Math.max(
       16,
@@ -84,16 +103,35 @@ export const SessionShareCard = forwardRef<View, Props>(
         Math.floor((size - 80) / Math.ceil(Math.sqrt(Math.max(totalSends, 1)) + 1))
       )
     );
-    
+
     const gymLabel = session.gym
       ? `${session.gym.name}${session.gym.branch ? ` ${session.gym.branch}` : ''}`
       : '암장 미선택';
 
-    // 암장 로고 — 있으면 카드에 워터마크처럼 노출.
-    // 사진/투명 배경(영상 위) → 우측 상단 작게, 솔리드 색깔 → 가운데 하단 부드럽게.
     const gymLogoUrl = session.gym?.logo_url ?? null;
-    const hasOverlay = backgroundImageUri != null || backgroundColor === 'transparent';
-    const logoPosition: 'topRight' | 'centerBottom' = hasOverlay ? 'topRight' : 'centerBottom';
+    const { logo: staticLogoSource, bg: staticLogoBg } = session.gym
+      ? matchGymStyle(session.gym.name, session.gym.branch)
+      : { logo: null, bg: null };
+    const resolvedLogoSource = gymLogoUrl ? { uri: gymLogoUrl } : staticLogoSource;
+    const resolvedLogoBg = staticLogoBg ?? 'rgba(255,255,255,0.95)';
+
+    // 그래프(grid) 레이아웃 아이템 sizes
+    const chipSize = size * 0.08 * itemScale;
+    const chipOverlap = chipSize * 0.35;
+    const gridGap = size * 0.018 * itemScale;
+
+    // 리스트 레이아웃 sizes
+    const listDot = size * 0.034 * itemScale;
+    const listPadV = size * 0.014 * itemScale;
+    const listGap = size * 0.012 * itemScale;
+    const listFontSz = size * 0.034 * itemScale;
+
+    // 심플(stats) 레이아웃 sizes
+    const statDot = size * 0.08 * itemScale;
+    const statGap = size * 0.025 * itemScale;
+    const statNumFont = size * 0.072 * itemScale;
+    const statGradeFont = size * 0.038 * itemScale;
+    const statChipFont = size * 0.034 * itemScale;
 
     return (
       <View
@@ -103,41 +141,32 @@ export const SessionShareCard = forwardRef<View, Props>(
           width,
           height,
           backgroundColor,
-          padding: size * 0.08,
+          padding: cardPadding,
           justifyContent: 'space-between',
           overflow: 'hidden',
           position: 'relative',
         }}
       >
-        {/* Background image overlay */}
+        {/* Background image */}
         {backgroundImageUri && (
           <Image
             source={{ uri: backgroundImageUri }}
-            style={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              width,
-              height,
-              opacity: backgroundOpacity,
-            }}
+            style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, width, height, opacity: backgroundOpacity }}
             resizeMode="cover"
           />
         )}
 
-        {/* Gym logo — 우측 상단 (사진/투명 배경일 때) */}
-        {gymLogoUrl && logoPosition === 'topRight' && (
+        {/* Gym logo / 이니셜 — 우측 상단 (showGymLogo true일 때만) */}
+        {showGymLogo && session.gym && (
           <View
             style={{
               position: 'absolute',
-              top: size * 0.05,
+              bottom: size * 0.05,
               right: size * 0.05,
               width: size * 0.13,
               height: size * 0.13,
               borderRadius: size * 0.065,
-              backgroundColor: 'rgba(255,255,255,0.95)',
+              backgroundColor: resolvedLogoBg,
               alignItems: 'center',
               justifyContent: 'center',
               overflow: 'hidden',
@@ -149,150 +178,92 @@ export const SessionShareCard = forwardRef<View, Props>(
               elevation: 4,
             }}
           >
-            <Image
-              source={{ uri: gymLogoUrl }}
-              style={{ width: '78%', height: '78%' }}
-              resizeMode="contain"
-            />
-          </View>
-        )}
-
-        {/* Gym logo — 가운데 하단 워터마크 (솔리드 배경일 때) */}
-        {gymLogoUrl && logoPosition === 'centerBottom' && (
-          <View
-            style={{
-              position: 'absolute',
-              bottom: size * 0.06,
-              left: 0,
-              right: 0,
-              alignItems: 'center',
-              opacity: 0.4,
-              zIndex: 1,
-            }}
-          >
-            <Image
-              source={{ uri: gymLogoUrl }}
-              style={{ width: size * 0.18, height: size * 0.09 }}
-              resizeMode="contain"
-            />
+            {resolvedLogoSource ? (
+              <Image source={resolvedLogoSource} style={{ width: '78%', height: '78%' }} resizeMode="contain" />
+            ) : (
+              <Text style={{ fontSize: size * 0.048, fontWeight: '900', color: '#06b6d4', letterSpacing: -0.5 }}>
+                {session.gym.name.slice(0, 2)}
+              </Text>
+            )}
           </View>
         )}
 
         {/* Top Header */}
         <View style={{ zIndex: 1 }}>
-          <Text
-            style={{
-              color: textMutedColor,
-              fontSize: size * 0.035,
-              fontWeight: '600',
-              letterSpacing: 0.5,
-            }}
-          >
+          <Text style={{ color: textMutedColor, fontSize: size * 0.035, fontWeight: '600', letterSpacing: 0.5 }}>
             {formatDate(session.session_date)}
           </Text>
           <Text
-            style={{
-              color: textColor,
-              fontSize: size * 0.056,
-              fontWeight: '900',
-              marginTop: 4,
-              letterSpacing: -0.5,
-            }}
+            style={{ color: textColor, fontSize: size * 0.056, fontWeight: '900', marginTop: 4, letterSpacing: -0.5 }}
             numberOfLines={1}
           >
             {gymLabel}
           </Text>
         </View>
 
-        {/* Layout content — bottom-anchored */}
-        <View
-          style={{
-            alignItems: 'center',
-            zIndex: 1,
-            marginTop: size * 0.04,
-          }}
-        >
+        {/* Visualization */}
+        <View style={{ alignItems: 'flex-start', zIndex: 1, marginTop: contentMarginTop }}>
+
+          {/* ─── grid / lead ─── */}
           {layoutType === 'grid' && isLead && (
-            <View style={{ width: '100%', gap: size * 0.018, paddingHorizontal: size * 0.04 }}>
+            <View style={{ width: '100%', gap: gridGap, paddingRight: size * 0.04 }}>
               {leadSorted.length === 0 ? (
-                <Text style={{ color: textMutedColor, fontSize: size * 0.04, fontWeight: '500', textAlign: 'center' }}>
-                  완등 기록 없음
-                </Text>
+                <Text style={{ color: textMutedColor, fontSize: size * 0.04, fontWeight: '500', textAlign: 'center' }}>완등 기록 없음</Text>
               ) : (
-                leadSorted.map((r) => {
-                  const chipSize = size * 0.08;
-                  const overlap = chipSize * 0.35;
-                  return (
-                    <View key={r.grade} style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap' }}>
-                      <View
-                        style={{
-                          minWidth: size * 0.13,
-                          paddingHorizontal: size * 0.025,
-                          paddingVertical: size * 0.012,
-                          borderRadius: chipSize / 2,
-                          backgroundColor: '#06b6d4',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          marginRight: size * 0.025,
-                        }}
-                      >
-                        <Text
-                          style={{
-                            color: '#ffffff',
-                            fontSize: size * 0.034,
-                            fontWeight: '900',
-                            letterSpacing: -0.3,
-                          }}
-                        >
-                          {r.grade}
-                        </Text>
-                      </View>
-                      {Array.from({ length: r.sends }).map((_, i) => (
-                        <View
-                          key={i}
-                          style={{
-                            width: chipSize,
-                            height: chipSize,
-                            borderRadius: chipSize / 2,
-                            backgroundColor: '#06b6d4',
-                            borderWidth: 2,
-                            borderColor: backgroundColor,
-                            marginLeft: i === 0 ? 0 : -overlap,
-                          }}
-                        />
-                      ))}
+                leadSorted.map((r) => (
+                  <View key={r.grade} style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap' }}>
+                    <View
+                      style={{
+                        minWidth: size * 0.13 * itemScale,
+                        paddingHorizontal: size * 0.025 * itemScale,
+                        paddingVertical: size * 0.012 * itemScale,
+                        borderRadius: chipSize / 2,
+                        backgroundColor: '#06b6d4',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        marginRight: size * 0.025 * itemScale,
+                      }}
+                    >
+                      <Text style={{ color: '#ffffff', fontSize: statChipFont, fontWeight: '900', letterSpacing: -0.3 }}>
+                        {r.grade}
+                      </Text>
                     </View>
-                  );
-                })
+                    {Array.from({ length: r.sends }).map((_, i) => (
+                      <View
+                        key={i}
+                        style={{
+                          width: chipSize, height: chipSize, borderRadius: chipSize / 2,
+                          backgroundColor: '#06b6d4', borderWidth: 2, borderColor: backgroundColor,
+                          marginLeft: i === 0 ? 0 : -chipOverlap,
+                        }}
+                      />
+                    ))}
+                  </View>
+                ))
               )}
             </View>
           )}
 
+          {/* ─── grid / boulder ─── */}
           {layoutType === 'grid' && !isLead && (
-            <View style={{ width: '100%', gap: size * 0.018, paddingHorizontal: size * 0.04 }}>
+            <View style={{ width: '100%', gap: gridGap, paddingRight: size * 0.04 }}>
               {sends.length === 0 ? (
-                <Text style={{ color: textMutedColor, fontSize: size * 0.04, fontWeight: '500', textAlign: 'center' }}>
-                  완등 기록 없음
-                </Text>
+                <Text style={{ color: textMutedColor, fontSize: size * 0.04, fontWeight: '500', textAlign: 'center' }}>완등 기록 없음</Text>
               ) : (
                 sends.map((cc) => {
                   const hex = resolveColorHex(cc.color);
                   const needsBorder = cc.color === 'white' || cc.color === 'yellow';
-                  const chipSize = size * 0.08;
-                  const overlap = chipSize * 0.35;
                   return (
                     <View key={cc.color} style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap' }}>
                       {Array.from({ length: cc.sends }).map((_, i) => (
                         <View
                           key={i}
                           style={{
-                            width: chipSize,
-                            height: chipSize,
-                            borderRadius: chipSize / 2,
+                            width: chipSize, height: chipSize, borderRadius: chipSize / 2,
                             backgroundColor: hex,
                             borderWidth: 2,
                             borderColor: needsBorder ? (isDarkBg ? '#1e293b' : '#cbd5e1') : backgroundColor,
-                            marginLeft: i === 0 ? 0 : -overlap,
+                            marginLeft: i === 0 ? 0 : -chipOverlap,
                           }}
                         />
                       ))}
@@ -303,31 +274,26 @@ export const SessionShareCard = forwardRef<View, Props>(
             </View>
           )}
 
+          {/* ─── list / lead ─── */}
           {layoutType === 'list' && isLead && (
-            <View style={{ gap: size * 0.012, alignSelf: 'stretch', alignItems: 'flex-start', paddingHorizontal: size * 0.04 }}>
+            <View style={{ gap: listGap, alignSelf: 'stretch', alignItems: 'flex-start', paddingRight: size * 0.04 }}>
               {leadSorted.length === 0 ? (
-                <Text style={{ color: textMutedColor, fontSize: size * 0.04, fontWeight: '500' }}>
-                  완등 기록 없음
-                </Text>
+                <Text style={{ color: textMutedColor, fontSize: size * 0.04, fontWeight: '500' }}>완등 기록 없음</Text>
               ) : (
                 leadSorted.map((r) => (
                   <View
                     key={r.grade}
                     style={{
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      paddingVertical: size * 0.014,
-                      paddingHorizontal: size * 0.025,
-                      backgroundColor: itemBg,
-                      borderWidth: 1,
-                      borderColor: itemBorder,
-                      borderRadius: size * 0.04,
+                      flexDirection: 'row', alignItems: 'center',
+                      paddingVertical: listPadV, paddingHorizontal: size * 0.025 * itemScale,
+                      backgroundColor: itemBg, borderWidth: 1, borderColor: itemBorder,
+                      borderRadius: size * 0.04 * itemScale,
                     }}
                   >
-                    <Text style={{ color: textColor, fontWeight: '900', fontSize: size * 0.04, letterSpacing: -0.3, marginRight: size * 0.025 }}>
+                    <Text style={{ color: textColor, fontWeight: '900', fontSize: listFontSz, letterSpacing: -0.3, marginRight: size * 0.025 * itemScale }}>
                       {r.grade}
                     </Text>
-                    <Text style={{ color: textMutedColor, fontWeight: '800', fontSize: size * 0.032 }}>
+                    <Text style={{ color: textMutedColor, fontWeight: '800', fontSize: listFontSz * 0.94 }}>
                       ×{r.sends}
                     </Text>
                   </View>
@@ -336,12 +302,11 @@ export const SessionShareCard = forwardRef<View, Props>(
             </View>
           )}
 
+          {/* ─── list / boulder ─── */}
           {layoutType === 'list' && !isLead && (
-            <View style={{ gap: size * 0.012, alignSelf: 'stretch', alignItems: 'flex-start', paddingHorizontal: size * 0.04 }}>
+            <View style={{ gap: listGap, alignSelf: 'stretch', alignItems: 'flex-start', paddingRight: size * 0.04 }}>
               {sends.length === 0 ? (
-                <Text style={{ color: textMutedColor, fontSize: size * 0.04, fontWeight: '500' }}>
-                  완등 기록 없음
-                </Text>
+                <Text style={{ color: textMutedColor, fontSize: size * 0.04, fontWeight: '500' }}>완등 기록 없음</Text>
               ) : (
                 sends.map((c) => {
                   const hex = resolveColorHex(c.color);
@@ -349,31 +314,24 @@ export const SessionShareCard = forwardRef<View, Props>(
                     <View
                       key={c.color}
                       style={{
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                        paddingVertical: size * 0.014,
-                        paddingHorizontal: size * 0.025,
-                        backgroundColor: itemBg,
-                        borderWidth: 1,
-                        borderColor: itemBorder,
-                        borderRadius: size * 0.04,
+                        flexDirection: 'row', alignItems: 'center',
+                        paddingVertical: listPadV, paddingHorizontal: size * 0.025 * itemScale,
+                        backgroundColor: itemBg, borderWidth: 1, borderColor: itemBorder,
+                        borderRadius: size * 0.04 * itemScale,
                       }}
                     >
                       <View
                         style={{
-                          width: size * 0.034,
-                          height: size * 0.034,
-                          borderRadius: (size * 0.034) / 2,
+                          width: listDot, height: listDot, borderRadius: listDot / 2,
                           backgroundColor: hex,
-                          borderWidth: c.color === 'white' ? 1 : 0,
-                          borderColor: '#cbd5e1',
-                          marginRight: size * 0.02,
+                          borderWidth: c.color === 'white' ? 1 : 0, borderColor: '#cbd5e1',
+                          marginRight: size * 0.02 * itemScale,
                         }}
                       />
-                      <Text style={{ color: textColor, fontWeight: '800', fontSize: size * 0.034, marginRight: size * 0.02 }}>
+                      <Text style={{ color: textColor, fontWeight: '800', fontSize: listFontSz, marginRight: size * 0.02 * itemScale }}>
                         {c.color.toUpperCase()}
                       </Text>
-                      <Text style={{ color: textMutedColor, fontWeight: '800', fontSize: size * 0.032 }}>
+                      <Text style={{ color: textMutedColor, fontWeight: '800', fontSize: listFontSz * 0.94 }}>
                         ×{c.sends}
                       </Text>
                     </View>
@@ -383,95 +341,56 @@ export const SessionShareCard = forwardRef<View, Props>(
             </View>
           )}
 
+          {/* ─── stats / lead ─── */}
           {layoutType === 'stats' && isLead && (
-            <View style={{ gap: size * 0.025, alignSelf: 'stretch', alignItems: 'flex-start', paddingHorizontal: size * 0.04 }}>
+            <View style={{ gap: statGap, alignSelf: 'stretch', alignItems: 'flex-start', paddingRight: size * 0.04 }}>
               {leadSorted.length === 0 ? (
-                <Text style={{ color: textMutedColor, fontSize: size * 0.04, fontWeight: '500' }}>
-                  완등 기록 없음
-                </Text>
+                <Text style={{ color: textMutedColor, fontSize: size * 0.04, fontWeight: '500' }}>완등 기록 없음</Text>
               ) : (
-                leadSorted.map((r) => {
-                  const dot = size * 0.08;
-                  return (
+                leadSorted.map((r) => (
+                  <View key={r.grade} style={{ flexDirection: 'row', alignItems: 'center' }}>
                     <View
-                      key={r.grade}
-                      style={{ flexDirection: 'row', alignItems: 'center' }}
+                      style={{
+                        minWidth: statDot, height: statDot,
+                        paddingHorizontal: size * 0.022 * itemScale,
+                        borderRadius: statDot / 2, backgroundColor: '#06b6d4',
+                        alignItems: 'center', justifyContent: 'center',
+                        marginRight: size * 0.04 * itemScale,
+                      }}
                     >
-                      <View
-                        style={{
-                          minWidth: dot,
-                          height: dot,
-                          paddingHorizontal: size * 0.022,
-                          borderRadius: dot / 2,
-                          backgroundColor: '#06b6d4',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          marginRight: size * 0.04,
-                        }}
-                      >
-                        <Text
-                          style={{
-                            color: '#ffffff',
-                            fontSize: size * 0.038,
-                            fontWeight: '900',
-                            letterSpacing: -0.3,
-                          }}
-                        >
-                          {r.grade}
-                        </Text>
-                      </View>
-                      <Text
-                        style={{
-                          color: textColor,
-                          fontSize: size * 0.072,
-                          fontWeight: '900',
-                          letterSpacing: -1,
-                        }}
-                      >
-                        {r.sends}
+                      <Text style={{ color: '#ffffff', fontSize: statGradeFont, fontWeight: '900', letterSpacing: -0.3 }}>
+                        {r.grade}
                       </Text>
                     </View>
-                  );
-                })
+                    <Text style={{ color: textColor, fontSize: statNumFont, fontWeight: '900', letterSpacing: -1 }}>
+                      {r.sends}
+                    </Text>
+                  </View>
+                ))
               )}
             </View>
           )}
 
+          {/* ─── stats / boulder ─── */}
           {layoutType === 'stats' && !isLead && (
-            <View style={{ gap: size * 0.025, alignSelf: 'stretch', alignItems: 'flex-start', paddingHorizontal: size * 0.04 }}>
+            <View style={{ gap: statGap, alignSelf: 'stretch', alignItems: 'flex-start', paddingRight: size * 0.04 }}>
               {sends.length === 0 ? (
-                <Text style={{ color: textMutedColor, fontSize: size * 0.04, fontWeight: '500' }}>
-                  완등 기록 없음
-                </Text>
+                <Text style={{ color: textMutedColor, fontSize: size * 0.04, fontWeight: '500' }}>완등 기록 없음</Text>
               ) : (
                 sends.map((cc) => {
                   const hex = resolveColorHex(cc.color);
                   const needsBorder = cc.color === 'white' || cc.color === 'yellow';
-                  const dot = size * 0.08;
                   return (
-                    <View
-                      key={cc.color}
-                      style={{ flexDirection: 'row', alignItems: 'center' }}
-                    >
+                    <View key={cc.color} style={{ flexDirection: 'row', alignItems: 'center' }}>
                       <View
                         style={{
-                          width: dot,
-                          height: dot,
-                          borderRadius: dot / 2,
+                          width: statDot, height: statDot, borderRadius: statDot / 2,
                           backgroundColor: hex,
-                          borderWidth: needsBorder ? 1 : 0,
-                          borderColor: '#cbd5e1',
-                          marginRight: size * 0.04,
+                          borderWidth: needsBorder ? 1 : 0, borderColor: '#cbd5e1',
+                          marginRight: size * 0.04 * itemScale,
                         }}
                       />
-                      <Text
-                        style={{
-                          color: textColor,
-                          fontSize: size * 0.072,
-                          fontWeight: '900',
-                          letterSpacing: -1,
-                        }}
-                      >
+                      <Text style={{ color: textColor, fontSize: statNumFont, fontWeight: '900', letterSpacing: -1 }}>
                         {cc.sends}
                       </Text>
                     </View>

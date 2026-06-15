@@ -4,12 +4,12 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { FeaturedBadgeChip } from '@/components/ui/featured-badge-chip';
 import { InstagramIcon } from '@/components/ui/instagram-icon';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { UserAvatar } from '@/components/ui/user-avatar';
+import { useLocalSearchParams, useRouter } from '@/lib/router';
 import React, { useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
-  Image,
   Linking,
   Modal,
   Pressable,
@@ -118,7 +118,6 @@ export default function PublicProfileScreen() {
   const canSeeContent = !isPrivate || isFollowing === true;
 
   const username = profile?.username ?? '...';
-  const firstChar = username && username.length > 0 ? username.charAt(0).toUpperCase() : '?';
 
   function handleFollowToggle() {
     if (!id) return;
@@ -142,13 +141,7 @@ export default function PublicProfileScreen() {
         {/* Profile card — 가로 레이아웃 (사진 좌 / 정보 우) */}
         <View style={s.profileCardH}>
           <View style={s.avatarContainerH}>
-            {profile?.avatar_url ? (
-              <Image source={{ uri: profile.avatar_url }} style={s.avatarImageH} resizeMode="cover" />
-            ) : (
-              <View style={s.avatarFallbackH}>
-                <Text style={s.avatarFallbackTextH}>{firstChar}</Text>
-              </View>
-            )}
+            <UserAvatar userKey={id} username={username} avatarUrl={profile?.avatar_url} size={74} />
           </View>
           <View style={s.profileInfoH}>
             <View style={s.profileNameRowH}>
@@ -1524,38 +1517,6 @@ function makeStyles(c: ThemeColors) {
     paddingBottom: 20,
     gap: 12,
   },
-  avatarContainer: {
-    width: 96,
-    height: 96,
-    borderRadius: 48,
-    borderWidth: 2.5,
-    borderColor: '#06b6d4',
-    backgroundColor: c.bg.card,
-    padding: 3,
-    shadowColor: '#06b6d4',
-    shadowOpacity: 0.18,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 4,
-  },
-  avatarImage: {
-    width: '100%',
-    height: '100%',
-    borderRadius: 42,
-  },
-  avatarFallback: {
-    width: '100%',
-    height: '100%',
-    borderRadius: 42,
-    backgroundColor: c.bg.accent,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatarFallbackText: {
-    color: c.brand.primary,
-    fontSize: 36,
-    fontWeight: '800',
-  },
   profileInfo: {
     alignItems: 'center',
     gap: 4,
@@ -1595,24 +1556,6 @@ function makeStyles(c: ThemeColors) {
     borderWidth: 2,
     borderColor: c.brand.primary,
     padding: 3,
-  },
-  avatarImageH: {
-    width: '100%',
-    height: '100%',
-    borderRadius: 36,
-  },
-  avatarFallbackH: {
-    width: '100%',
-    height: '100%',
-    borderRadius: 36,
-    backgroundColor: c.bg.subtle,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatarFallbackTextH: {
-    fontSize: 30,
-    fontWeight: '900',
-    color: c.brand.primary,
   },
   profileInfoH: {
     flex: 1,

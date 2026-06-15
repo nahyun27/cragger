@@ -4,14 +4,15 @@
     "slug": "cragger",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/images/splash-icon.png",
     "scheme": "cragger",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/expo.icon",
+      "icon": "./assets/images/splash-icon.png",
       "infoPlist": {
         "CFBundleDisplayName": "크래거"
-      }
+      },
+      "bundleIdentifier": "com.cragger.app"
     },
     "android": {
       "name": "크래거",
@@ -33,11 +34,16 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#208AEF",
-          "android": {
-            "image": "./assets/images/splash-icon.png",
-            "imageWidth": 76
-          }
+          "image": "./assets/splash.png",
+          "imageWidth": 1242,
+          "resizeMode": "cover",
+          "backgroundColor": "#208AEF"
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "color": "#208AEF"
         }
       ],
       "expo-sharing",

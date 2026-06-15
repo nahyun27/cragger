@@ -2,7 +2,7 @@
  * 프로필 설정 페이지 — 기존 ProfileMenuModal 의 항목들을 전부 풀스크린으로 옮김.
  * 그룹별로 카드 묶음 + 각 row 는 BoingPressable (살짝 작아졌다 통통 튀는 피드백).
  */
-import { useRouter } from 'expo-router';
+import { useRouter } from '@/lib/router';
 import React, { useMemo, useState } from 'react';
 import {
   Platform,

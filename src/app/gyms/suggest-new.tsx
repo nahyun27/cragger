@@ -1,5 +1,5 @@
 import { customAlert } from '@/components/ui/custom-alert';
-import { useRouter } from 'expo-router';
+import { useRouter } from '@/lib/router';
 import * as ImagePicker from 'expo-image-picker';
 import React, { useMemo, useState } from 'react';
 import {
@@ -139,7 +139,7 @@ export default function SuggestNewGymScreen() {
       if (description.trim()) changes.description = description.trim();
       if (phone.trim()) changes.phone = phone.trim();
       if (websiteUrl.trim()) changes.website_url = websiteUrl.trim();
-      if (instagramHandle.trim()) changes.instagram_handle = instagramHandle.trim();
+      if (instagramHandle.trim()) changes.instagram_handle = instagramHandle.trim().replace(/@/g, '');
       for (const g of BOOLEAN_GROUPS) {
         for (const f of g.items) {
           if (bools[f.key] !== undefined) {
@@ -329,10 +329,9 @@ export default function SuggestNewGymScreen() {
               </FieldRow>
               <FieldRow label="인스타그램">
                 <FormInput
-                  leadingText="@"
                   value={instagramHandle}
                   onChangeText={setInstagramHandle}
-                  placeholder="handle"
+                  placeholder="@handle"
                   autoCapitalize="none"
                 />
               </FieldRow>

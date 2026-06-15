@@ -1,7 +1,7 @@
 import { customAlert } from '@/components/ui/custom-alert';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import * as ImagePicker from 'expo-image-picker';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from '@/lib/router';
 import React, { useMemo, useState } from 'react';
 import {
   Image,
@@ -302,6 +302,15 @@ export default function NewPostScreen() {
                 />
               </Section>
 
+              <GymSection
+                gymId={gymId}
+                setGymId={setGymId}
+                recentGyms={recentGyms}
+                selectedGym={selectedGym}
+                onOpenModal={() => setShowGymModal(true)}
+                c={c}
+              />
+
               <Section title="정원 (선택)" icon="users">
                 <FormInput
                   leadingIcon="users"
@@ -338,40 +347,16 @@ export default function NewPostScreen() {
             </Text>
           </Section>
 
-          <Section title="관련 암장">
-            <View className="flex-row flex-wrap gap-2">
-              <Chip
-                label="장소 검색"
-                icon={<Feather name="search" size={14} color={c.text.tertiary} />}
-                selected={false}
-                onPress={() => setShowGymModal(true)}
-              />
-              {gymId !== null && (
-                <Chip
-                  label="태그 해제"
-                  selected={false}
-                  onPress={() => setGymId(null)}
-                />
-              )}
-              {(recentGyms ?? []).map((g) => (
-                <Chip
-                  key={g.id}
-                  label={`${g.name}${g.branch ? ` ${g.branch}` : ''}`}
-                  selected={gymId === g.id}
-                  onPress={() => setGymId(gymId === g.id ? null : g.id)}
-                />
-              ))}
-            </View>
-            {selectedGym && (
-              <View className="mt-2 px-3 py-2 rounded-md bg-background-secondary">
-                <Text className="text-text-primary text-sm">
-                  선택: {selectedGym.name}
-                  {selectedGym.branch ? ` ${selectedGym.branch}` : ''}
-                  {selectedGym.city ? ` · ${selectedGym.city}` : ''}
-                </Text>
-              </View>
-            )}
-          </Section>
+          {!isMeetup && (
+            <GymSection
+              gymId={gymId}
+              setGymId={setGymId}
+              recentGyms={recentGyms}
+              selectedGym={selectedGym}
+              onOpenModal={() => setShowGymModal(true)}
+              c={c}
+            />
+          )}
 
           <PollComposer value={poll} onChange={setPoll} />
 
@@ -431,5 +416,49 @@ export default function NewPostScreen() {
         onClose={() => setShowGymModal(false)}
       />
     </SafeAreaView>
+  );
+}
+
+type GymSectionProps = {
+  gymId: string | null;
+  setGymId: (id: string | null) => void;
+  recentGyms: { id: string; name: string; branch: string | null }[] | undefined;
+  selectedGym: { id: string; name: string; branch: string | null; city?: string | null } | null;
+  onOpenModal: () => void;
+  c: ReturnType<typeof import('@/lib/theme').useThemeColors>;
+};
+
+function GymSection({ gymId, setGymId, recentGyms, selectedGym, onOpenModal, c }: GymSectionProps) {
+  return (
+    <Section title="관련 암장">
+      <View className="flex-row flex-wrap gap-2">
+        <Chip
+          label="장소 검색"
+          icon={<Feather name="search" size={14} color={c.text.tertiary} />}
+          selected={false}
+          onPress={onOpenModal}
+        />
+        {gymId !== null && (
+          <Chip label="태그 해제" selected={false} onPress={() => setGymId(null)} />
+        )}
+        {(recentGyms ?? []).map((g) => (
+          <Chip
+            key={g.id}
+            label={`${g.name}${g.branch ? ` ${g.branch}` : ''}`}
+            selected={gymId === g.id}
+            onPress={() => setGymId(gymId === g.id ? null : g.id)}
+          />
+        ))}
+      </View>
+      {selectedGym && (
+        <View className="mt-2 px-3 py-2 rounded-md bg-background-secondary">
+          <Text className="text-text-primary text-sm">
+            선택: {selectedGym.name}
+            {selectedGym.branch ? ` ${selectedGym.branch}` : ''}
+            {selectedGym.city ? ` · ${selectedGym.city}` : ''}
+          </Text>
+        </View>
+      )}
+    </Section>
   );
 }

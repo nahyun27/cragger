@@ -1,7 +1,10 @@
 import { useQuery } from '@tanstack/react-query';
 
+import type { SessionCategory } from '@/constants/session-category';
 import { useAuth } from '@/lib/auth-context';
 import { supabase } from '@/lib/supabase';
+
+export type ColorSendCount = { color: string; count: number };
 
 export type MonthlySession = {
   id: string;
@@ -11,6 +14,8 @@ export type MonthlySession = {
   gym: { id: string; name: string; branch: string | null } | null;
   send_count: number;
   attempt_count: number;
+  color_sends: ColorSendCount[];
+  category: SessionCategory | null;
 };
 
 export type MonthlySessionsResult = {
@@ -49,7 +54,7 @@ export function useMonthlySessions(year: number, month: number) {
 
       const { data: sessions, error: sErr } = await supabase
         .from('sessions')
-        .select('id, session_date, duration_min, condition, gym:gyms(id, name, branch)')
+        .select('id, session_date, duration_min, condition, category, gym:gyms(id, name, branch)')
         .eq('user_id', userId!)
         .gte('session_date', from)
         .lt('session_date', to)
@@ -62,6 +67,7 @@ export function useMonthlySessions(year: number, month: number) {
         session_date: string;
         duration_min: number | null;
         condition: number | null;
+        category: SessionCategory | null;
         gym: { id: string; name: string; branch: string | null } | null;
       }>;
 
@@ -76,28 +82,51 @@ export function useMonthlySessions(year: number, month: number) {
       };
       if (rows.length === 0) return empty;
 
-      // attempts: send + total count
+      // attempts: send + total count + 색깔별 완등 (problem.color 조인)
       const sessionIds = rows.map((r) => r.id);
       const { data: attempts, error: aErr } = await supabase
         .from('attempts')
-        .select('session_id, result')
+        .select('session_id, result, problem:problems(color)')
         .in('session_id', sessionIds);
       if (aErr) throw new Error(aErr.message);
 
       const sendCountBySession = new Map<string, number>();
       const totalCountBySession = new Map<string, number>();
-      for (const r of (attempts ?? []) as Array<{ session_id: string; result: string }>) {
+      const colorSendsBySession = new Map<string, Map<string, number>>();
+      for (const r of (attempts ?? []) as Array<{
+        session_id: string;
+        result: string;
+        problem: { color: string } | null;
+      }>) {
         totalCountBySession.set(r.session_id, (totalCountBySession.get(r.session_id) ?? 0) + 1);
-        if (r.result === 'send' || r.result === 'flash' || r.result === 'onsight') {
+        const isSend = r.result === 'send' || r.result === 'flash' || r.result === 'onsight';
+        if (isSend) {
           sendCountBySession.set(r.session_id, (sendCountBySession.get(r.session_id) ?? 0) + 1);
+          const color = r.problem?.color;
+          if (color) {
+            if (!colorSendsBySession.has(r.session_id)) {
+              colorSendsBySession.set(r.session_id, new Map());
+            }
+            const m = colorSendsBySession.get(r.session_id)!;
+            m.set(color, (m.get(color) ?? 0) + 1);
+          }
         }
       }
 
-      const merged: MonthlySession[] = rows.map((r) => ({
-        ...r,
-        send_count: sendCountBySession.get(r.id) ?? 0,
-        attempt_count: totalCountBySession.get(r.id) ?? 0,
-      }));
+      const merged: MonthlySession[] = rows.map((r) => {
+        const colorMap = colorSendsBySession.get(r.id);
+        const color_sends: ColorSendCount[] = colorMap
+          ? Array.from(colorMap.entries())
+              .map(([color, count]) => ({ color, count }))
+              .sort((a, b) => b.count - a.count)
+          : [];
+        return {
+          ...r,
+          send_count: sendCountBySession.get(r.id) ?? 0,
+          attempt_count: totalCountBySession.get(r.id) ?? 0,
+          color_sends,
+        };
+      });
 
       const byDate: Record<string, MonthlySession[]> = {};
       const sendCountsByDate: Record<string, number> = {};
