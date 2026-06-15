@@ -315,25 +315,23 @@ export default function CrewDetailScreen() {
                   <Text style={s.regionChipText}>{data.region}</Text>
                 </View>
               )}
+              {data.home_gym && (
+                <View style={s.profileHomeGym}>
+                  <Feather name="home" size={10} color={c.text.tertiary} />
+                  <Text style={s.profileGymText} numberOfLines={1}>
+                    {data.home_gym.name}{data.home_gym.branch ? ` ${data.home_gym.branch}` : ''}
+                  </Text>
+                </View>
+              )}
             </View>
           </View>
         </View>
 
-        {(data.description || data.home_gym) && (
+        {data.description && (
           <View style={s.profileDescriptionBox}>
-            {data.description && (
-              <Text style={s.profileDescriptionText}>
-                {data.description}
-              </Text>
-            )}
-            {data.home_gym && (
-              <View style={s.profileMetaRow}>
-                <Feather name="home" size={12} color={c.text.tertiary} />
-                <Text style={s.profileGymText}>
-                  {data.home_gym.name} {data.home_gym.branch || ''}
-                </Text>
-              </View>
-            )}
+            <Text style={s.profileDescriptionText}>
+              {data.description}
+            </Text>
           </View>
         )}
 
@@ -2202,6 +2200,13 @@ function makeStyles(c: ThemeColors) {
     alignItems: 'center',
     marginTop: 6,
     gap: 8,
+    flex: 1,
+  },
+  profileHomeGym: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginLeft: 'auto',
   },
   profileMemberCount: {
     fontSize: 13,
