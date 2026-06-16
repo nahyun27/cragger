@@ -333,6 +333,8 @@ export function useUpdateCrew() {
     onSuccess: (_d, vars) => {
       queryClient.invalidateQueries({ queryKey: ['crews', 'detail', vars.crewId] });
       queryClient.invalidateQueries({ queryKey: ['crews', 'mine'] });
+      queryClient.invalidateQueries({ queryKey: ['crews', 'recruiting'] });
+      queryClient.invalidateQueries({ queryKey: ['crews', 'discover'] });
     },
   });
 }
