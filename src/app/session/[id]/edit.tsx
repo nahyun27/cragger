@@ -28,6 +28,7 @@ import { FormInput } from '@/components/ui/form';
 import { BottomCTA } from '@/components/ui/bottom-cta';
 import { useGyms } from '@/hooks/use-gyms';
 import { useGymRegisteredColors } from '@/hooks/use-gym-registered-colors';
+import { useGymColorSchemes } from '@/hooks/use-spray-wall';
 import { useRecentColorActivity } from '@/hooks/use-recent-color-activity';
 import { useRecentGyms } from '@/hooks/use-recent-gyms';
 import { useSessionDetail, useUpdateSession } from '@/hooks/use-session';
@@ -82,37 +83,35 @@ export default function EditSessionScreen() {
   const [prefilled, setPrefilled] = useState(false);
 
   const { data: recentColors } = useRecentColorActivity(gymId);
-  const { data: registeredColors } = useGymRegisteredColors(gymId);
-  // primary = 그 암장에 등록된 색깔만 우선 노출. 나머지는 secondary (난이도 추가).
+  const gymColorSchemesQ = useGymColorSchemes(gymId ?? undefined);
+  const gymColorSchemes = gymColorSchemesQ.data ?? [];
+
   const { colorOrder, primaryCount } = useMemo<{
     colorOrder: readonly GridColor[];
     primaryCount: number;
   }>(() => {
-    const registered = new Set(
-      (registeredColors ?? []).filter((c) =>
-        (GRID_COLORS as readonly string[]).includes(c),
-      ),
-    );
+    const schemeColors = gymColorSchemes
+      .map((cs) => cs.color)
+      .filter((c) => (GRID_COLORS as readonly string[]).includes(c)) as GridColor[];
+
+    if (schemeColors.length > 0) {
+      const schemeSet = new Set(schemeColors);
+      const rest = GRID_COLORS.filter((c) => !schemeSet.has(c)) as GridColor[];
+      return { colorOrder: [...schemeColors, ...rest], primaryCount: schemeColors.length };
+    }
+
+    // fallback: 최근 사용 색깔 먼저
     const seen = new Set<string>();
-    const orderHead: GridColor[] = [];
+    const head: GridColor[] = [];
     for (const c of recentColors ?? []) {
       if ((GRID_COLORS as readonly string[]).includes(c) && !seen.has(c)) {
-        orderHead.push(c as GridColor);
+        head.push(c as GridColor);
         seen.add(c);
       }
     }
-    const orderTail = GRID_COLORS.filter((c) => !seen.has(c));
-    const order: GridColor[] = [...orderHead, ...orderTail];
-    if (registered.size === 0) {
-      return { colorOrder: order, primaryCount: order.length };
-    }
-    const primary = order.filter((c) => registered.has(c));
-    const secondary = order.filter((c) => !registered.has(c));
-    return {
-      colorOrder: [...primary, ...secondary],
-      primaryCount: primary.length,
-    };
-  }, [recentColors, registeredColors]);
+    const tail = GRID_COLORS.filter((c) => !seen.has(c)) as GridColor[];
+    return { colorOrder: [...head, ...tail], primaryCount: head.length };
+  }, [gymColorSchemes, recentColors]);
 
   const isLeadSession = data?.discipline === 'lead';
   const isSprayWallSession = (data?.spray_wall_summary?.length ?? 0) > 0 && data?.discipline !== 'lead';

@@ -415,41 +415,34 @@ export default function NewSessionScreen() {
   const sprayWallProblemList = sprayWallProblemsQ.data ?? [];
   const sprayWallPhotoList = sprayWallPhotosQ.data ?? [];
   const gymColorSchemes = gymColorSchemesQ.data ?? [];
-  // primary = 그 암장에 등록된 색깔 (recent activity desc). secondary = 나머지.
-  // 등록 정보 없으면 primary=전체 14색 (이전과 동일 동작).
+  // gym_color_schemes.order_index 순서가 있으면 그걸 우선 사용.
+  // 없으면(암장 미등록) recentColors 기반 fallback.
   const { colorOrder, primaryCount } = useMemo<{
     colorOrder: readonly GridColor[];
     primaryCount: number;
   }>(() => {
-    // 등록된 색깔이 GRID_COLORS와 교집합
-    const registered = new Set(
-      (registeredColors ?? []).filter((c) =>
-        (GRID_COLORS as readonly string[]).includes(c),
-      ),
-    );
-    // 최근 활동순으로 head 만들기 (전체 컬러)
+    const schemeColors = gymColorSchemes
+      .map((cs) => cs.color)
+      .filter((c) => (GRID_COLORS as readonly string[]).includes(c)) as GridColor[];
+
+    if (schemeColors.length > 0) {
+      const schemeSet = new Set(schemeColors);
+      const rest = GRID_COLORS.filter((c) => !schemeSet.has(c)) as GridColor[];
+      return { colorOrder: [...schemeColors, ...rest], primaryCount: schemeColors.length };
+    }
+
+    // fallback: 최근 사용 색깔 먼저
     const seen = new Set<string>();
-    const orderHead: GridColor[] = [];
+    const head: GridColor[] = [];
     for (const c of recentColors ?? []) {
       if ((GRID_COLORS as readonly string[]).includes(c) && !seen.has(c)) {
-        orderHead.push(c as GridColor);
+        head.push(c as GridColor);
         seen.add(c);
       }
     }
-    const orderTail = GRID_COLORS.filter((c) => !seen.has(c));
-    const order: GridColor[] = [...orderHead, ...orderTail];
-
-    if (registered.size === 0) {
-      return { colorOrder: order, primaryCount: order.length };
-    }
-    // 등록된 색깔이 앞으로 오게 재정렬 (등록 색깔끼리는 위 order 순서 유지)
-    const primary = order.filter((c) => registered.has(c));
-    const secondary = order.filter((c) => !registered.has(c));
-    return {
-      colorOrder: [...primary, ...secondary],
-      primaryCount: primary.length,
-    };
-  }, [recentColors, registeredColors]);
+    const tail = GRID_COLORS.filter((c) => !seen.has(c)) as GridColor[];
+    return { colorOrder: [...head, ...tail], primaryCount: head.length };
+  }, [gymColorSchemes, recentColors]);
   const { data: allGyms } = useGyms();
   const selectedGym = useMemo(
     () => allGyms?.find((g) => g.id === gymId) ?? null,
