@@ -115,6 +115,7 @@ export default function EditSessionScreen() {
   }, [recentColors, registeredColors]);
 
   const isLeadSession = data?.discipline === 'lead';
+  const isSprayWallSession = (data?.spray_wall_summary?.length ?? 0) > 0 && data?.discipline !== 'lead';
 
   // 첫 fetch 완료 시 한 번만 prefill — 이후 사용자 편집 보존
   useEffect(() => {
@@ -158,8 +159,9 @@ export default function EditSessionScreen() {
   const canSubmit = useMemo(() => {
     if (!gymId) return false;
     if (isLeadSession) return leadRoutes.length > 0;
+    if (isSprayWallSession) return true;
     return Object.values(colorCounts).some((c) => c.tries > 0);
-  }, [gymId, colorCounts, leadRoutes, isLeadSession]);
+  }, [gymId, colorCounts, leadRoutes, isLeadSession, isSprayWallSession]);
 
   async function handleSubmit() {
     if (!id || !gymId || updateSession.isPending) return;
@@ -329,6 +331,19 @@ export default function EditSessionScreen() {
         {isLeadSession ? (
           <Section title="리드 루트">
             <LeadEntry value={leadRoutes} onChange={setLeadRoutes} />
+          </Section>
+        ) : isSprayWallSession ? (
+          <Section title="스프레이월">
+            <View className="px-3 py-3 rounded-xl bg-background-secondary gap-1">
+              <Text className="text-text-tertiary text-xs font-semibold">
+                스프레이월 기록 {data!.spray_wall_summary.length}개 — 문제 상세 페이지에서 수정할 수 있어요
+              </Text>
+              {data!.spray_wall_summary.slice(0, 5).map((sw) => (
+                <Text key={sw.id} className="text-text-secondary text-sm font-bold">
+                  #{sw.number} {sw.name ?? ''}
+                </Text>
+              ))}
+            </View>
           </Section>
         ) : (
           <Section title="색깔별 기록">

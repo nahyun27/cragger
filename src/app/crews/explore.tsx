@@ -67,7 +67,7 @@ export function RecruitingCrewCard({ crew }: { crew: CrewSummary }) {
   return (
     <Pressable
       onPress={() => router.push({ pathname: '/crew/[id]', params: { id: crew.id } } as never)}
-      style={({ pressed }) => [s.card, pressed && { opacity: 0.92 }]}
+      style={s.card}
     >
       <View style={s.cardAvatar}>
         {crew.image_url ? (
@@ -77,12 +77,7 @@ export function RecruitingCrewCard({ crew }: { crew: CrewSummary }) {
         )}
       </View>
       <View style={s.cardBody}>
-        <View style={s.cardTitleRow}>
-          <Text style={s.cardTitle} numberOfLines={1}>{crew.name}</Text>
-          <View style={s.recruitingChip}>
-            <Text style={s.recruitingChipText}>모집중</Text>
-          </View>
-        </View>
+        <Text style={s.cardTitle} numberOfLines={1}>{crew.name}</Text>
         <View style={s.cardMetaRow}>
           {crew.region && (
             <View style={s.cardMetaItem}>

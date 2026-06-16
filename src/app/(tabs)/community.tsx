@@ -186,7 +186,7 @@ function RecruitingCrewMiniCard({ crew }: { crew: CrewSummary }) {
   return (
     <Pressable
       onPress={() => router.push({ pathname: '/crew/[id]', params: { id: crew.id } } as never)}
-      style={({ pressed }) => [s.recruitCard, pressed && { opacity: 0.85 }]}
+      style={s.recruitCard}
     >
       <View style={{ position: 'relative' }}>
         <View style={[s.recruitCardAvatar, { overflow: 'hidden' }]}>

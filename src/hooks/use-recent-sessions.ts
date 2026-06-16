@@ -10,9 +10,10 @@ export type RecentSession = {
   gym: { id: string; name: string; branch: string | null } | null;
   send_count: number;
   discipline: 'boulder' | 'lead' | 'mixed' | 'empty';
+  has_spray_wall: boolean;
   max_lead_grade: string | null;
   color_sends: { color: string; count: number }[];
-  lead_sends: { grade: string; count: number }[];   // lead 그레이드별 완등
+  lead_sends: { grade: string; count: number }[];
 };
 
 function compareLeadGrade(a: string, b: string): number {
@@ -60,13 +61,14 @@ export function useRecentSessions(limit = 10) {
       const sessionIds = sessionRows.map((s) => s.id);
       const { data: attempts, error: attemptsErr } = await supabase
         .from('attempts')
-        .select('session_id, result, climbing_type, problem:problems(color, route_grade)')
+        .select('session_id, result, climbing_type, spray_wall_problem_id, problem:problems(color, route_grade)')
         .in('session_id', sessionIds);
       if (attemptsErr) throw new Error(attemptsErr.message);
 
       const sendCounts = new Map<string, number>();
       const boulderCounts = new Map<string, number>();
       const leadCounts = new Map<string, number>();
+      const sprayWallCounts = new Map<string, number>();
       const maxLeadGrade = new Map<string, string>();
       const colorSendsBySession = new Map<string, Map<string, number>>();
       const leadSendsBySession = new Map<string, Map<string, number>>();
@@ -76,13 +78,16 @@ export function useRecentSessions(limit = 10) {
         session_id: string;
         result: string;
         climbing_type: 'boulder' | 'lead' | 'board';
+        spray_wall_problem_id: string | null;
         problem: { color: string | null; route_grade: string | null } | null;
       }>) {
         const isSend = SEND.has(r.result);
         if (isSend) {
           sendCounts.set(r.session_id, (sendCounts.get(r.session_id) ?? 0) + 1);
         }
-        if (r.climbing_type === 'lead') {
+        if (r.spray_wall_problem_id) {
+          sprayWallCounts.set(r.session_id, (sprayWallCounts.get(r.session_id) ?? 0) + 1);
+        } else if (r.climbing_type === 'lead') {
           leadCounts.set(r.session_id, (leadCounts.get(r.session_id) ?? 0) + 1);
           const g = r.problem?.route_grade;
           if (g) {
@@ -101,6 +106,7 @@ export function useRecentSessions(limit = 10) {
           }
         } else if (r.climbing_type === 'boulder') {
           boulderCounts.set(r.session_id, (boulderCounts.get(r.session_id) ?? 0) + 1);
+
           // 색깔별 완등 집계 (boulder + send만)
           if (isSend && r.problem?.color) {
             if (!colorSendsBySession.has(r.session_id)) {
@@ -138,6 +144,7 @@ export function useRecentSessions(limit = 10) {
           gym: s.gym,
           send_count: sendCounts.get(s.id) ?? 0,
           discipline,
+          has_spray_wall: (sprayWallCounts.get(s.id) ?? 0) > 0,
           max_lead_grade: maxLeadGrade.get(s.id) ?? null,
           color_sends,
           lead_sends,

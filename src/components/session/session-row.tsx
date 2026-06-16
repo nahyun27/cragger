@@ -22,10 +22,17 @@ export type SessionSummary = {
   gym: { id: string; name: string; branch: string | null } | null;
   send_count: number;
   discipline?: 'boulder' | 'lead' | 'mixed' | 'empty';
+  has_spray_wall?: boolean;
   max_lead_grade?: string | null;
   color_sends?: { color: string; count: number }[];
   lead_sends?: { grade: string; count: number }[];
   category?: SessionCategory | null;
+};
+
+const DISCIPLINE_BADGE: Record<string, { label: string; bg: string; fg: string }> = {
+  boulder: { label: '볼더', bg: '#0e748522', fg: '#0e7485' },
+  lead:    { label: '리드',   bg: '#7c3aed22', fg: '#7c3aed' },
+  mixed:   { label: '혼합',   bg: '#0369a122', fg: '#0369a1' },
 };
 
 export function SessionRow({ session }: { session: SessionSummary }) {
@@ -55,12 +62,28 @@ export function SessionRow({ session }: { session: SessionSummary }) {
           <Text style={s.sessionDateWeekday}>{weekday}</Text>
         </View>
         <View style={s.sessionInfo}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
             <Text style={[s.sessionGymName, { flexShrink: 1 }]} numberOfLines={1}>
-              {gymName}
-              {branchName}
+              {gymName}{branchName}
             </Text>
-            {session.category && <CategoryChip category={session.category} size="xs" />}
+            {session.category ? (
+              <CategoryChip category={session.category} size="xs" />
+            ) : (
+              <>
+                {session.discipline && DISCIPLINE_BADGE[session.discipline] && (
+                  <View style={[s.discBadge, { backgroundColor: DISCIPLINE_BADGE[session.discipline].bg }]}>
+                    <Text style={[s.discBadgeText, { color: DISCIPLINE_BADGE[session.discipline].fg }]}>
+                      {DISCIPLINE_BADGE[session.discipline].label}
+                    </Text>
+                  </View>
+                )}
+                {session.has_spray_wall && (
+                  <View style={[s.discBadge, { backgroundColor: '#06b6d422' }]}>
+                    <Text style={[s.discBadgeText, { color: '#0891b2' }]}>스프레이월</Text>
+                  </View>
+                )}
+              </>
+            )}
           </View>
 
           {/* 1순위: 색깔 시각화 (boulder + 색 기록 있을 때) */}
@@ -175,6 +198,15 @@ function makeStyles(c: ThemeColors) {
       fontSize: 14,
       fontWeight: '800',
       color: c.text.primary,
+    },
+    discBadge: {
+      paddingHorizontal: 7,
+      paddingVertical: 2,
+      borderRadius: 6,
+    },
+    discBadgeText: {
+      fontSize: 10,
+      fontWeight: '800',
     },
     sessionMetaRow: {
       flexDirection: 'row',
