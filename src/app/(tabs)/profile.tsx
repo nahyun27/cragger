@@ -201,21 +201,22 @@ export default function ProfileScreen() {
           />
         }
       >
-        {/* Profile card — 가로 레이아웃 (사진 좌 / 정보 우) */}
-        <MyProfileCardH
-          profile={profile}
-          username={username}
-          firstChar={firstChar}
-          selectedBadge={selectedBadge}
-        />
-
-        <BodyInfoStrip
-          heightCm={profile?.height_cm ?? null}
-          reachCm={profile?.reach_cm ?? null}
-          weightKg={profile?.weight_visible ? (profile?.weight_kg ?? null) : null}
-          climbingStartDate={profile?.climbing_start_date ?? null}
-          onEdit={() => router.push('/profile/edit')}
-        />
+        {/* ── 프로필 헤더 섹션 ── */}
+        <View style={s.profileSection}>
+          <MyProfileCardH
+            profile={profile}
+            username={username}
+            firstChar={firstChar}
+            selectedBadge={selectedBadge}
+          />
+          <BodyInfoStrip
+            heightCm={profile?.height_cm ?? null}
+            reachCm={profile?.reach_cm ?? null}
+            weightKg={profile?.weight_visible ? (profile?.weight_kg ?? null) : null}
+            climbingStartDate={profile?.climbing_start_date ?? null}
+            onEdit={() => router.push('/profile/edit')}
+          />
+        </View>
 
         {/* Stats section — scoped to this month */}
         <View style={s.sectionContainer}>
@@ -2017,7 +2018,7 @@ function makeStyles(c: ThemeColors) {
   bodyPill: {
     flexGrow: 1,
     minWidth: '22%',
-    backgroundColor: c.bg.card,
+    backgroundColor: c.bg.subtle,
     borderWidth: 1,
     borderColor: c.border.subtle,
     borderRadius: 12,
@@ -2047,6 +2048,15 @@ function makeStyles(c: ThemeColors) {
     fontSize: 10,
     color: c.text.tertiary,
     fontWeight: '600',
+  },
+
+  // 프로필 헤더 섹션
+  profileSection: {
+    backgroundColor: c.bg.card,
+    marginHorizontal: -20,
+    paddingBottom: 20,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: c.border.subtle,
   },
 
   // Stats Section
